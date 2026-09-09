@@ -3204,12 +3204,14 @@ function aiProbe() {
     });
   }
   _aiProbing = true;
-  // sessionStorage 短记忆（10 分钟）：避免每次路由都探测
+  // sessionStorage 短记忆：可用缓存 10 分钟；不可用只缓存 30 秒
+  // （AI 上线/修复后，用户刷新页面即可恢复，不会被旧「不可用」状态卡住）
   var saved = null;
   try { saved = sessionStorage.getItem('qingyu.ai.ok'); } catch (e) {}
   if (saved) {
     var parts = String(saved).split('|');
-    if (parts[1] && (Date.now() - Number(parts[1])) < 600000) {
+    var ttl = parts[0] === '1' ? 600000 : 30000;
+    if (parts[1] && (Date.now() - Number(parts[1])) < ttl) {
       _aiOk = parts[0] === '1';
       return Promise.resolve(_aiOk === true);
     }
