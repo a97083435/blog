@@ -28,7 +28,7 @@ function applyTheme(t) {
   try { document.documentElement.setAttribute('data-theme', t); } catch (e) {}
 }
 function setTheme(t) { applyTheme(t); try { localStorage.setItem(themeKey(), t); } catch (e) {} }
-function toggleTheme() { var n = getTheme() === 'dark' ? 'light' : 'dark'; setTheme(n); refreshThemeIcon(); renderAccentSwatches(); return n; }
+function toggleTheme() { var n = getTheme() === 'dark' ? 'light' : 'dark'; setTheme(n); refreshThemeIcon(); renderAccentSelect(); return n; }
 /* 统一 SVG 图标：currentColor 描边，自动继承文字色、hover 变主题色 */
 function svgIcon(name, size) {
   size = size || 18;
@@ -108,7 +108,7 @@ function applyAccent(a) {
 function setAccent(a) {
   applyAccent(a);
   try { localStorage.setItem(accentKey(), a); } catch (e) {}
-  renderAccentSwatches();
+  renderAccentSelect();
 }
 function accentSwatchColor(id) {
   for (var i = 0; i < ACCENT_PALETTES.length; i++) {
@@ -116,24 +116,7 @@ function accentSwatchColor(id) {
   }
   return '#999';
 }
-function accentSwatchesHTML() {
-  var cur = getAccent();
-  var lang = (window.__i18n && window.__i18n.getLocale) ? window.__i18n.getLocale() : '';
-  return ACCENT_PALETTES.map(function (p) {
-    var active = p.id === cur;
-    var label = (lang && lang.indexOf('en') === 0) ? p.en : p.zh;
-    return '<button type="button" class="accent-swatch' + (active ? ' active' : '') + '" data-accent="' + p.id + '"'
-      + ' title="' + esc(p.en + ' · ' + p.zh) + '" aria-label="' + esc(p.zh) + '" aria-pressed="' + active + '">'
-      + '<span class="accent-dot" style="background:' + accentSwatchColor(p.id) + '"></span>'
-      + '<span class="accent-name">' + esc(label) + '</span></button>';
-  }).join('');
-}
-function renderAccentSwatches() {
-  var boxes = document.querySelectorAll('.accent-pop-swatches');
-  for (var i = 0; i < boxes.length; i++) boxes[i].innerHTML = accentSwatchesHTML();
-  renderAccentSelect();
-}
-/* 手机侧栏「颜色下拉」：形态与语言选择一致，但选项带色点，选色直观 */
+/* 「颜色下拉」组件：桌面顶栏 & 手机侧栏统一形态（参考语言选择框），选项带色点，选色直观 */
 function accentLabelOf(id) {
   for (var i = 0; i < ACCENT_PALETTES.length; i++) {
     if (ACCENT_PALETTES[i].id === id) {
@@ -166,27 +149,21 @@ function renderAccentSelect() {
     if (menu) menu.innerHTML = accentSelectOptionsHTML();
   }
 }
-function toggleAccentSelect() {
-  var menu = document.querySelector('.accent-select-menu');
-  if (!menu) return;
+function toggleAccentSelect(sel) {
+  var menu = sel ? sel.querySelector('.accent-select-menu') : null;
+  var trig = sel ? sel.querySelector('.accent-select-trigger') : null;
+  if (!menu || !trig) return;
   var open = menu.classList.toggle('open');
-  var trig = document.querySelector('.accent-select-trigger');
-  if (trig) trig.setAttribute('aria-expanded', open ? 'true' : 'false');
+  trig.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 function closeAccentSelect() {
-  var menu = document.querySelector('.accent-select-menu');
-  if (menu && menu.classList.contains('open')) menu.classList.remove('open');
-  var trig = document.querySelector('.accent-select-trigger');
-  if (trig) trig.setAttribute('aria-expanded', 'false');
-}
-function toggleAccentPop() {
-  var pop = document.getElementById('accentPop');
-  if (!pop) return;
-  pop.classList.toggle('open');
-}
-function closeAccentPop() {
-  var pop = document.getElementById('accentPop');
-  if (pop) pop.classList.remove('open');
+  var sels = document.querySelectorAll('.accent-select');
+  for (var i = 0; i < sels.length; i++) {
+    var menu = sels[i].querySelector('.accent-select-menu');
+    var trig = sels[i].querySelector('.accent-select-trigger');
+    if (menu && menu.classList.contains('open')) menu.classList.remove('open');
+    if (trig) trig.setAttribute('aria-expanded', 'false');
+  }
 }
 
 function esc(s) {
@@ -1217,13 +1194,13 @@ function app() { return document.querySelector('#app'); }
   var langSwitch = '<select id="langSwitch" class="lang-switch" onchange="window.__i18n.loadLocale(this.value).then(function(){ route(); })"></select>';
   var themeBtn = '<button class="icon-btn" id="themeToggle" aria-label="' + t('theme.toggle') + '" title="' + t('theme.toggle') + '">' + themeIcon() + '</button>';
   var searchBtn = '<button class="icon-btn search-toggle" id="searchToggle" aria-label="' + t('search.toggle') + '" title="' + t('search.toggle') + '">' + searchIconSvg() + '</button>';
-  var accentSwitch = '<div class="accent-wrap" id="accentWrap" role="group" aria-label="' + accentTitle() + '">'
-    + '<button class="icon-btn" id="accentToggle" aria-label="' + accentTitle() + '" title="' + accentTitle() + '">' + svgIcon('palette', 18) + '</button>'
-    + '<span class="accent-chip" aria-hidden="true"></span>'
-    + '<div class="accent-pop" id="accentPop" role="menu" aria-label="' + accentTitle() + '">'
-    + '<div class="accent-pop-title">' + accentTitle() + '</div>'
-    + '<div class="accent-pop-swatches"></div>'
-    + '</div></div>';
+  var accentSwitch = '<div class="accent-select" id="accentSelectTop" role="group" aria-label="' + accentTitle() + '">'
+    + '<button type="button" class="accent-select-trigger" aria-haspopup="listbox" aria-expanded="false" aria-label="' + accentTitle() + '">'
+    + '<span class="accent-select-current"><span class="accent-dot" style="background:' + accentSwatchColor(getAccent()) + '"></span><span class="accent-name">' + esc(accentLabelOf(getAccent())) + '</span></span>'
+    + '<span class="accent-select-arrow" aria-hidden="true">▾</span>'
+    + '</button>'
+    + '<div class="accent-select-menu" role="listbox" aria-label="' + accentTitle() + '">' + accentSelectOptionsHTML() + '</div>'
+    + '</div>';
   var hamburger = '<button class="hamburger-btn" id="hamburgerBtn" aria-label="' + t('nav.toggle') + '"><span></span><span></span><span></span></button>';
 
   // 侧边栏导航项（移动端用）
@@ -1246,7 +1223,7 @@ function app() { return document.querySelector('#app'); }
     + '<div class="sidebar-footer">'
     + '<select id="langSwitchSide" class="lang-switch"></select>'
     + '<div class="sidebar-accent">'
-    + '<div class="accent-select" id="accentSelectSide" role="group" aria-label="' + accentTitle() + '">'
+    + '<div class="accent-select up" id="accentSelectSide" role="group" aria-label="' + accentTitle() + '">'
     + '<button type="button" class="accent-select-trigger" id="accentSelectTrigger" aria-haspopup="listbox" aria-expanded="false" aria-label="' + accentTitle() + '">'
     + '<span class="accent-select-current"><span class="accent-dot" style="background:' + accentSwatchColor(getAccent()) + '"></span><span class="accent-name">' + esc(accentLabelOf(getAccent())) + '</span></span>'
     + '<span class="accent-select-arrow" aria-hidden="true">▾</span>'
@@ -3170,31 +3147,30 @@ function bindGlobal() {
   bindMobileSidebar();
 }
 
-/* 主题色取色面板：顶栏弹层 + 移动端侧栏「颜色下拉」。
+/* 主题色「颜色下拉」：桌面顶栏 + 手机侧栏统一形态。
  * 全部走 document 级事件委托：与顶栏/侧栏的渲染时序解耦——
- * 若首个进入的页面不含顶栏（后台等），之后回到前台时按钮点击依然有效。 */
+ * 若首个进入的页面不含顶栏（后台等），之后回到前台时点击依然有效。 */
 var _accentBound = false;
 function bindAccentPicker() {
-  if (_accentBound) { renderAccentSwatches(); return; }
+  if (_accentBound) { renderAccentSelect(); return; }
   _accentBound = true;
   document.addEventListener('click', function (e) {
     var t = (e && e.target) || null;
     if (!t || !t.closest) return;
-    if (t.closest('#accentToggle')) { toggleAccentPop(); return; }
-    if (t.closest('.accent-select-trigger')) { toggleAccentSelect(); return; }
+    var trig = t.closest('.accent-select-trigger');
+    if (trig && trig.parentNode) { toggleAccentSelect(trig.parentNode); return; }
     var sw = t.closest('[data-accent]');
-    if (sw) { setAccent(sw.getAttribute('data-accent')); closeAccentPop(); closeAccentSelect(); return; }
-    var wrap = document.getElementById('accentWrap');
-    if (wrap && wrap.contains && !wrap.contains(t)) closeAccentPop();
-    var sel = document.querySelector('.accent-select');
-    if (sel && sel.contains && !sel.contains(t)) closeAccentSelect();
+    if (sw) { setAccent(sw.getAttribute('data-accent')); closeAccentSelect(); return; }
+    // 点击任意下拉外部：关闭所有展开的主题色下拉
+    var inside = false;
+    var sels = document.querySelectorAll('.accent-select');
+    for (var i = 0; i < sels.length; i++) {
+      if (sels[i].contains && sels[i].contains(t)) { inside = true; break; }
+    }
+    if (!inside) closeAccentSelect();
   });
-  document.addEventListener('keydown', function (e) {
-    if (!e || e.key !== 'Escape') return;
-    closeAccentPop();
-    closeAccentSelect();
-  });
-  renderAccentSwatches();
+  document.addEventListener('keydown', function (e) { if (e && e.key === 'Escape') closeAccentSelect(); });
+  renderAccentSelect();
 }
 
 function bindMobileSidebar() {

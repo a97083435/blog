@@ -373,59 +373,34 @@ a:hover { text-decoration: underline; }
 }
 .icon-btn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 
-/* 主题色切换面板（桌面顶栏） */
-.accent-wrap { position: relative; }
-/* 顶栏按钮右下角的当前主题色角标：纯 CSS 跟随 var(--accent)，无需 JS */
-.accent-chip {
-  position: absolute; right: -1px; bottom: -1px;
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--accent); border: 2px solid var(--bg);
-  pointer-events: none;
-}
-.accent-pop {
-  position: absolute; top: calc(100% + 10px); right: 0; z-index: 60;
-  min-width: 172px;
-  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-  box-shadow: var(--shadow); padding: 10px;
-  display: none;
-}
-.accent-pop.open { display: block; animation: accentPopIn 0.14s ease; }
-@keyframes accentPopIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-.accent-pop-title { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; margin: 0 2px 8px; }
-.accent-pop-swatches { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.accent-swatch {
-  display: flex; align-items: center; gap: 7px;
-  padding: 6px 8px; border: 1px solid var(--border); border-radius: 9px;
-  background: var(--bg-soft); color: var(--fg); font-size: 12.5px; cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
-}
-.accent-swatch:hover { border-color: var(--accent); }
-.accent-swatch.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-.accent-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); flex-shrink: 0; }
-.accent-name { line-height: 1; }
-
-/* 移动端侧栏主题色：颜色下拉（形态与语言选择一致，选项带色点） */
+/* 主题色「颜色下拉」：桌面顶栏 & 手机侧栏统一形态（参考语言选择框） */
 .sidebar-accent { margin: 14px 0 0; }
-.accent-select { position: relative; }
+.accent-select { position: relative; display: inline-flex; }
 .accent-select-trigger {
-  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   font-size: 13px; padding: 4px 8px;
   border: 1px solid var(--border); border-radius: 6px;
   background: var(--bg-soft); color: var(--fg); cursor: pointer;
   line-height: 1.4; text-align: left;
   gap: 8px;
+  min-width: 0;
 }
 .accent-select-trigger:hover { border-color: var(--accent); }
+.accent-select-trigger:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); outline: none; }
 .accent-select-current { display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; }
 .accent-select-current .accent-dot { width: 13px; height: 13px; flex-shrink: 0; }
 .accent-select-arrow { color: var(--muted); font-size: 10px; flex-shrink: 0; }
 .accent-select-menu {
-  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 70;
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 70;
+  min-width: 136px; width: max-content; max-width: 100%;
   background: var(--card); border: 1px solid var(--border); border-radius: 8px;
   box-shadow: var(--shadow); padding: 4px;
   display: none;
 }
+/* 侧栏（靠近视口底部）改为向上弹出 */
+.accent-select.up .accent-select-menu { top: auto; bottom: calc(100% + 6px); }
 .accent-select-menu.open { display: block; animation: accentPopIn 0.12s ease; }
+@keyframes accentPopIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .accent-select-option {
   display: flex; align-items: center; gap: 8px; width: 100%;
   padding: 8px 10px; border: none; border-radius: 6px;
@@ -435,6 +410,8 @@ a:hover { text-decoration: underline; }
 .accent-select-option.active { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
 .accent-select-option .accent-dot { width: 14px; height: 14px; flex-shrink: 0; }
 .accent-select-check { margin-left: auto; color: var(--accent); font-weight: 700; line-height: 1; }
+.accent-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); flex-shrink: 0; }
+.accent-name { line-height: 1; }
 
 /* 语言切换器 */
 .lang-switch {
@@ -460,6 +437,9 @@ a:hover { text-decoration: underline; }
 /* 移动端语言切换器缩小 */
 @media (max-width: 992px) {
   .lang-switch { font-size: 12px; padding: 3px 4px; padding-right: 18px; }
+  /* 顶栏空间有限：主题色下拉收起名称，仅保留色点 + 箭头 */
+  .topbar-actions .accent-select-current .accent-name { display: none; }
+  .topbar-actions .accent-select-trigger { gap: 4px; padding: 3px 6px; }
 }
 
 /* 搜索图标：纯圆环 + 内部圆点（去掉柄） */
@@ -2358,6 +2338,7 @@ kbd {
   /* 移动端隐藏桌面元素 */
   .main-nav { display: none; }
   .topbar-actions .lang-switch,
+  .topbar-actions .accent-select,
   .topbar-actions .icon-btn:not(.search-toggle) { display: none; }
   /* 汉堡按钮显示 */
   .hamburger-btn { display: flex; }
