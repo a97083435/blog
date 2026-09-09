@@ -407,9 +407,8 @@ a:hover { text-decoration: underline; }
 }
 .lang-option:hover { background: var(--bg-soft); }
 .lang-option.active { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
-.lang-flag { font-size: 15px; line-height: 1; }
+.lang-flag { font-size: 15px; line-height: 1; flex-shrink: 0; }
 .lang-name { line-height: 1.2; }
-.lang-check { margin-left: auto; color: var(--accent); font-weight: 700; line-height: 1; }
 
 /* 手机侧栏：主题色为与语言完全一致的原生下拉 */
 .sidebar-picks { display: flex; gap: 8px; align-items: center; }

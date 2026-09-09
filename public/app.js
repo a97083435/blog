@@ -184,8 +184,7 @@ function langOptionsHTML() {
   return langs.map(function (l) {
     var active = l.code === cur;
     return '<button type="button" class="lang-option' + (active ? ' active' : '') + '" data-lang="' + l.code + '" role="option" aria-selected="' + active + '">'
-      + '<span class="lang-flag">' + l.flag + '</span><span class="lang-name">' + esc(l.name) + '</span>'
-      + '<span class="lang-check"' + (active ? '' : ' hidden') + '>✓</span></button>';
+      + '<span class="lang-flag">' + l.flag + '</span><span class="lang-name">' + esc(l.name) + '</span></button>';
   }).join('');
 }
 function renderLangPop() {
