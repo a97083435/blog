@@ -412,9 +412,14 @@ a:hover { text-decoration: underline; }
 .lang-check { margin-left: auto; color: var(--accent); font-weight: 700; line-height: 1; }
 
 /* 手机侧栏：主题色为与语言完全一致的原生下拉 */
-.sidebar-accent { margin: 14px 0 0; display: grid; gap: 6px; }
-.sidebar-accent-title { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; margin: 0 2px; }
-.sidebar-accent .lang-switch { width: 100%; }
+.sidebar-picks { display: flex; gap: 8px; align-items: center; }
+.sidebar-picks > * { width: calc(50% - 4px); flex: none; min-width: 0; }
+.accent-native-wrap { position: relative; display: flex; align-items: center; min-width: 0; }
+.accent-native-wrap .accent-dot {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  width: 12px; height: 12px; pointer-events: none; z-index: 1;
+}
+.accent-native-wrap .lang-switch { width: 100%; padding-left: 26px; }
 
 /* 语言切换器 */
 .lang-switch {

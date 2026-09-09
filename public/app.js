@@ -158,6 +158,8 @@ function renderAccentNativeSelect() {
   var sel = document.getElementById('accentNativeSide');
   if (!sel) return;
   var cur = getAccent();
+  var dot = document.getElementById('accentNativeDot');
+  if (dot) dot.style.background = accentSwatchColor(cur);
   var opts = ACCENT_PALETTES.map(function (p) {
     return '<option value="' + p.id + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(accentLabelOf(p.id)) + '</option>';
   }).join('');
@@ -1264,10 +1266,12 @@ function app() { return document.querySelector('#app'); }
     + '<button class="sidebar-close" id="sidebarClose" aria-label="' + t('search.close') + '">✕</button></div>'
     + '<nav class="sidebar-nav">' + sidebarLinks + '</nav>'
     + '<div class="sidebar-footer">'
+    + '<div class="sidebar-picks">'
     + '<select id="langSwitchSide" class="lang-switch"></select>'
-    + '<div class="sidebar-accent">'
-    + '<label class="sidebar-accent-title" for="accentNativeSide">' + accentTitle() + '</label>'
+    + '<div class="accent-native-wrap">'
+    + '<span class="accent-dot" id="accentNativeDot" aria-hidden="true"></span>'
     + '<select id="accentNativeSide" class="lang-switch accent-native" aria-label="' + accentTitle() + '"></select>'
+    + '</div>'
     + '</div>'
     + '</div>'
     + '</aside>';
