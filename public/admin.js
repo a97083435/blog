@@ -958,6 +958,7 @@
 
   function bindEditor(content, route) {
     var area = content.querySelector('#abBody');
+    area.addEventListener('input', function () { autosizeArea(area); });
     area.addEventListener('input', debounce(function () { updatePreview(content); }, 200));
     content.querySelector('#abToolbar').querySelectorAll('[data-md]').forEach(function (b) {
       b.addEventListener('click', function () { insertMd(area, b.getAttribute('data-md')); updatePreview(content); area.focus(); });
@@ -980,9 +981,16 @@
   function updatePreview(content) {
     var area = content.querySelector('#abBody');
     var pane = content.querySelector('#abPreviewPane');
-    var md = area.value || '';
+    autosizeArea(area);
+    var md = area ? (area.value || '') : '';
     if (window.renderMarkdown) pane.innerHTML = window.renderMarkdown(md);
     else pane.textContent = md;
+  }
+  /* 编辑器输入框自动增高：无内部滚动条，高度完全跟随内容（与右侧预览一致展开） */
+  function autosizeArea(area) {
+    if (!area) return;
+    area.style.height = 'auto';
+    area.style.height = Math.max(area.scrollHeight, 420) + 'px';
   }
   function insertMd(area, type) {
     var s = area.selectionStart, e = area.selectionEnd, v = area.value;
