@@ -83,6 +83,18 @@ var ACCENT_PALETTES = [
   { id: 'dusk',   zh: '凝夜紫', en: 'Dusk',    light: '#8b2671', dark: '#ad6598' }
 ];
 function accentKey() { return 'qingyu.accent'; }
+/* 面板标题内置多语言：不依赖 locales JSON（避免旧 JSON 缓存导致显示成 key 原文） */
+var ACCENT_TITLES = {
+  'zh-CN': '主题色',
+  'en': 'Theme color',
+  'ja': 'テーマカラー',
+  'ko': '테마 색상',
+  'hi': 'थीम रंग'
+};
+function accentTitle() {
+  var loc = (window.__i18n && window.__i18n.getLocale) ? window.__i18n.getLocale() : 'zh-CN';
+  return ACCENT_TITLES[loc] || ACCENT_TITLES['zh-CN'];
+}
 function getAccent() {
   try {
     var v = localStorage.getItem(accentKey());
@@ -1158,10 +1170,11 @@ function app() { return document.querySelector('#app'); }
   var langSwitch = '<select id="langSwitch" class="lang-switch" onchange="window.__i18n.loadLocale(this.value).then(function(){ route(); })"></select>';
   var themeBtn = '<button class="icon-btn" id="themeToggle" aria-label="' + t('theme.toggle') + '" title="' + t('theme.toggle') + '">' + themeIcon() + '</button>';
   var searchBtn = '<button class="icon-btn search-toggle" id="searchToggle" aria-label="' + t('search.toggle') + '" title="' + t('search.toggle') + '">' + searchIconSvg() + '</button>';
-  var accentSwitch = '<div class="accent-wrap" id="accentWrap">'
-    + '<button class="icon-btn" id="accentToggle" aria-label="' + t('theme.accent') + '" title="' + t('theme.accent') + '">' + svgIcon('palette', 18) + '</button>'
-    + '<div class="accent-pop" id="accentPop" role="menu" aria-label="' + t('theme.accent') + '">'
-    + '<div class="accent-pop-title">' + t('theme.accent') + '</div>'
+  var accentSwitch = '<div class="accent-wrap" id="accentWrap" role="group" aria-label="' + accentTitle() + '">'
+    + '<button class="icon-btn" id="accentToggle" aria-label="' + accentTitle() + '" title="' + accentTitle() + '">' + svgIcon('palette', 18) + '</button>'
+    + '<span class="accent-chip" aria-hidden="true"></span>'
+    + '<div class="accent-pop" id="accentPop" role="menu" aria-label="' + accentTitle() + '">'
+    + '<div class="accent-pop-title">' + accentTitle() + '</div>'
     + '<div class="accent-pop-swatches"></div>'
     + '</div></div>';
   var hamburger = '<button class="hamburger-btn" id="hamburgerBtn" aria-label="' + t('nav.toggle') + '"><span></span><span></span><span></span></button>';
@@ -1184,8 +1197,9 @@ function app() { return document.querySelector('#app'); }
     + '<button class="sidebar-close" id="sidebarClose" aria-label="' + t('search.close') + '">✕</button></div>'
     + '<nav class="sidebar-nav">' + sidebarLinks + '</nav>'
     + '<div class="sidebar-footer">'
-    + '<div class="sidebar-accent"><div class="sidebar-accent-title">' + t('theme.accent') + '</div><div class="accent-pop-swatches"></div></div>'
-    + '<select id="langSwitchSide" class="lang-switch"></select></div>'
+    + '<select id="langSwitchSide" class="lang-switch"></select>'
+    + '<div class="sidebar-accent"><div class="sidebar-accent-title">' + accentTitle() + '</div><div class="accent-pop-swatches compact"></div></div>'
+    + '</div>'
     + '</aside>';
 
   var searchForm = '<form class="topbar-search" id="topbarSearch" role="search" onsubmit="return false">'
@@ -3102,17 +3116,17 @@ function bindGlobal() {
 }
 
 /* 主题色取色面板：顶栏弹层开关 + 全局委托（桌面弹层 & 移动端侧栏的色块点击）。
- * 事件委托注册一次（_accentBound 防重），路由重建 DOM 后仅刷新色块内容。 */
+ * 全部走 document 级事件委托：与顶栏/侧栏的渲染时序解耦——
+ * 若首个进入的页面不含顶栏（后台等），之后回到前台时按钮点击依然有效。 */
 var _accentBound = false;
 function bindAccentPicker() {
   if (_accentBound) { renderAccentSwatches(); return; }
   _accentBound = true;
-  var at = document.querySelector('#accentToggle');
-  if (at) at.addEventListener('click', function (e) { e.stopPropagation(); toggleAccentPop(); });
   document.addEventListener('click', function (e) {
     var t = (e && e.target) || null;
-    if (!t) return;
-    var sw = (t.closest ? t.closest('[data-accent]') : null);
+    if (!t || !t.closest) return;
+    if (t.closest('#accentToggle')) { toggleAccentPop(); return; }
+    var sw = t.closest('[data-accent]');
     if (sw) { setAccent(sw.getAttribute('data-accent')); closeAccentPop(); return; }
     var wrap = document.getElementById('accentWrap');
     if (wrap && wrap.contains && !wrap.contains(t)) closeAccentPop();

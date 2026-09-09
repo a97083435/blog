@@ -375,6 +375,13 @@ a:hover { text-decoration: underline; }
 
 /* 主题色切换面板（桌面顶栏） */
 .accent-wrap { position: relative; }
+/* 顶栏按钮右下角的当前主题色角标：纯 CSS 跟随 var(--accent)，无需 JS */
+.accent-chip {
+  position: absolute; right: -1px; bottom: -1px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--bg);
+  pointer-events: none;
+}
 .accent-pop {
   position: absolute; top: calc(100% + 10px); right: 0; z-index: 60;
   min-width: 172px;
@@ -397,9 +404,21 @@ a:hover { text-decoration: underline; }
 .accent-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); flex-shrink: 0; }
 .accent-name { line-height: 1; }
 
-/* 移动端侧栏主题色 */
-.sidebar-accent { margin: 0 20px 14px; }
+/* 移动端侧栏主题色：紧凑单行圆点（附在语言切换下方） */
+.sidebar-accent { margin: 14px 0 0; }
 .sidebar-accent-title { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; margin: 0 2px 8px; }
+.accent-pop-swatches.compact { display: flex; justify-content: space-between; gap: 8px; }
+.accent-pop-swatches.compact .accent-swatch {
+  flex: 1; justify-content: center; padding: 4px 0;
+  border: none; background: none; min-width: 0;
+}
+.accent-pop-swatches.compact .accent-name { display: none; }
+.accent-pop-swatches.compact .accent-dot {
+  width: 22px; height: 22px; border: 2px solid var(--border);
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.accent-pop-swatches.compact .accent-swatch:hover .accent-dot { border-color: var(--accent); transform: scale(1.08); }
+.accent-pop-swatches.compact .accent-swatch.active .accent-dot { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
 /* 语言切换器 */
 .lang-switch {

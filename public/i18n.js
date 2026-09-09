@@ -18,6 +18,8 @@
   ];
 
   var DEFAULT_LANG = 'zh-CN';
+  /* 语言 JSON 缓存版本：修改 locales/*.json 后递增，强制浏览器拉新文件 */
+  var I18N_VER = '2';
   var _locale = DEFAULT_LANG;
   var _translations = {};
 
@@ -449,9 +451,9 @@
     // 先加载内嵌兜底（中文即时可用，其他语言空对象）
     _translations = (lang === DEFAULT_LANG) ? JSON.parse(JSON.stringify(_BUILTIN_ZH)) : {};
 
-    // 尝试网络加载最新 JSON 并覆盖
+    // 尝试网络加载最新 JSON 并覆盖（带版本参数，避免旧 JSON 被浏览器/CDN 缓存导致新增 key 缺失）
     var base = _baseDir();
-    var url = base + '/locales/' + lang + '.json';
+    var url = base + '/locales/' + lang + '.json?v=' + I18N_VER;
     var loaded = false;
     try {
       var resp = await fetch(url);
