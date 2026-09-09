@@ -64,7 +64,9 @@ function svgIcon(name, size) {
     check: '<svg ' + s + ' ' + c + '><path d="M4 12.5l5 5L20 6.5"/></svg>',
     send: '<svg ' + s + ' ' + c + '><path d="M3 11l18-8-8 18-2-8-8-2z"/><path d="M21 3 11 13"/></svg>',
     palette: '<svg ' + s + ' ' + c + '><path d="M12 3a9 9 0 1 0 5.4 16.2A2.4 2.4 0 0 0 15.6 17h-.9a2.6 2.6 0 0 1-2.6-2.6c0-1.4 1.1-2.6 2.6-2.6h1.4A3.9 3.9 0 0 0 20.2 8 9 9 0 0 0 12 3z"/><circle cx="7.4" cy="11.3" r="1"/><circle cx="10.6" cy="7.2" r="1"/><circle cx="15.4" cy="8.6" r="1"/></svg>',
-    globe: '<svg ' + s + ' ' + c + '><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15.5 15.5 0 0 1 0 18M12 3a15.5 15.5 0 0 0 0 18"/></svg>'
+    globe: '<svg ' + s + ' ' + c + '><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15.5 15.5 0 0 1 0 18M12 3a15.5 15.5 0 0 0 0 18"/></svg>',
+    spark: '<svg ' + s + ' ' + c + '><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>',
+    copy: '<svg ' + s + ' ' + c + '><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>'
   };
   return I[name] || '';
 }
@@ -1644,6 +1646,7 @@ async function renderPost(id) {
   var tags = normalizeTags(post).map(function (t) { return '<a href="' + esc(href('/', { tag: t })) + '" data-tag-link>' + esc(t) + '</a>'; }).join('');
   var minutes = Math.max(1, Math.ceil((stripMd(content || '').length / 400)));
   html += '<div class="post-header"><h1>' + esc(post.title || '') + '</h1><div class="meta"><span class="meta-date">' + esc(post.date || '') + '</span><span class="meta-dot">·</span><span>' + minutes + ' ' + t('post.minRead') + '</span><span class="meta-dot">·</span><span class="meta-views">' + svgIcon('eye', 14) + ' <span id="viewCount">0</span> ' + t('post.views') + '</span>' + (post.pinned ? '<span class="pin">' + svgIcon('pin', 13) + ' ' + t('post.pin') + '</span>' : '') + '</div></div>';
+  html += aiPostSlot(post);
   html += toc;
   html += '<article class="article">' + bodyHtml + '</article>';
   // 点赞：正文尾部，水平居中
@@ -2055,6 +2058,7 @@ function renderPostList() {
     + '<div class="admin-head-titles"><h2>' + svgIcon('doc', 20) + ' ' + t('admin.postList.title') + '</h2><p class="admin-head-sub">' + t('admin.postList.desc') + '</p></div>'
     + '<a class="btn btn-primary btn-new-post" href="' + esc(href('/admin/write')) + '">' + svgIcon('pen', 14) + ' ' + t('editor.newPost') + '</a>'
     + '</div>';
+  html += aiCommentsSlotHTML();
   html += '<div class="admin-stats">'
     + '<div class="admin-stat"><span class="admin-stat-num">' + posts.length + '</span><span class="admin-stat-label">' + t('admin.postList.allStatus') + '</span></div>'
     + '<div class="admin-stat"><span class="admin-stat-num">' + pinnedCount + '</span><span class="admin-stat-label">' + t('admin.postList.pin') + '</span></div>'
@@ -2187,6 +2191,7 @@ function renderEditorBody() {
     + '<div class="field field-full"><label>' + t('editor.coverPlaceholder') + '</label><input type="text" id="coverInput" placeholder="' + t('editor.coverHint') + '"></div>'
     + '<div class="field check-label"><label><input type="checkbox" id="pinnedInput"> ' + svgIcon('pin', 13) + ' ' + t('editor.pin') + '</label></div>'
     + '</div></div>';
+  body += aiAssistSlotHTML();
   body += '<div class="editor-wrap">'
     + '<section class="editor-pane"><div class="pane-head">' + svgIcon('pen', 13) + ' ' + t('editor.editing') + '<span class="pane-note">Markdown</span></div><div id="toolbar" class="toolbar">' + toolbarHtml() + '</div><textarea id="mdInput" class="md-input" rows="18" placeholder="' + t('editor.writeHint') + '"></textarea></section>'
     + '<section class="editor-pane preview-pane"><div class="pane-head">' + svgIcon('eye', 13) + ' ' + t('editor.preview') + '<span class="pane-note">' + t('editor.realtimeRender') + '</span></div><div class="write-preview article preview-body" id="previewPane"></div></section>'
@@ -3181,6 +3186,266 @@ function _setJsonLd(obj) {
 }
 
 
+/* ============================================================
+ * AI 功能（渐进增强，零侵入降级）
+ * · 后端 /api/ai/* 仅在 Cloudflare 绑定 Workers AI 时可用；
+ *   前端探测失败 → 相关 slot 保持为空，不渲染任何 AI 元素。
+ * · 任何 AI 请求失败只影响该元素自身，绝不阻塞博客核心功能。
+ * ============================================================ */
+var _aiOk = null;
+var _aiProbing = false;
+function aiProbe() {
+  if (_aiOk !== null) return Promise.resolve(_aiOk === true);
+  if (_aiProbing) {
+    return new Promise(function (resolve) {
+      var iv = setInterval(function () {
+        if (_aiOk !== null) { clearInterval(iv); resolve(_aiOk === true); }
+      }, 60);
+    });
+  }
+  _aiProbing = true;
+  // sessionStorage 短记忆（10 分钟）：避免每次路由都探测
+  var saved = null;
+  try { saved = sessionStorage.getItem('qingyu.ai.ok'); } catch (e) {}
+  if (saved) {
+    var parts = String(saved).split('|');
+    if (parts[1] && (Date.now() - Number(parts[1])) < 600000) {
+      _aiOk = parts[0] === '1';
+      return Promise.resolve(_aiOk === true);
+    }
+  }
+  return apiFetch('api/ai/ping')
+    .then(function () { _aiOk = true; })
+    .catch(function () { _aiOk = false; })
+    .then(function () {
+      try { sessionStorage.setItem('qingyu.ai.ok', (_aiOk ? '1' : '0') + '|' + Date.now()); } catch (e) {}
+      return _aiOk === true;
+    });
+}
+function aiLang() {
+  var loc = (window.__i18n && window.__i18n.getLocale) ? window.__i18n.getLocale() : 'zh-CN';
+  return /^(zh-CN|en|ja|ko|hi)$/.test(loc) ? loc : 'zh-CN';
+}
+function aiErrText(e) {
+  var m = (e && e.message) || '';
+  return /^HTTP \d{3}$/.test(m) ? t('ai.fail') : (m || t('ai.fail'));
+}
+/* —— 渲染时的占位 slot（探测失败保持为空） —— */
+function aiPostSlot(post) {
+  if (!post || post.enc || Number(post.protected || 0) === 1) return '';
+  return '<div class="ai-post-slot" id="aiSummarySlot" data-slug="' + esc(post.id) + '"></div>';
+}
+function aiAssistSlotHTML() {
+  return '<div class="ai-assist-slot" id="aiAssistSlot"></div>';
+}
+function aiCommentsSlotHTML() {
+  return '<div class="ai-comments-slot" id="aiCommentsSlot"></div>';
+}
+/* —— 探测完成后填充 slot —— */
+function aiFillSlots() {
+  aiProbe().then(function (ok) {
+    var s = document.getElementById('aiSummarySlot');
+    if (s) s.innerHTML = ok ? aiSummaryBtnHTML(s.getAttribute('data-slug') || '') : '';
+    var as = document.getElementById('aiAssistSlot');
+    if (as) as.innerHTML = ok ? aiAssistBarHTML() : '';
+    var cs = document.getElementById('aiCommentsSlot');
+    if (cs) cs.innerHTML = ok ? aiCommentsBarHTML() : '';
+  });
+}
+function aiSummaryBtnHTML(slug) {
+  return '<button type="button" class="btn btn-sm btn-ghost ai-btn" data-ai-action="summary" data-slug="' + esc(slug) + '">' + svgIcon('spark', 13) + ' ' + esc(t('ai.title')) + '</button>';
+}
+function aiSummaryCardHTML(summary, slug, isAdmin) {
+  return '<div class="ai-card">'
+    + '<div class="ai-card-head">' + svgIcon('spark', 13) + ' ' + esc(t('ai.title')) + '<span class="ai-badge">' + esc(t('ai.generated')) + '</span></div>'
+    + '<div class="ai-card-body">' + esc(summary) + '</div>'
+    + (isAdmin ? '<div class="ai-card-foot"><button type="button" class="btn btn-sm btn-ghost" data-ai-action="summary" data-slug="' + esc(slug) + '" data-force="1">' + svgIcon('pen', 12) + ' ' + esc(t('ai.regenerate')) + '</button></div>' : '')
+    + '</div>';
+}
+function aiDoSummary(btn) {
+  var slug = btn.getAttribute('data-slug') || '';
+  var force = !!btn.getAttribute('data-force');
+  var slot = document.getElementById('aiSummarySlot');
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = svgIcon('spinner', 13) + ' ' + esc(t('site.loading'));
+  apiFetch('api/ai/summary', { method: 'POST', body: JSON.stringify({ slug: slug, lang: aiLang(), force: force }) })
+    .then(function (d) {
+      if (slot) slot.innerHTML = aiSummaryCardHTML(d.summary || '', slug, adminOk());
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      if (slot) {
+        var msg = document.createElement('div');
+        msg.className = 'ai-fail';
+        msg.textContent = aiErrText(e);
+        slot.appendChild(msg);
+        setTimeout(function () { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 6000);
+      }
+    });
+}
+/* —— 后台写作助手 —— */
+function aiAssistBarHTML() {
+  var opts = ['zh-CN', 'en', 'ja', 'ko', 'hi'].map(function (c) {
+    return '<option value="' + c + '"' + (c === aiLang() ? ' selected' : '') + '>' + c + '</option>';
+  }).join('');
+  return '<div class="ai-assist">'
+    + '<span class="ai-assist-title">' + svgIcon('spark', 13) + ' ' + esc(t('ai.assist.title')) + '</span>'
+    + '<select class="ai-assist-lang" id="aiAssistLang" aria-label="' + esc(t('ai.assist.targetLang')) + '">' + opts + '</select>'
+    + '<button type="button" class="btn btn-sm" data-ai-action="title">' + esc(t('ai.assist.titles')) + '</button>'
+    + '<button type="button" class="btn btn-sm" data-ai-action="polish">' + esc(t('ai.assist.polish')) + '</button>'
+    + '<button type="button" class="btn btn-sm" data-ai-action="tags">' + esc(t('ai.assist.tags')) + '</button>'
+    + '<button type="button" class="btn btn-sm" data-ai-action="translate">' + esc(t('ai.assist.translate')) + '</button>'
+    + '<span class="ai-assist-msg" id="aiAssistMsg"></span>'
+    + '<div class="ai-assist-out" id="aiAssistOut"></div>'
+    + '</div>';
+}
+function aiAssistMsg(text) {
+  var el = document.getElementById('aiAssistMsg');
+  if (el) el.textContent = text;
+}
+function aiDoAssist(action, btn) {
+  var md = document.getElementById('mdInput');
+  var text = md ? md.value : '';
+  if (!text || !text.trim()) { aiAssistMsg(t('ai.assist.empty')); return; }
+  var sel = document.getElementById('aiAssistLang');
+  var lang = sel ? sel.value : aiLang();
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = svgIcon('spinner', 13);
+  apiFetch('api/ai/assist', { method: 'POST', body: JSON.stringify({ action: action, text: text, lang: lang }) })
+    .then(function (d) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      aiAssistMsg('');
+      var out = document.getElementById('aiAssistOut');
+      if (out) out.innerHTML = aiAssistResultHTML(action, (d && d.result) || '');
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      aiAssistMsg(aiErrText(e));
+    });
+}
+function aiAssistResultHTML(action, result) {
+  var apply;
+  if (action === 'title') apply = '<button type="button" class="btn btn-sm btn-primary" data-ai-use="title">' + esc(t('ai.assist.applyTitle')) + '</button>';
+  else if (action === 'tags') apply = '<button type="button" class="btn btn-sm btn-primary" data-ai-use="tags">' + esc(t('ai.assist.applyTags')) + '</button>';
+  else apply = '<button type="button" class="btn btn-sm btn-primary" data-ai-use="paste">' + esc(t('ai.assist.pasteEnd')) + '</button>';
+  return '<div class="ai-result"><pre>' + esc(result) + '</pre><div class="ai-result-actions">'
+    + apply
+    + '<button type="button" class="btn btn-sm btn-ghost" data-ai-use="copy">' + svgIcon('copy', 12) + ' ' + esc(t('ai.assist.copy')) + '</button>'
+    + '<button type="button" class="btn btn-sm btn-ghost" data-ai-use="hide">' + esc(t('ai.assist.hide')) + '</button>'
+    + '</div></div>';
+}
+function aiApplyUse(use) {
+  var out = document.getElementById('aiAssistOut');
+  if (!out) return;
+  var pre = out.querySelector('pre');
+  var text = pre ? pre.textContent : '';
+  if (use === 'hide') { out.innerHTML = ''; return; }
+  if (use === 'copy') {
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function () {});
+    return;
+  }
+  if (!text) return;
+  if (use === 'title') {
+    var first = String(text).split('\n').map(function (s) { return s.trim(); }).filter(Boolean)[0] || '';
+    var ti = document.getElementById('titleInput');
+    if (ti && first) { ti.value = first; out.innerHTML = ''; }
+  } else if (use === 'tags') {
+    var tg = document.getElementById('tagInput');
+    if (tg) {
+      tg.value = String(text).split(/[\n，,、]/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8).join(', ');
+      out.innerHTML = '';
+    }
+  } else if (use === 'paste') {
+    var md = document.getElementById('mdInput');
+    if (md) {
+      md.value = md.value ? md.value.replace(/\s*$/, '') + '\n\n' + text : text;
+      md.dispatchEvent(new Event('input'));
+      out.innerHTML = '';
+    }
+  }
+}
+/* —— 后台评论 AI —— */
+function aiCommentsBarHTML() {
+  return '<button type="button" class="btn btn-sm" data-ai-action="csummary">' + svgIcon('spark', 14) + ' ' + esc(t('ai.comments.summarize')) + '</button>';
+}
+function aiDoCommentSummary(btn) {
+  var slot = document.getElementById('aiCommentsSlot');
+  var orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = svgIcon('spinner', 13) + ' ' + esc(t('site.loading'));
+  apiFetch('api/ai/comments', { method: 'POST', body: JSON.stringify({ action: 'summarize' }) })
+    .then(function (d) {
+      if (!slot) return;
+      if (d && d.empty) { slot.innerHTML = '<div class="ai-fail info">' + esc(t('ai.comments.empty')) + '</div>'; return; }
+      slot.innerHTML = aiCommentsPanelHTML((d && d.summary) || '', !!(d && d.cached));
+    })
+    .catch(function (e) {
+      btn.disabled = false;
+      btn.innerHTML = orig;
+      if (slot) {
+        var msg = document.createElement('div');
+        msg.className = 'ai-fail';
+        msg.textContent = aiErrText(e);
+        slot.appendChild(msg);
+        setTimeout(function () { if (msg.parentNode) msg.parentNode.removeChild(msg); }, 6000);
+      }
+    });
+}
+function aiCommentsPanelHTML(summary, cached) {
+  return '<div class="ai-card">'
+    + '<div class="ai-card-head">' + svgIcon('spark', 13) + ' ' + esc(t('ai.comments.summary')) + '<span class="ai-badge">' + esc(cached ? t('ai.cached') : t('ai.generated')) + '</span></div>'
+    + '<div class="ai-card-body">' + esc(summary) + '</div>'
+    + '<div class="ai-screen">'
+    + '<textarea id="aiScreenText" rows="2" maxlength="1000" placeholder="' + esc(t('ai.comments.screenHint')) + '"></textarea>'
+    + '<div class="ai-screen-row"><button type="button" class="btn btn-sm" data-ai-action="screen">' + esc(t('ai.comments.screen')) + '</button><span class="ai-screen-out" id="aiScreenOut"></span></div>'
+    + '</div></div>';
+}
+function aiDoScreen() {
+  var ta = document.getElementById('aiScreenText');
+  var text = ta ? ta.value : '';
+  if (!text.trim()) return;
+  var out = document.getElementById('aiScreenOut');
+  if (out) out.innerHTML = '<span class="ai-pending">' + esc(t('site.loading')) + '…</span>';
+  apiFetch('api/ai/comments', { method: 'POST', body: JSON.stringify({ action: 'screen', text: text }) })
+    .then(function (d) {
+      if (out) {
+        out.innerHTML = d && d.spam
+          ? '<span class="ai-screen-spam">' + esc(t('ai.comments.spam')) + (d.reason ? '：' + esc(d.reason) : '') + '</span>'
+          : '<span class="ai-screen-ok">' + esc(t('ai.comments.notSpam')) + (d && d.reason ? '：' + esc(d.reason) : '') + '</span>';
+      }
+    })
+    .catch(function (e) { if (out) out.textContent = aiErrText(e); });
+}
+var _aiBound = false;
+function bindAiEvents() {
+  if (_aiBound) return;
+  _aiBound = true;
+  document.addEventListener('click', function (e) {
+    var t = (e && e.target) || null;
+    if (!t || !t.closest) return;
+    var act = t.closest('[data-ai-action]');
+    if (act) {
+      var action = act.getAttribute('data-ai-action');
+      if (action === 'summary') aiDoSummary(act);
+      else if (action === 'title' || action === 'polish' || action === 'tags' || action === 'translate') aiDoAssist(action, act);
+      else if (action === 'csummary') aiDoCommentSummary(act);
+      else if (action === 'screen') aiDoScreen();
+      return;
+    }
+    var use = t.closest('[data-ai-use]');
+    if (use) { aiApplyUse(use.getAttribute('data-ai-use')); }
+  });
+}
+function aiInit() {
+  bindAiEvents();
+  aiFillSlots();
+}
+
 function bindGlobal() {
   // 主题切换：顶栏
   var tb = document.querySelector('#themeToggle');
@@ -3191,6 +3456,7 @@ function bindGlobal() {
   bindBackTop();
   populateLangSwitch();
   bindMobileSidebar();
+  aiInit();
 }
 
 /* 主题色「颜色下拉」：桌面顶栏 + 手机侧栏统一形态。

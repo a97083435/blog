@@ -19,7 +19,7 @@
 
   var DEFAULT_LANG = 'zh-CN';
   /* 语言 JSON 缓存版本：修改 locales/*.json 后递增，强制浏览器拉新文件 */
-  var I18N_VER = '2';
+  var I18N_VER = '3';
   var _locale = DEFAULT_LANG;
   var _translations = {};
 
@@ -37,6 +37,30 @@
     "nav.toggle": "展开导航",
     "theme.toggle": "切换深色/浅色模式",
     "theme.accent": "主题色",
+    "ai.title": "AI 摘要",
+    "ai.generated": "AI 生成 · 仅供参考",
+    "ai.regenerate": "重新生成",
+    "ai.fail": "AI 暂不可用，请稍后再试",
+    "ai.cached": "缓存",
+    "ai.assist.title": "AI 写作助手",
+    "ai.assist.targetLang": "目标语言",
+    "ai.assist.titles": "标题建议",
+    "ai.assist.polish": "润色",
+    "ai.assist.tags": "标签",
+    "ai.assist.translate": "翻译",
+    "ai.assist.empty": "请先在编辑区输入内容",
+    "ai.assist.applyTitle": "应用到标题",
+    "ai.assist.applyTags": "填入标签",
+    "ai.assist.pasteEnd": "插入到正文末尾",
+    "ai.assist.copy": "复制",
+    "ai.assist.hide": "收起",
+    "ai.comments.summarize": "AI 评论汇总",
+    "ai.comments.summary": "评论汇总",
+    "ai.comments.empty": "暂无评论可汇总",
+    "ai.comments.screenHint": "粘贴一条评论，检测是否垃圾",
+    "ai.comments.screen": "垃圾检测",
+    "ai.comments.spam": "疑似垃圾",
+    "ai.comments.notSpam": "非垃圾",
     "search.toggle": "搜索文章",
     "search.placeholder": "搜索文章…",
     "search.close": "关闭搜索",
