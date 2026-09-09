@@ -400,4 +400,35 @@
   .ab-grid.cols-2, .ab-grid.cols-3, .ab-grid.cols-4, .ab-grid.cols-5 { grid-template-columns: 1fr; }
 }
 
+/* ========== AI（写作助手 & 评论汇总；slot 为空时零占用） ========== */
+.ab-ai-slot, .ab-ai-comments { margin: 0 0 14px; }
+.ab-ai {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  border: 1px solid var(--ab-border); border-radius: 10px;
+  background: rgba(127, 127, 127, .06); padding: 10px 12px;
+}
+.ab-ai-title {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--ab-primary); margin-right: 2px;
+}
+.ab-ai-lang {
+  font-size: 12.5px; padding: 4px 6px;
+  border: 1px solid var(--ab-border); border-radius: 6px;
+  background: var(--ab-card); color: var(--ab-text);
+}
+.ab-ai-msg { font-size: 12.5px; color: var(--ab-muted); width: 100%; }
+.ab-ai-out { width: 100%; }
+.ab-ai-result {
+  border: 1px solid var(--ab-border); border-radius: 8px;
+  background: var(--ab-card); padding: 8px 10px; margin-top: 2px;
+}
+.ab-ai-result pre {
+  margin: 0; white-space: pre-wrap; word-break: break-word;
+  font-size: 13px; line-height: 1.6; max-height: 220px; overflow: auto;
+}
+.ab-ai-card {
+  border: 1px solid var(--ab-border); border-left: 3px solid var(--ab-primary);
+  border-radius: 10px; background: var(--ab-card); padding: 12px 14px;
+}
+
 /* ========== 可视化导航编辑器 ========== */

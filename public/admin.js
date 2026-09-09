@@ -752,6 +752,167 @@
   function enc(s) { return encodeURIComponent(s); }
   function dec(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
 
+  /* ====================== AI（写作助手 & 评论汇总） ======================
+   * 复用 window.aiProbe 探测（app.js）；AI 不可用 → slot 留空，后台其余功能不受影响。
+   * 与 app.js 的 AI 回调纯后台自包含：按钮不走 data-ai-action（避免被 app.js 全局委托拦截），
+   * 请求走 admin 自己的 api()，结果应用到本模块编辑器（#abTitle/#abTags/#abBody）。 */
+  function abAiProbe() {
+    if (typeof window.aiProbe === 'function') return window.aiProbe();
+    return Promise.resolve(false);
+  }
+  function abAiLang() {
+    var loc = (window.__i18n && window.__i18n.getLocale) ? window.__i18n.getLocale() : 'zh-CN';
+    return /^(zh-CN|en|ja|ko|hi)$/.test(loc) ? loc : 'zh-CN';
+  }
+  function abAiErr(e) {
+    var m = (e && e.message) || '';
+    return /^HTTP \d{3}$/.test(m) ? t('ai.fail') : (m || t('ai.fail'));
+  }
+  function abAiMsg(text) {
+    var el = document.getElementById('abAiMsg');
+    if (el) el.textContent = text;
+  }
+  function abAiBarHTML() {
+    var opts = ['zh-CN', 'en', 'ja', 'ko', 'hi'].map(function (c) {
+      return '<option value="' + c + '"' + (c === abAiLang() ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+    return '<div class="ab-ai">'
+      + '<span class="ab-ai-title">' + icon('spark', 14) + ' ' + esc(t('ai.assist.title')) + '</span>'
+      + '<select class="ab-ai-lang" id="abAiLang">' + opts + '</select>'
+      + '<button type="button" class="ab-btn sm" data-abai="title">' + esc(t('ai.assist.titles')) + '</button>'
+      + '<button type="button" class="ab-btn sm" data-abai="polish">' + esc(t('ai.assist.polish')) + '</button>'
+      + '<button type="button" class="ab-btn sm" data-abai="tags">' + esc(t('ai.assist.tags')) + '</button>'
+      + '<button type="button" class="ab-btn sm" data-abai="translate">' + esc(t('ai.assist.translate')) + '</button>'
+      + '<span class="ab-ai-msg" id="abAiMsg"></span>'
+      + '<div class="ab-ai-out" id="abAiOut"></div>'
+      + '</div>';
+  }
+  function initAbAi(content) {
+    var slot = content.querySelector('#abAiAssist');
+    if (!slot) return;
+    abAiProbe().then(function (ok) {
+      if (!ok) return;   // AI 不可用 → 保持为空
+      slot.innerHTML = abAiBarHTML();
+      slot.querySelectorAll('[data-abai]').forEach(function (b) {
+        b.addEventListener('click', function () { abAiDo(b.getAttribute('data-abai'), b); });
+      });
+    });
+  }
+  function abAiDo(action, btn) {
+    var area = document.getElementById('abBody');
+    var text = area ? area.value : '';
+    if (!text || !text.trim()) { abAiMsg(t('ai.assist.empty')); return; }
+    var sel = document.getElementById('abAiLang');
+    var lang = sel ? sel.value : abAiLang();
+    var orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = icon('spinner', 13);
+    api('api/ai/assist', { method: 'POST', body: JSON.stringify({ action: action, text: text, lang: lang }) })
+      .then(function (d) {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        abAiMsg('');
+        var out = document.getElementById('abAiOut');
+        if (out) out.innerHTML = abAiResultHTML(action, (d && d.result) || '');
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        abAiMsg(abAiErr(e));
+      });
+  }
+  function abAiResultHTML(action, result) {
+    var useLabel = action === 'title' ? t('ai.assist.applyTitle') : action === 'tags' ? t('ai.assist.applyTags') : t('ai.assist.pasteEnd');
+    var useAct = action === 'title' ? 'title' : action === 'tags' ? 'tags' : 'paste';
+    return '<div class="ab-ai-result"><pre>' + esc(result) + '</pre>'
+      + '<div class="ab-row" style="gap:8px;margin-top:8px;flex-wrap:wrap">'
+      + '<button type="button" class="ab-btn sm primary" data-abai-use="' + useAct + '">' + esc(useLabel) + '</button>'
+      + '<button type="button" class="ab-btn sm ghost" data-abai-use="copy">' + icon('copy', 12) + ' ' + esc(t('ai.assist.copy')) + '</button>'
+      + '<button type="button" class="ab-btn sm ghost" data-abai-use="hide">' + esc(t('ai.assist.hide')) + '</button>'
+      + '</div></div>';
+  }
+  function abAiApply(content, use) {
+    var out = content.querySelector('#abAiOut');
+    if (!out) return;
+    var pre = out.querySelector('pre');
+    var text = pre ? pre.textContent : '';
+    if (use === 'hide') { out.innerHTML = ''; return; }
+    if (use === 'copy') {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).catch(function () {});
+      return;
+    }
+    if (!text) return;
+    if (use === 'title') {
+      var first = String(text).split('\n').map(function (s) { return s.trim(); }).filter(Boolean)[0] || '';
+      var ti = content.querySelector('#abTitle');
+      if (ti && first) { ti.value = first; out.innerHTML = ''; }
+    } else if (use === 'tags') {
+      var tg = content.querySelector('#abTags');
+      if (tg) {
+        tg.value = String(text).split(/[\n，,、]/).map(function (s) { return s.trim(); }).filter(Boolean).slice(0, 8).join(', ');
+        out.innerHTML = '';
+      }
+    } else if (use === 'paste') {
+      var area = content.querySelector('#abBody');
+      if (area) {
+        area.value = area.value ? area.value.replace(/\s*$/, '') + '\n\n' + text : text;
+        area.dispatchEvent(new Event('input'));
+        out.innerHTML = '';
+      }
+    }
+  }
+  /* —— 评论页：AI 汇总 + 单条垃圾检测 —— */
+  function initAbAiComments(content) {
+    var slot = content.querySelector('#abAiComments');
+    if (!slot || !cloudOn()) return;
+    abAiProbe().then(function (ok) {
+      if (!ok) return;
+      slot.innerHTML = '<button type="button" class="ab-btn sm" id="abAiCsum">' + icon('spark', 14) + ' ' + esc(t('ai.comments.summarize')) + '</button>';
+      slot.querySelector('#abAiCsum').addEventListener('click', function () {
+        var btn = this;
+        btn.disabled = true;
+        btn.innerHTML = icon('spinner', 13) + ' ' + esc(t('site.loading'));
+        api('api/ai/comments', { method: 'POST', body: JSON.stringify({ action: 'summarize' }) })
+          .then(function (d) {
+            slot.innerHTML = abAiCommentsHTML((d && d.summary) || '', !!(d && d.empty), !!(d && d.cached));
+            bindAiScreen(slot);
+          })
+          .catch(function (e) {
+            btn.disabled = false;
+            btn.innerHTML = icon('spark', 14) + ' ' + esc(t('ai.comments.summarize'));
+            slot.innerHTML = '<span class="ab-muted" style="font-size:13px">' + esc(abAiErr(e)) + '</span>';
+          });
+      });
+    });
+  }
+  function abAiCommentsHTML(summary, empty, cached) {
+    if (empty) return '<div class="ab-ai-card"><p class="ab-muted">' + esc(t('ai.comments.empty')) + '</p></div>';
+    return '<div class="ab-ai-card">'
+      + '<div class="ab-row" style="align-items:center;gap:8px"><b>' + icon('spark', 13) + ' ' + esc(t('ai.comments.summary')) + '</b><span class="ab-chip" style="margin-left:auto">' + esc(cached ? t('ai.cached') : t('ai.generated')) + '</span></div>'
+      + '<p style="margin:8px 0 0;white-space:pre-line;line-height:1.7">' + esc(summary) + '</p>'
+      + '<div class="ab-field" style="margin-top:12px"><label class="ab-label">' + esc(t('ai.comments.screenHint')) + '</label><textarea class="ab-input" id="abAiScreenText" rows="2" maxlength="1000"></textarea></div>'
+      + '<div class="ab-row" style="gap:8px;margin-top:8px"><button type="button" class="ab-btn sm" id="abAiScreen">' + esc(t('ai.comments.screen')) + '</button><span id="abAiScreenOut" style="font-size:13px"></span></div>'
+      + '</div>';
+  }
+  function bindAiScreen(slot) {
+    var btn = slot.querySelector('#abAiScreen');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      var ta = slot.querySelector('#abAiScreenText');
+      var text = ta ? ta.value : '';
+      if (!text.trim()) return;
+      var out = slot.querySelector('#abAiScreenOut');
+      if (out) out.innerHTML = '<span class="ab-muted">' + esc(t('site.loading')) + '…</span>';
+      api('api/ai/comments', { method: 'POST', body: JSON.stringify({ action: 'screen', text: text }) })
+        .then(function (d) {
+          if (out) out.innerHTML = d && d.spam
+            ? '<span style="color:#d9534f;font-weight:600">' + esc(t('ai.comments.spam')) + (d.reason ? '：' + esc(d.reason) : '') + '</span>'
+            : '<span style="color:#4a9d5f">' + esc(t('ai.comments.notSpam')) + (d && d.reason ? '：' + esc(d.reason) : '') + '</span>';
+        })
+        .catch(function (e) { if (out) out.textContent = abAiErr(e); });
+    });
+  }
+
   /* ====================== 编辑器 ====================== */
   function pageEditor(content, route) {
     content.innerHTML =
@@ -767,6 +928,7 @@
           '<label style="display:flex;align-items:center;gap:6px;font-size:14px;cursor:pointer"><input type="checkbox" id="abPinned"> ' + icon('pin', 14) + ' ' + t('admin.editor.pin') + '</label>' +
         '</div>' +
       '</div>' +
+      '<div id="abAiAssist" class="ab-ai-slot"></div>' +
       '<div class="ab-editor-split">' +
         '<div class="ab-editor-pane">' +
           '<div class="ab-editor-toolbar" id="abToolbar">' +
@@ -791,6 +953,7 @@
 
     bindEditor(content, route);
     if (route.id) loadEditor(content, route.id); else updatePreview(content);
+    initAbAi(content);
   }
 
   function bindEditor(content, route) {
@@ -974,9 +1137,10 @@
     content.innerHTML += '<div class="ab-toolbar">' +
       '<div class="ab-search"><input class="ab-input" id="abCmtKw" placeholder="' + t('admin.comments.search') + '"></div>' +
       '<select class="ab-select" id="abCmtFilter" style="max-width:160px"><option value="all">' + t('admin.comments.all') + '</option><option value="pending"' + (filter === 'pending' ? ' selected' : '') + '>' + t('admin.comments.pendingStatus') + '</option><option value="approved">' + t('admin.comments.approved') + '</option></select>' +
-      '</div><div class="ab-table-wrap"><table class="ab-table"><thead><tr><th>' + t('admin.comments.colAuthor') + '</th><th>' + t('admin.comments.colContent') + '</th><th>' + t('admin.comments.colPost') + '</th><th>' + t('admin.comments.colDate') + '</th><th>' + t('admin.comments.colStatus') + '</th><th class="col-actions">' + t('admin.comments.colActions') + '</th></tr></thead><tbody id="abCmtBody"></tbody></table></div>';
+      '</div><div id="abAiComments" class="ab-ai-comments"></div><div class="ab-table-wrap"><table class="ab-table"><thead><tr><th>' + t('admin.comments.colAuthor') + '</th><th>' + t('admin.comments.colContent') + '</th><th>' + t('admin.comments.colPost') + '</th><th>' + t('admin.comments.colDate') + '</th><th>' + t('admin.comments.colStatus') + '</th><th class="col-actions">' + t('admin.comments.colActions') + '</th></tr></thead><tbody id="abCmtBody"></tbody></table></div>';
     bindComments(content);
     loadComments(content, filter);
+    initAbAiComments(content);
   }
   function bindComments(content) {
     var kw = content.querySelector('#abCmtKw');
