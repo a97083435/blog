@@ -11,6 +11,7 @@
   "nav.admin": "Admin Panel",
   "nav.toggle": "Open navigation",
   "theme.toggle": "Toggle dark/light mode",
+  "theme.accent": "Theme color",
   "search.toggle": "Search articles",
   "search.placeholder": "Search articles…",
   "search.close": "Close search",

@@ -11,6 +11,7 @@
   "nav.admin": "管理パネル",
   "nav.toggle": "ナビゲーションを開く",
   "theme.toggle": "ダーク/ライトモード切替",
+  "theme.accent": "テーマカラー",
   "search.toggle": "記事を検索",
   "search.placeholder": "記事を検索…",
   "search.close": "検索を閉じる",

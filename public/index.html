@@ -53,6 +53,11 @@
           t = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
         }
         document.documentElement.setAttribute('data-theme', t);
+        // 主题色（accent）：缺省 terra = 默认赭橙配色；提前设置避免切色后首屏闪动
+        var a = localStorage.getItem('qingyu.accent');
+        if (['terra', 'indigo', 'bamboo', 'dusk'].indexOf(a) >= 0) {
+          document.documentElement.setAttribute('data-accent', a);
+        }
       } catch (e) {}
     })();
   </script>
@@ -69,10 +74,10 @@
     }
     .boot-ring::before, .boot-ring::after {
       content: ""; position: absolute; inset: 0; border-radius: 50%;
-      border: 3px solid transparent; border-top-color: #c25e3a;
+      border: 3px solid transparent; border-top-color: var(--accent, #c25e3a);
       animation: bootSpin 1s cubic-bezier(.5,.15,.75,.45) infinite;
     }
-    .boot-ring::after { animation-delay: .15s; border-top-color: #e08a63; opacity: .7; }
+    .boot-ring::after { animation-delay: .15s; border-top-color: var(--accent-2, #e08a63); opacity: .7; }
     .boot-dot {
       width: 7px; height: 7px; border-radius: 50%; background: #cfc4b6;
       animation: bootPulse 1.2s ease-in-out infinite;

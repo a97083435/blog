@@ -10,7 +10,7 @@
   --ab-header-h: 58px;
   --ab-radius: 12px;
   --ab-radius-sm: 8px;
-  --ab-primary: #c25e3a;
+  --ab-primary: var(--accent);
   --ab-primary-2: #b1502f;
   --ab-primary-weak: #f6e7df;
   --ab-bg: #f4f2ee;
@@ -31,7 +31,7 @@
   --ab-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
 }
 [data-theme="dark"] {
-  --ab-primary: #e08a63;
+  --ab-primary: var(--accent);
   --ab-primary-2: #d97c53;
   --ab-primary-weak: #3a2a22;
   --ab-bg: #1b1815;

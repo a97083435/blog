@@ -28,7 +28,7 @@ function applyTheme(t) {
   try { document.documentElement.setAttribute('data-theme', t); } catch (e) {}
 }
 function setTheme(t) { applyTheme(t); try { localStorage.setItem(themeKey(), t); } catch (e) {} }
-function toggleTheme() { var n = getTheme() === 'dark' ? 'light' : 'dark'; setTheme(n); refreshThemeIcon(); return n; }
+function toggleTheme() { var n = getTheme() === 'dark' ? 'light' : 'dark'; setTheme(n); refreshThemeIcon(); renderAccentSwatches(); return n; }
 /* 统一 SVG 图标：currentColor 描边，自动继承文字色、hover 变主题色 */
 function svgIcon(name, size) {
   size = size || 18;
@@ -62,13 +62,72 @@ function svgIcon(name, size) {
     tag: '<svg ' + s + ' ' + c + '><path d="M3 3h7l11 11-7 7L3 10V3z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>',
     list: '<svg ' + s + ' ' + c + '><path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
     check: '<svg ' + s + ' ' + c + '><path d="M4 12.5l5 5L20 6.5"/></svg>',
-    send: '<svg ' + s + ' ' + c + '><path d="M3 11l18-8-8 18-2-8-8-2z"/><path d="M21 3 11 13"/></svg>'
+    send: '<svg ' + s + ' ' + c + '><path d="M3 11l18-8-8 18-2-8-8-2z"/><path d="M21 3 11 13"/></svg>',
+    palette: '<svg ' + s + ' ' + c + '><path d="M12 3a9 9 0 1 0 5.4 16.2A2.4 2.4 0 0 0 15.6 17h-.9a2.6 2.6 0 0 1-2.6-2.6c0-1.4 1.1-2.6 2.6-2.6h1.4A3.9 3.9 0 0 0 20.2 8 9 9 0 0 0 12 3z"/><circle cx="7.4" cy="11.3" r="1"/><circle cx="10.6" cy="7.2" r="1"/><circle cx="15.4" cy="8.6" r="1"/></svg>'
   };
   return I[name] || '';
 }
 function themeIcon() { return getTheme() === 'dark' ? svgIcon('sun', 18) : svgIcon('moon', 18); }
 function refreshThemeIcon() {
   var b = document.querySelector('#themeToggle'); if (b) b.innerHTML = themeIcon();
+}
+
+/* ---------- 主题色（accent palette）切换 ----------
+ * 与明暗主题正交的第二个维度：localStorage qingyu.accent（缺省 terra = 现有赭橙配色）。
+ * 色板定义在 style.css 的 [data-accent=...] 变量块；此处只负责
+ * data-accent 属性、持久化、以及取色面板（顶栏弹层 + 移动端侧栏）的渲染与交互。 */
+var ACCENT_PALETTES = [
+  { id: 'terra',  zh: '赭橙',   en: 'Terra',   light: '#c25e3a', dark: '#e08a63' },
+  { id: 'indigo', zh: '黛蓝',   en: 'Indigo',  light: '#2b73af', dark: '#619ac3' },
+  { id: 'bamboo', zh: '竹青',   en: 'Bamboo',  light: '#497568', dark: '#1ba784' },
+  { id: 'dusk',   zh: '凝夜紫', en: 'Dusk',    light: '#8b2671', dark: '#ad6598' }
+];
+function accentKey() { return 'qingyu.accent'; }
+function getAccent() {
+  try {
+    var v = localStorage.getItem(accentKey());
+    for (var i = 0; i < ACCENT_PALETTES.length; i++) if (ACCENT_PALETTES[i].id === v) return v;
+  } catch (e) {}
+  return 'terra';
+}
+function applyAccent(a) {
+  try { document.documentElement.setAttribute('data-accent', a); } catch (e) {}
+}
+function setAccent(a) {
+  applyAccent(a);
+  try { localStorage.setItem(accentKey(), a); } catch (e) {}
+  renderAccentSwatches();
+}
+function accentSwatchColor(id) {
+  for (var i = 0; i < ACCENT_PALETTES.length; i++) {
+    if (ACCENT_PALETTES[i].id === id) return getTheme() === 'dark' ? ACCENT_PALETTES[i].dark : ACCENT_PALETTES[i].light;
+  }
+  return '#999';
+}
+function accentSwatchesHTML() {
+  var cur = getAccent();
+  var lang = (window.__i18n && window.__i18n.getLocale) ? window.__i18n.getLocale() : '';
+  return ACCENT_PALETTES.map(function (p) {
+    var active = p.id === cur;
+    var label = (lang && lang.indexOf('en') === 0) ? p.en : p.zh;
+    return '<button type="button" class="accent-swatch' + (active ? ' active' : '') + '" data-accent="' + p.id + '"'
+      + ' title="' + esc(p.en + ' · ' + p.zh) + '" aria-label="' + esc(p.zh) + '" aria-pressed="' + active + '">'
+      + '<span class="accent-dot" style="background:' + accentSwatchColor(p.id) + '"></span>'
+      + '<span class="accent-name">' + esc(label) + '</span></button>';
+  }).join('');
+}
+function renderAccentSwatches() {
+  var boxes = document.querySelectorAll('.accent-pop-swatches');
+  for (var i = 0; i < boxes.length; i++) boxes[i].innerHTML = accentSwatchesHTML();
+}
+function toggleAccentPop() {
+  var pop = document.getElementById('accentPop');
+  if (!pop) return;
+  pop.classList.toggle('open');
+}
+function closeAccentPop() {
+  var pop = document.getElementById('accentPop');
+  if (pop) pop.classList.remove('open');
 }
 
 function esc(s) {
@@ -1099,6 +1158,12 @@ function app() { return document.querySelector('#app'); }
   var langSwitch = '<select id="langSwitch" class="lang-switch" onchange="window.__i18n.loadLocale(this.value).then(function(){ route(); })"></select>';
   var themeBtn = '<button class="icon-btn" id="themeToggle" aria-label="' + t('theme.toggle') + '" title="' + t('theme.toggle') + '">' + themeIcon() + '</button>';
   var searchBtn = '<button class="icon-btn search-toggle" id="searchToggle" aria-label="' + t('search.toggle') + '" title="' + t('search.toggle') + '">' + searchIconSvg() + '</button>';
+  var accentSwitch = '<div class="accent-wrap" id="accentWrap">'
+    + '<button class="icon-btn" id="accentToggle" aria-label="' + t('theme.accent') + '" title="' + t('theme.accent') + '">' + svgIcon('palette', 18) + '</button>'
+    + '<div class="accent-pop" id="accentPop" role="menu" aria-label="' + t('theme.accent') + '">'
+    + '<div class="accent-pop-title">' + t('theme.accent') + '</div>'
+    + '<div class="accent-pop-swatches"></div>'
+    + '</div></div>';
   var hamburger = '<button class="hamburger-btn" id="hamburgerBtn" aria-label="' + t('nav.toggle') + '"><span></span><span></span><span></span></button>';
 
   // 侧边栏导航项（移动端用）
@@ -1118,7 +1183,9 @@ function app() { return document.querySelector('#app'); }
     + '<button class="icon-btn sidebar-theme" id="themeToggleSide" aria-label="' + t('theme.toggle') + '" title="' + t('theme.toggle') + '">' + themeIcon() + '</button>'
     + '<button class="sidebar-close" id="sidebarClose" aria-label="' + t('search.close') + '">✕</button></div>'
     + '<nav class="sidebar-nav">' + sidebarLinks + '</nav>'
-    + '<div class="sidebar-footer"><select id="langSwitchSide" class="lang-switch"></select></div>'
+    + '<div class="sidebar-footer">'
+    + '<div class="sidebar-accent"><div class="sidebar-accent-title">' + t('theme.accent') + '</div><div class="accent-pop-swatches"></div></div>'
+    + '<select id="langSwitchSide" class="lang-switch"></select></div>'
     + '</aside>';
 
   var searchForm = '<form class="topbar-search" id="topbarSearch" role="search" onsubmit="return false">'
@@ -1132,7 +1199,7 @@ function app() { return document.querySelector('#app'); }
     + '<div class="container topbar-inner">'
     + '<div class="topbar-left">' + hamburger + '<a class="brand" href="' + esc(href('/')) + '">' + getSiteName() + '</a></div>'
     + '<nav class="main-nav">' + links + '</nav>'
-    + '<div class="topbar-actions">' + searchBtn + langSwitch + themeBtn + '</div>'
+    + '<div class="topbar-actions">' + searchBtn + langSwitch + accentSwitch + themeBtn + '</div>'
     + searchForm
     + '</div>'
     + '<div class="search-panel" id="searchPanel"></div>'
@@ -3026,11 +3093,32 @@ function bindGlobal() {
   // 主题切换：顶栏
   var tb = document.querySelector('#themeToggle');
   if (tb) tb.addEventListener('click', function () { toggleTheme(); });
+  bindAccentPicker();
   bindTocScroll();
   bindSearch();
   bindBackTop();
   populateLangSwitch();
   bindMobileSidebar();
+}
+
+/* 主题色取色面板：顶栏弹层开关 + 全局委托（桌面弹层 & 移动端侧栏的色块点击）。
+ * 事件委托注册一次（_accentBound 防重），路由重建 DOM 后仅刷新色块内容。 */
+var _accentBound = false;
+function bindAccentPicker() {
+  if (_accentBound) { renderAccentSwatches(); return; }
+  _accentBound = true;
+  var at = document.querySelector('#accentToggle');
+  if (at) at.addEventListener('click', function (e) { e.stopPropagation(); toggleAccentPop(); });
+  document.addEventListener('click', function (e) {
+    var t = (e && e.target) || null;
+    if (!t) return;
+    var sw = (t.closest ? t.closest('[data-accent]') : null);
+    if (sw) { setAccent(sw.getAttribute('data-accent')); closeAccentPop(); return; }
+    var wrap = document.getElementById('accentWrap');
+    if (wrap && wrap.contains && !wrap.contains(t)) closeAccentPop();
+  });
+  document.addEventListener('keydown', function (e) { if (e && e.key === 'Escape') closeAccentPop(); });
+  renderAccentSwatches();
 }
 
 function bindMobileSidebar() {
@@ -3279,6 +3367,7 @@ function loadAdSense() {
 window.__bootPromise = (async function () {
   var cfg = getConfig();
   applyTheme(getTheme());
+  applyAccent(getAccent());
   bindNavClicks();
   loadAdSense();   // 尽早把 AdSense 库挂到 head，使其能在页面渲染后即时处理广告位
 

@@ -11,6 +11,7 @@
   "nav.admin": "관리자 패널",
   "nav.toggle": "탐색 열기",
   "theme.toggle": "다크/라이트 모드 전환",
+  "theme.accent": "테마 색상",
   "search.toggle": "글 검색",
   "search.placeholder": "글 검색…",
   "search.close": "검색 닫기",
