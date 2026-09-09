@@ -184,8 +184,13 @@ function langOptionsHTML() {
   return langs.map(function (l) {
     var active = l.code === cur;
     return '<button type="button" class="lang-option' + (active ? ' active' : '') + '" data-lang="' + l.code + '" role="option" aria-selected="' + active + '">'
-      + '<span class="lang-flag">' + l.flag + '</span><span class="lang-name">' + esc(l.name) + '</span></button>';
+      + '<span class="lang-flag">' + flagImg(l.code) + '</span><span class="lang-name">' + esc(l.name) + '</span></button>';
   }).join('');
+}
+/* 桌面语言面板的旗帜：使用本地 SVG，避免 Windows 上旗帜 emoji 渲染为字母（手机端原生 select 仍用 emoji） */
+function flagImg(code) {
+  var c = { 'zh-CN': 'cn', 'en': 'gb', 'ja': 'jp', 'ko': 'kr', 'hi': 'in' }[code] || 'cn';
+  return '<img class="lang-flag-img" src="/flags/' + c + '.svg" alt="" width="20" height="14" loading="lazy">';
 }
 function renderLangPop() {
   var inner = document.getElementById('langPopInner');
