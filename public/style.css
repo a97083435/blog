@@ -404,21 +404,37 @@ a:hover { text-decoration: underline; }
 .accent-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); flex-shrink: 0; }
 .accent-name { line-height: 1; }
 
-/* 移动端侧栏主题色：紧凑单行圆点（附在语言切换下方） */
+/* 移动端侧栏主题色：颜色下拉（形态与语言选择一致，选项带色点） */
 .sidebar-accent { margin: 14px 0 0; }
-.sidebar-accent-title { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; margin: 0 2px 8px; }
-.accent-pop-swatches.compact { display: flex; justify-content: space-between; gap: 8px; }
-.accent-pop-swatches.compact .accent-swatch {
-  flex: 1; justify-content: center; padding: 4px 0;
-  border: none; background: none; min-width: 0;
+.accent-select { position: relative; }
+.accent-select-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; padding: 4px 8px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-soft); color: var(--fg); cursor: pointer;
+  line-height: 1.4; text-align: left;
+  gap: 8px;
 }
-.accent-pop-swatches.compact .accent-name { display: none; }
-.accent-pop-swatches.compact .accent-dot {
-  width: 22px; height: 22px; border: 2px solid var(--border);
-  transition: border-color 0.15s ease, transform 0.15s ease;
+.accent-select-trigger:hover { border-color: var(--accent); }
+.accent-select-current { display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; }
+.accent-select-current .accent-dot { width: 13px; height: 13px; flex-shrink: 0; }
+.accent-select-arrow { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+.accent-select-menu {
+  position: absolute; left: 0; right: 0; bottom: calc(100% + 6px); z-index: 70;
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: var(--shadow); padding: 4px;
+  display: none;
 }
-.accent-pop-swatches.compact .accent-swatch:hover .accent-dot { border-color: var(--accent); transform: scale(1.08); }
-.accent-pop-swatches.compact .accent-swatch.active .accent-dot { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.accent-select-menu.open { display: block; animation: accentPopIn 0.12s ease; }
+.accent-select-option {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 8px 10px; border: none; border-radius: 6px;
+  background: none; color: var(--fg); font-size: 13px; cursor: pointer; text-align: left;
+}
+.accent-select-option:hover { background: var(--bg-soft); }
+.accent-select-option.active { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
+.accent-select-option .accent-dot { width: 14px; height: 14px; flex-shrink: 0; }
+.accent-select-check { margin-left: auto; color: var(--accent); font-weight: 700; line-height: 1; }
 
 /* 语言切换器 */
 .lang-switch {
