@@ -68,7 +68,7 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 | **静态模式** | 双击 `index.html` 即可使用，数据存浏览器 localStorage | 本地写作、临时预览 |
 | **云端模式** | 部署到 Cloudflare Workers + D1，数据存云端数据库 | 正式发布、多人访问 |
 
-整个博客本体就在 `public/` 目录：前台 `index.html` + `style.css` + `app.js` + `posts.js`，后台 `admin.js` + `admin.css`，国际化 `i18n.js` + `locales/`。无需任何第三方运行时依赖。
+整个博客本体就在 `public/` 目录：前台 `index.html` + `style.css` + `app.js` + `posts.js` + `music-player.js`，后台 `admin.js` + `admin.css`，国际化 `i18n.js` + `locales/`。无需任何第三方运行时依赖。
 
 > 💡 仓库根目录的 `index.html` 只是一个跳转页，会自动打开 `public/index.html`（Cloudflare Pages / Workers 的部署目录）。本地双击 `public/index.html` 同样可用。
 
@@ -99,8 +99,9 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 │   ├── config.js                    # 全站配置（页脚 / 广告 / 模式 / 语言）
 │   ├── style.css                    # 前台样式（深色模式 + 响应式 + 四级衬线字体）
 │   ├── app.js                       # 前台逻辑（路由 / 评论 / 留言板 / 加密 / 搜索 / 多语言 / 主题色 / AI 摘要）
-│   ├── admin.js                     # 后台管理 SPA（仪表盘 / 文章 / 评论 / 标签 / 设置 / AI 写作助手 / 评论汇总）
+│   ├── admin.js                     # 后台管理 SPA（仪表盘 / 文章 / 评论 / 标签 / 音乐 / 设置 / AI 写作助手 / 评论汇总）
 │   ├── admin.css                    # 后台样式（响应式布局）
+│   ├── music-player.js              # 前台全站音乐播放器（右下角悬浮按钮 + 弹出面板 / 播放列表 / 进度记忆）
 │   ├── i18n.js                      # 国际化模块（中/英/日/韩/印地，内置中文兜底）
 │   ├── posts.js                     # 静态模式文章数据（由「导出 posts.js」生成）
 │   ├── locales/                     # 语言包（zh-CN / en / ja / ko / hi）
@@ -127,7 +128,7 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 │   │   ├── media.js                 # 媒体资源库
 │   │   ├── media/[id].js            # 媒体删除
 │   │   ├── settings.js              # 站点设置
-│   │   ├── site-files/              # 站点产物（feed.xml / sitemap.xml / posts.js）
+│   │   └── site-files/              # 站点产物（feed.xml / sitemap.xml / posts.js）
 │   │   │   ├── index.js             # 列出 / 保存产物
 │   │   │   └── [name].js            # 下载产物内容
 │   │   ├── admin/
@@ -140,7 +141,8 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 │   │   └── sitemap.xml.js           # Sitemap 生成
 │   └── _lib/
 │       ├── api-core.js              # API 核心逻辑（D1 + 鉴权 + 安全）
-│       └── ai.js                    # Workers AI 封装（模型 / 提示词 / 限流 / 降级）
+│       ├── ai.js                    # Workers AI 封装（模型 / 提示词 / 限流 / 降级）
+│       └── music.js                 # 音乐 API（R2 预签名直传 / 元数据 CRUD / R2 对象同步删除）
 ├── worker.js                        # Cloudflare Workers 入口（路由分发，含 /api/ai/* 接线）
 ├── migrations/                      # D1 数据库迁移（CI 自动执行，幂等）
 │   ├── 0001_init.sql                # 基础表结构
@@ -154,7 +156,8 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 │   ├── 0009_comment_status_index.sql # 评论状态索引
 │   ├── 0010_admin_must_change.sql   # 强制改密标记
 │   ├── 0011_comment_reply.sql       # 评论回复 parent_id 字段
-│   └── 0012_clear_orphaned_nav.sql  # 清理遗留 nav 配置
+│   ├── 0012_clear_orphaned_nav.sql  # 清理遗留 nav 配置
+│   └── 0013_music.sql               # 音乐播放列表表（元数据；音频本体存 R2）
 ├── scripts/
 │   └── migrate-kv-to-d1.mjs         # 一次性迁移：KV 数据 → D1
 ├── .github/workflows/
@@ -193,6 +196,7 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 | **主题色切换** | 6 种强调色可选，桌面为图标按钮 + 弹层、手机端为原生下拉，深 / 浅色主题通用 |
 | **多语言界面** | 中文 / English / 日本語 / 한국어 / हिन्दी，自动识别 + 手动切换（桌面 🌐 图标弹层、手机原生下拉） |
 | **AI 文章摘要** | 文章页一键生成内容摘要，单篇 30 天缓存；AI 不可用时自动隐藏入口 |
+| **全站音乐播放器** | 右下角悬浮音符按钮，平时**缩进窗口外露出一点圆弧**、悬停 / 点击即滑出；点击弹出面板：曲目信息 · 可拖动进度条 · 上一首 / 播放暂停 / 下一首 · 音量 · 播放列表（点击切换、当前高亮 + 均衡动画）。自动连播；**记忆上次曲目与进度**、音量持久化，刷新后恢复但不自动出声；无音乐时完全隐藏，后台路由自动收起 |
 | 四级衬线字体 | 正文思源宋体 · 章节标题源樣明體 · 大标题梦源宋体 · 引用朱雀仿宋 |
 
 ### 管理后台
@@ -207,6 +211,7 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 | **AI 评论汇总** | 评论页一键汇总近期评论要点（1 小时缓存）+ 单条评论垃圾检测 |
 | 标签管理 | 标签重命名 / 删除（批量更新所有相关文章） |
 | 媒体资源库 | 图片上传（base64 存 D1） |
+| **音乐管理** | 音频上传（浏览器直传 R2 签名 URL，显示上传进度）；**文件名自动识别「歌曲名-歌手」** 预填；列表行内试听 / 删除（**删除与 R2 对象同步**）；曲目多时列表卡片内滚动、表头吸顶 |
 | 博客设置 | 站点信息（含站点头像，同时也是左上角品牌 Logo 与 favicon）/ 个人资料（头像显示在左下角）/ 导航菜单 |
 | 一键导出 | 同时导出 posts.js / feed.xml / sitemap.xml，覆盖即发布 |
 | 顶栏 | 右上角 🌐 语言弹层（同前台风格，SVG 国旗）+ 账户菜单（个人资料 / 改密 / 退出） |
@@ -364,6 +369,18 @@ D1 是 Cloudflare 的边缘 SQLite 数据库，本项目的**主存储**：
 | `site_settings` | 站点设置 | k, v（键值对） |
 | `site_files` | 站点产物 | name, content, updated_at（feed/sitemap/posts.js） |
 | `stats_daily` | 每日统计 | post_id, date, views, likes |
+| `music` | 音乐播放列表 | id, title, artist, url（R2 公开地址）, cover, size, duration, sort |
+
+### R2（对象存储）
+
+R2 用于存放**音乐音频本体**（元数据在 D1，`url` 指向 R2 公开地址）：
+
+| 能力 | 说明 |
+| --- | --- |
+| 浏览器直传 | 后端签发 SigV4 预签名 PUT URL（含 `UNSIGNED-PAYLOAD` / `x-amz-date`），文件**不经过 Worker** 直传 R2，上传进度前端可见 |
+| 公开读取 | 绑定 R2 自定义域名（如 `music.2024921.xyz` → `public.r2.dev`），前台播放器直接拉流 |
+| 同步删除 | 删除曲目时 Worker 侧签名发起 R2 DELETE（`host;x-amz-content-sha256;x-amz-date` 签名头），再删 D1 行，两者一致 |
+| 格式白名单 | mp3 / m4a / ogg / wav / aac / opus / flac，单文件 ≤ 30MB |
 
 ### Workers AI（推理）
 
@@ -469,13 +486,17 @@ node seed.js https://your-blog.workers.dev [--token <会话或写入令牌>]
 
 ## 🖼️ 项目截图
 
-| 首页（浅色） | 文章详情 | 写作台 |
+| 首页（浅色，右下角为播放器悬浮按钮） | 文章详情 | 写作台 |
 | --- | --- | --- |
 | ![首页](screenshots/home.png) | ![文章详情](screenshots/detail.png) | ![写作台](screenshots/write.png) |
 
 | 管理后台 · 仪表盘 | 评论管理 | 移动端 |
 | --- | --- | --- |
 | ![后台仪表盘](screenshots/admin.png) | ![评论管理](screenshots/admin-list.png) | ![移动端](screenshots/mobile.png) |
+
+| 全站音乐播放器（点击右下角按钮弹出的面板） | 后台 · 音乐管理（列表卡片内滚动） |
+| --- | --- |
+| ![音乐播放器](screenshots/music-player.png) | ![后台音乐管理](screenshots/music-admin.png) |
 
 ### 衬线字体预览
 
