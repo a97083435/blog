@@ -931,9 +931,9 @@ html[data-theme="dark"] .post-card .mini-tags span {
 @keyframes qy-spin { to { transform: rotate(360deg); } }
 
 /* ---------- 文章详情 ---------- */
-/* 文章详情页：正文居中且保持舒适阅读宽度 */
+/* 文章详情页：正文居中且保持舒适阅读宽度（较关于页的容器全宽略收窄，避免中文行过长） */
 .post-body {
-  max-width: 760px;
+  max-width: 1000px;
   margin-left: auto;
   margin-right: auto;
 }
