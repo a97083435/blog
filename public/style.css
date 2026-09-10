@@ -1340,12 +1340,12 @@ footer { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--
   .about-author-avatar { width: 54px; height: 54px; }
 }
 
-/* ---------- 回到顶部 ---------- */
-/* ---------- 回到顶部（悬浮右下角，滚动后出现） ---------- */
+/* ---------- 回到顶部（悬浮右下角，滚动后出现）
+ * 位于播放器悬浮按钮（54px + 26px 底边）上方，避免两者重叠 */
 .btn-top {
   position: fixed;
   right: 22px;
-  bottom: 22px;
+  bottom: 92px;              /* 26 + 54 + 12 间距：给右下角播放器按钮让位 */
   width: 42px;
   height: 42px;
   border-radius: 0;              /* 与全站直角风格一致 */
@@ -1368,7 +1368,7 @@ footer { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--
 .btn-top.show { opacity: 1; visibility: visible; transform: translateY(0); }
 .btn-top:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
 @media (max-width: 640px) {
-  .btn-top { right: 14px; bottom: 14px; width: 38px; height: 38px; }
+  .btn-top { right: 14px; bottom: 80px; width: 38px; height: 38px; } /* 20 + 50 + 10 间距 */
 }
 
 /* ---------- 写作页细节：字数 / 保存状态 / 快捷键提示 ---------- */
@@ -2545,14 +2545,21 @@ textarea { resize: none; }
 .mp-root.mp-on { display: block; }
 .mp-root.mp-hidden { display: none; }
 
-/* ---------- 右下角悬浮按钮 ---------- */
-.mp-fab {
+/* ---------- 右下角悬浮按钮（抽屉式：平时缩进窗口外，露出一点；hover/点击滑出） ---------- */
+.mp-fab-wrap {
   position: fixed;
   right: 22px;
   bottom: 26px;
   z-index: 950;
   width: 54px;
   height: 54px;
+  transform: translateX(calc(100% - 13px)); /* 默认缩回：仅露出右侧 13px 圆弧 */
+  transition: transform .32s cubic-bezier(.32,.72,.25,1);
+}
+.mp-fab-wrap.expanded { transform: translateX(0); }
+.mp-fab {
+  width: 100%;
+  height: 100%;
   border: 0;
   border-radius: 50%;
   background: var(--mp-accent);
@@ -2562,10 +2569,10 @@ textarea { resize: none; }
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
-  transition: transform .18s ease, box-shadow .18s ease;
+  transition: box-shadow .18s ease;
+  padding: 0;
 }
-.mp-fab:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); }
-.mp-fab:active { transform: translateY(0) scale(.96); }
+.mp-fab-wrap.expanded .mp-fab:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); }
 .mp-fab-icon { display: flex; align-items: center; justify-content: center; }
 
 /* 播放中：音符呼吸 + 外环旋转 */
@@ -2586,6 +2593,8 @@ textarea { resize: none; }
 .mp-fab.playing .mp-fab-icon { animation: mpFabPulse 1.6s ease-in-out infinite; }
 @keyframes mpFabSpin { to { transform: rotate(360deg); } }
 @keyframes mpFabPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(.88); } }
+/* 缩回时露出的圆弧边缘，带音符小把手提示可触碰 */
+.mp-fab-wrap:not(.expanded) .mp-fab { box-shadow: none; }
 
 /* ---------- 弹出面板 ---------- */
 .mp-panel {
@@ -2784,7 +2793,7 @@ textarea { resize: none; }
 
 /* 移动端 */
 @media (max-width: 560px) {
-  .mp-fab { right: 16px; bottom: 20px; width: 50px; height: 50px; }
+  .mp-fab-wrap { right: 16px; bottom: 20px; width: 50px; height: 50px; transform: translateX(calc(100% - 12px)); }
   .mp-panel {
     right: 12px;
     left: 12px;

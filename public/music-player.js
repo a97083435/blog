@@ -29,10 +29,14 @@
   var playing = false;
   var seeking = false;
   var audio = new Audio();
-  var root, fab, panel, playBtn, seekInput, volInput, curTimeEl, durTimeEl, panelList, panelTitle, panelArtist, panelCover, panelCount;
+  var root, fabWrap, fab, panel, playBtn, seekInput, volInput, curTimeEl, durTimeEl, panelList, panelTitle, panelArtist, panelCover, panelCount;
   var VOL_KEY = 'qy.music.volume';
   var LAST_KEY = 'qy.music.last';
   var visible = false;
+  var retractTimer = null;
+  function canHover() {
+    try { return window.matchMedia && window.matchMedia('(hover: hover)').matches; } catch (e) { return false; }
+  }
 
   /* ---------- 工具 ---------- */
   function tt(key) {
@@ -65,9 +69,11 @@
     root.id = 'musicPlayer';
     root.className = 'mp-root';
     root.innerHTML =
-      '<button type="button" class="mp-fab" id="mpFab" title="' + esc(tt('player.playlist')) + '" aria-label="' + esc(tt('player.playlist')) + '">' +
-        '<span class="mp-fab-icon" id="mpFabIcon">' + icon('music') + '</span>' +
-      '</button>' +
+      '<div class="mp-fab-wrap" id="mpFabWrap">' +
+        '<button type="button" class="mp-fab" id="mpFab" title="' + esc(tt('player.playlist')) + '" aria-label="' + esc(tt('player.playlist')) + '">' +
+          '<span class="mp-fab-icon" id="mpFabIcon">' + icon('music') + '</span>' +
+        '</button>' +
+      '</div>' +
       '<div class="mp-panel" id="mpPanel" role="dialog" aria-hidden="true">' +
         '<div class="mp-panel-head">' +
           '<span class="mp-cover" id="mpCover">' + icon('music', 17) + '</span>' +
@@ -96,6 +102,7 @@
         '<div class="mp-list" id="mpList"></div>' +
       '</div>';
     document.body.appendChild(root);
+    fabWrap = document.getElementById('mpFabWrap');
     fab = document.getElementById('mpFab');
     panel = document.getElementById('mpPanel');
     playBtn = document.getElementById('mpPlay');
@@ -110,6 +117,9 @@
     panelCount = document.getElementById('mpCount');
 
     fab.addEventListener('click', togglePanel);
+    // 悬浮按钮抽屉效果：hover 滑出、移开延时缩回（触摸设备靠点击展开）
+    fabWrap.addEventListener('mouseenter', expandFab);
+    fabWrap.addEventListener('mouseleave', function () { if (!panel.classList.contains('open')) scheduleRetract(); });
     document.getElementById('mpPanelClose').addEventListener('click', closePanel);
     document.getElementById('mpPrev').addEventListener('click', function () { step(-1); });
     document.getElementById('mpNext').addEventListener('click', function () { step(1); });
@@ -241,6 +251,26 @@
     }
   }
 
+  /* ---------- 悬浮按钮抽屉（缩进窗口外露一点，触碰滑出） ---------- */
+  function expandFab() {
+    if (!fabWrap) return;
+    if (retractTimer) { clearTimeout(retractTimer); retractTimer = null; }
+    fabWrap.classList.add('expanded');
+  }
+  function scheduleRetract() {
+    if (!fabWrap) return;
+    if (retractTimer) clearTimeout(retractTimer);
+    retractTimer = setTimeout(function () {
+      retractTimer = null;
+      if (!panel.classList.contains('open')) fabWrap.classList.remove('expanded');
+    }, 1400);
+  }
+  function retractFab() {
+    if (!fabWrap) return;
+    if (retractTimer) { clearTimeout(retractTimer); retractTimer = null; }
+    fabWrap.classList.remove('expanded');
+  }
+
   /* ---------- 播放列表 ---------- */
   function renderList() {
     if (!panelList) return;
@@ -269,14 +299,15 @@
     if (!root || !panel) return;
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
-    fab.classList.add('open');
+    expandFab();
     renderList();
   }
   function closePanel() {
     if (!panel) return;
     panel.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
-    fab.classList.remove('open');
+    // 触摸设备：关面板即缩回；桌面：交由 mouseleave 延时缩回
+    if (!canHover()) retractFab();
   }
   function togglePanel() {
     if (panel.classList.contains('open')) closePanel(); else openPanel();
@@ -292,7 +323,7 @@
   function syncRoute() {
     var hide = isBackstagePath(currentPath());
     if (root) root.classList.toggle('mp-hidden', hide);
-    if (hide) closePanel();
+    if (hide) { closePanel(); retractFab(); }
   }
 
   /* ---------- 初始化 ---------- */
