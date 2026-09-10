@@ -3297,7 +3297,6 @@ function aiAssistBarHTML() {
     + '<select class="ai-assist-lang" id="aiAssistLang" aria-label="' + esc(t('ai.assist.targetLang')) + '">' + opts + '</select>'
     + '<button type="button" class="btn btn-sm" data-ai-action="title">' + esc(t('ai.assist.titles')) + '</button>'
     + '<button type="button" class="btn btn-sm" data-ai-action="polish">' + esc(t('ai.assist.polish')) + '</button>'
-    + '<button type="button" class="btn btn-sm" data-ai-action="tags">' + esc(t('ai.assist.tags')) + '</button>'
     + '<button type="button" class="btn btn-sm" data-ai-action="translate">' + esc(t('ai.assist.translate')) + '</button>'
     + '<span class="ai-assist-msg" id="aiAssistMsg"></span>'
     + '<div class="ai-assist-out" id="aiAssistOut"></div>'

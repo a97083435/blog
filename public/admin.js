@@ -608,7 +608,7 @@
     // 最新发布
     var recentPosts = posts.slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); }).slice(0, 5);
     content.querySelector('#abRecentPosts').innerHTML = recentPosts.length ? recentPosts.map(function (p) {
-      return '<div class="ab-feed-item"><div class="ab-feed-main"><b>' + esc(p.title || t('admin.dashboard.noTitle')) + '</b><span>' + esc(fmtDate(p.date)) + ' · ' + esc(p.category || t('admin.dashboard.uncategorized')) + '</span></div></div>';
+      return '<div class="ab-feed-item"><div class="ab-feed-main"><b>' + esc(p.title || t('admin.dashboard.noTitle')) + '</b><span>' + esc(fmtDate(p.date)) + '</span></div></div>';
     }).join('') : '<div class="ab-empty"><div class="ab-empty-ico">📝</div><p>' + t('admin.dashboard.noPosts') + '</p><a class="ab-btn primary sm" data-link="/admin/posts/new">' + t('admin.dashboard.goWrite') + '</a></div>';
     content.querySelectorAll('#abRecentPosts [data-link]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); go(a.getAttribute('data-link')); }); });
 
@@ -667,10 +667,9 @@
       '<div class="ab-toolbar">' +
         '<div class="ab-search"><input class="ab-input" id="abPostKw" placeholder="' + t('admin.postList.search') + '"></div>' +
         '<select class="ab-select" id="abPostStatus" style="max-width:140px"><option value="all">' + t('admin.postList.allStatus') + '</option><option value="published">' + t('admin.dashboard.published') + '</option><option value="draft">' + t('admin.dashboard.drafts') + '</option></select>' +
-        '<select class="ab-select" id="abPostCat" style="max-width:160px"><option value="">' + t('admin.postList.allCats') + '</option></select>' +
       '</div>' +
       '<div class="ab-table-wrap"><table class="ab-table"><thead><tr>' +
-        '<th>' + t('admin.postList.colTitle') + '</th><th>' + t('admin.postList.colCategory') + '</th><th>' + t('admin.postList.colTags') + '</th><th>' + t('admin.postList.colDate') + '</th><th>' + t('admin.postList.colStatus') + '</th><th class="col-actions">' + t('admin.postList.colActions') + '</th>' +
+        '<th>' + t('admin.postList.colTitle') + '</th><th>' + t('admin.postList.colTags') + '</th><th>' + t('admin.postList.colDate') + '</th><th>' + t('admin.postList.colStatus') + '</th><th class="col-actions">' + t('admin.postList.colActions') + '</th>' +
       '</tr></thead><tbody id="abPostBody"></tbody></table></div>' +
       '<div class="ab-pagination" id="abPostPage"></div>';
 
@@ -685,36 +684,24 @@
   function bindPosts(content) {
     var kw = content.querySelector('#abPostKw');
     var st = content.querySelector('#abPostStatus');
-    var cat = content.querySelector('#abPostCat');
     function refilter() { loadPosts(content, 1); }
     kw.addEventListener('input', debounce(refilter, 250));
     st.addEventListener('change', refilter);
-    cat.addEventListener('change', refilter);
   }
   function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
 
   async function loadPosts(content, page, silent) {
     var body = content.querySelector('#abPostBody');
-    var catSel = content.querySelector('#abPostCat');
     // silent：删除/审核后的静默校准刷新，不打断当前视图（不闪加载行）
-    if (!silent) body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px"><span class="ab-spin"></span> ' + t('admin.postList.loading') + '</td></tr>';
+    if (!silent) body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px"><span class="ab-spin"></span> ' + t('admin.postList.loading') + '</td></tr>';
     var posts = [];
-    try { posts = await listPosts(); } catch (e) { body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px" class="ab-muted">' + t('admin.postList.loadFail') + esc(e.message || e) + '</td></tr>'; return; }
-
-    // 分类下拉
-    var cats = {};
-    posts.forEach(function (p) { var c = p.category || t('admin.dashboard.uncategorized'); cats[c] = (cats[c] || 0) + 1; });
-    var cur = catSel.value;
-    catSel.innerHTML = '<option value="">' + t('admin.postList.allCats') + '</option>' + Object.keys(cats).map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + ' (' + cats[c] + ')</option>'; }).join('');
-    catSel.value = cur;
+    try { posts = await listPosts(); } catch (e) { body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px" class="ab-muted">' + t('admin.postList.loadFail') + esc(e.message || e) + '</td></tr>'; return; }
 
     var kw = content.querySelector('#abPostKw').value.trim().toLowerCase();
     var st = content.querySelector('#abPostStatus').value;
-    var cf = content.querySelector('#abPostCat').value;
 
     var filtered = posts.filter(function (p) {
       if (st !== 'all' && (p.status || 'published') !== st) return false;
-      if (cf && (p.category || t('admin.dashboard.uncategorized')) !== cf) return false;
       if (kw) {
         var hay = ((p.title || '') + ' ' + (p.tags || []).join(' ')).toLowerCase();
         if (hay.indexOf(kw) < 0) return false;
@@ -724,7 +711,7 @@
     filtered.sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); });
 
     if (!filtered.length) {
-      body.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:34px" class="ab-muted">' + t('admin.postList.noMatch') + '</td></tr>';
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:34px" class="ab-muted">' + t('admin.postList.noMatch') + '</td></tr>';
       content.querySelector('#abPostPage').innerHTML = '';
       return;
     }
@@ -738,7 +725,6 @@
       else statusBadge = '<span class="ab-status ' + ((p.status || 'published') === 'draft' ? 'draft' : 'published') + '">' + ((p.status || 'published') === 'draft' ? t('admin.dashboard.drafts') : t('admin.dashboard.published')) + '</span>';
       return '<tr>' +
         '<td><a class="ab-post-title" data-link="/admin/posts/' + enc(id) + '/edit">' + esc(p.title || t('admin.dashboard.noTitle')) + '</a></td>' +
-        '<td class="ab-td-cat">' + (p.category ? '<span class="ab-chip cat">' + esc(p.category) + '</span>' : '<span class="ab-muted">—</span>') + '</td>' +
         '<td class="ab-td-tags">' + (p.tags && p.tags.length ? '<div class="ab-tag-row">' + p.tags.map(function (t) { return '<span class="ab-chip">' + esc(t) + '</span>'; }).join('') + '</div>' : '<span class="ab-muted">—</span>') + '</td>' +
         '<td class="ab-td-date">' + esc(fmtDate(p.date)) + '</td>' +
         '<td class="ab-td-status">' + statusBadge + '</td>' +
@@ -835,7 +821,6 @@
       + '<select class="ab-ai-lang" id="abAiLang">' + opts + '</select>'
       + '<button type="button" class="ab-btn sm" data-abai="title">' + esc(t('ai.assist.titles')) + '</button>'
       + '<button type="button" class="ab-btn sm" data-abai="polish">' + esc(t('ai.assist.polish')) + '</button>'
-      + '<button type="button" class="ab-btn sm" data-abai="tags">' + esc(t('ai.assist.tags')) + '</button>'
       + '<button type="button" class="ab-btn sm" data-abai="translate">' + esc(t('ai.assist.translate')) + '</button>'
       + '<span class="ab-ai-msg" id="abAiMsg"></span>'
       + '<div class="ab-ai-out" id="abAiOut"></div>'
@@ -974,7 +959,6 @@
       '<div class="ab-editor-head">' +
         '<input class="ab-input" id="abTitle" placeholder="' + t('admin.editor.titlePlaceholder') + '" style="font-size:16px;font-weight:600">' +
         '<div class="ab-editor-meta">' +
-          '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.categoryPlaceholder') + '</label><input class="ab-input" id="abCat" list="abCatList" placeholder="' + t('admin.editor.categoryExample') + '"><datalist id="abCatList"></datalist></div>' +
           '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.tagsPlaceholder') + '</label><input class="ab-input" id="abTags" placeholder="' + t('admin.editor.tagsExample') + '"></div>' +
         '</div>' +
         '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.coverPlaceholder') + '</label><div class="ab-row"><input class="ab-input" id="abCover" placeholder="https://…"><button class="ab-btn sm" id="abPickCover">' + t('admin.editor.selectMedia') + '</button></div></div>' +
@@ -1023,14 +1007,6 @@
     if (exp) exp.addEventListener('click', downloadAllStatic);
     var pick = content.querySelector('#abPickCover');
     if (pick) pick.addEventListener('click', function () { openMediaPicker(content); });
-    // 填充分类候选
-    if (cloudOn()) {
-      api('api/posts').then(function (d) {
-        var list = (d && d.posts) || [];
-        var cats = {}; list.forEach(function (p) { if (p.category) cats[p.category] = 1; });
-        content.querySelector('#abCatList').innerHTML = Object.keys(cats).map(function (c) { return '<option value="' + esc(c) + '">'; }).join('');
-      }).catch(function () {});
-    }
   }
   function updatePreview(content) {
     var area = content.querySelector('#abBody');
@@ -1064,7 +1040,6 @@
     var p = await getPost(id);
     if (!p) { toast(t('admin.editor.notFound'), 'err'); return; }
     content.querySelector('#abTitle').value = p.title || '';
-    content.querySelector('#abCat').value = p.category || '';
     content.querySelector('#abTags').value = (p.tags || []).join(', ');
     content.querySelector('#abCover').value = p.cover || '';
     content.querySelector('#abBody').value = p.content || '';
@@ -1085,7 +1060,6 @@
       excerpt: (body.replace(/[#>*`\-!\[\]()]/g, '').slice(0, 120).trim()),
       content: body, cover: content.querySelector('#abCover').value.trim(),
       pinned: wantPinned, tags: tags,
-      category: content.querySelector('#abCat').value.trim(),
       status: status
     };
 
@@ -1130,61 +1104,56 @@
     content.innerHTML = '<div class="ab-page-head"><div><h1 class="ab-page-title">' + t('admin.tags.title') + '</h1><p class="ab-page-sub">' + t('admin.tags.desc') + '</p></div>' +
       (cloudOn() ? '' : '<span class="ab-chip" style="background:var(--ab-primary-weak);color:var(--ab-primary)">' + t('admin.categories.staticHint') + '</span>') + '</div>' +
       '<div class="ab-card"><div class="ab-table-wrap"><table class="ab-table"><thead><tr><th>' + t('admin.tags.colTag') + '</th><th>' + t('admin.tags.colCount') + '</th><th class="col-actions">' + t('admin.postList.colActions') + '</th></tr></thead><tbody id="abTagBody"></tbody></table></div></div>';
-    await loadTerms(content, 'tags', '#abTagBody');
+    await loadTerms(content, '#abTagBody');
   }
-  async function loadTerms(content, field, sel) {
+  async function loadTerms(content, sel) {
     var body = content.querySelector(sel);
     body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:24px"><span class="ab-spin"></span> ' + t('admin.postList.loading') + '</td></tr>';
     var posts = [];
     try { posts = await listPosts(); } catch (e) {}
     var map = {};
     posts.forEach(function (p) {
-      var vals = field === 'category' ? [(p.category || t('admin.dashboard.uncategorized'))] : (p.tags || []);
-      vals.forEach(function (v) { var k = field === 'category' ? (p.category || t('admin.dashboard.uncategorized')) : v; if (k) map[k] = (map[k] || 0) + 1; });
+      (p.tags || []).forEach(function (v) { if (v) map[v] = (map[v] || 0) + 1; });
     });
     var keys = Object.keys(map).sort(function (a, b) { return map[b] - map[a]; });
-    if (!keys.length) { body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px" class="ab-muted">' + (field === 'category' ? t('admin.categories.noData') : t('admin.tags.noData')) + '</td></tr>'; return; }
+    if (!keys.length) { body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px" class="ab-muted">' + t('admin.tags.noData') + '</td></tr>'; return; }
     if (!cloudOn()) {
-      body.innerHTML = keys.map(function (k) { return '<tr><td><span class="ab-chip ' + (field === 'category' ? 'cat' : '') + '">' + esc(k) + '</span></td><td>' + map[k] + '</td><td class="ab-muted">' + t('admin.categories.staticHint') + '</td></tr>'; }).join('');
+      body.innerHTML = keys.map(function (k) { return '<tr><td><span class="ab-chip">' + esc(k) + '</span></td><td>' + map[k] + '</td><td class="ab-muted">' + t('admin.categories.staticHint') + '</td></tr>'; }).join('');
       return;
     }
     body.innerHTML = keys.map(function (k) {
       var ek = enc(k);
-      return '<tr><td><span class="ab-chip ' + (field === 'category' ? 'cat' : '') + '">' + esc(k) + '</span></td><td>' + map[k] + '</td>' +
-        '<td class="col-actions"><button class="ab-btn sm" data-rename="' + ek + '">' + icon('pen', 13) + ' ' + (field === 'category' ? t('admin.categories.rename') : t('admin.tags.rename')) + '</button> ' +
-        '<button class="ab-btn sm danger" data-delterm="' + ek + '">' + icon('trash', 13) + ' ' + (field === 'category' ? t('admin.categories.delete') : t('admin.tags.delete')) + '</button></td></tr>';
+      return '<tr><td><span class="ab-chip">' + esc(k) + '</span></td><td>' + map[k] + '</td>' +
+        '<td class="col-actions"><button class="ab-btn sm" data-rename="' + ek + '">' + icon('pen', 13) + ' ' + t('admin.tags.rename') + '</button> ' +
+        '<button class="ab-btn sm danger" data-delterm="' + ek + '">' + icon('trash', 13) + ' ' + t('admin.tags.delete') + '</button></td></tr>';
     }).join('');
-    body.querySelectorAll('[data-rename]').forEach(function (b) { b.addEventListener('click', function () { renameTerm(content, field, dec(b.getAttribute('data-rename')), sel); }); });
+    body.querySelectorAll('[data-rename]').forEach(function (b) { b.addEventListener('click', function () { renameTerm(content, dec(b.getAttribute('data-rename')), sel); }); });
     body.querySelectorAll('[data-delterm]').forEach(function (b) { b.addEventListener('click', function () {
       var old = dec(b.getAttribute('data-delterm'));
-      confirmModal((field === 'category' ? t('admin.categories.delete') : t('admin.tags.delete')), '<p class="ab-muted">' + (field === 'category' ? t('admin.categories.deleteConfirm', { name: esc(old) }) : t('admin.tags.deleteConfirm', { name: esc(old) })) + '</p>', async function () {
-        try { await applyTermChange(field, old, null); toast(field === 'category' ? t('admin.categories.renameOk') : t('admin.tags.renameOk'), 'ok'); loadTerms(content, field, sel); } catch (e) { toast(t('admin.postList.opFail') + (e.message || e), 'err'); }
+      confirmModal(t('admin.tags.delete'), '<p class="ab-muted">' + t('admin.tags.deleteConfirm', { name: esc(old) }) + '</p>', async function () {
+        try { await applyTermChange(old, null); toast(t('admin.tags.renameOk'), 'ok'); loadTerms(content, sel); } catch (e) { toast(t('admin.postList.opFail') + (e.message || e), 'err'); }
       }, t('admin.comments.delete'));
     }); });
   }
-  async function renameTerm(content, field, old, sel) {
-    var nv = prompt(t('admin.categories.rename') + '「' + old + '」', old);
+  async function renameTerm(content, old, sel) {
+    var nv = prompt(t('admin.tags.rename') + '「' + old + '」', old);
     if (nv == null) return; nv = nv.trim();
     if (!nv || nv === old) return;
-    try { await applyTermChange(field, old, nv); toast(field === 'category' ? t('admin.categories.renameOk') : t('admin.tags.renameOk'), 'ok'); loadTerms(content, field, sel); } catch (e) { toast(t('admin.postList.opFail') + (e.message || e), 'err'); }
+    try { await applyTermChange(old, nv); toast(t('admin.tags.renameOk'), 'ok'); loadTerms(content, sel); } catch (e) { toast(t('admin.postList.opFail') + (e.message || e), 'err'); }
   }
-  async function applyTermChange(field, old, neo) {
+  async function applyTermChange(old, neo) {
     var summary = await listPosts();
     var ids = [];
     summary.forEach(function (p) {
-      if (field === 'category') { if ((p.category || t('admin.dashboard.uncategorized')) === old) ids.push(p.id); }
-      else { if ((p.tags || []).indexOf(old) >= 0) ids.push(p.id); }
+      if ((p.tags || []).indexOf(old) >= 0) ids.push(p.id);
     });
     for (var i = 0; i < ids.length; i++) {
       // 必须取「完整」文章（含正文）再改字段后回写，否则云端 PUT 会清空正文
       var full = await getPost(ids[i]);
       if (!full) continue;
-      if (field === 'category') { full.category = neo || t('admin.dashboard.uncategorized'); }
-      else {
-        var tags = (full.tags || []).slice();
-        var j = tags.indexOf(old);
-        if (j >= 0) { if (neo) { tags[j] = neo; } else { tags.splice(j, 1); } full.tags = tags; }
-      }
+      var tags = (full.tags || []).slice();
+      var j = tags.indexOf(old);
+      if (j >= 0) { if (neo) { tags[j] = neo; } else { tags.splice(j, 1); } full.tags = tags; }
       await savePost(full, false);
     }
   }
