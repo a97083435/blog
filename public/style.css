@@ -2502,20 +2502,27 @@ kbd {
   border-radius: 10px;
   background: var(--bg);
   font-size: 14px;
+  outline: none;
   transition: border-color .15s ease, box-shadow .15s ease;
 }
 .field input[type="text"]:hover:not(:focus), .field input[type="date"]:hover:not(:focus), .field input[type="datetime-local"]:hover:not(:focus), .field textarea:hover:not(:focus),
 .comment-form input:hover:not(:focus), .comment-form textarea:hover:not(:focus),
 .lock-form input:hover:not(:focus), .gate-form input:hover:not(:focus),
 .gb-form-row input[type="text"]:hover:not(:focus), .guestbook-form textarea:hover:not(:focus),
-.ai-screen textarea:hover:not(:focus), #globalSearchInput:hover:not(:focus) {
+.ai-screen textarea:hover:not(:focus), #globalSearchInput:hover:not(:focus),
+.lang-switch:hover:not(:focus) {
   border-color: var(--accent);
 }
+/* 聚焦：仅边框高亮（单层，无外环 ring，避免“两层框”） */
 .field input:focus, .field textarea:focus,
 .comment-form input:focus, .comment-form textarea:focus,
 .lock-form input:focus, .gate-form input:focus,
 .gb-form-row input[type="text"]:focus, .guestbook-form textarea:focus,
-.ai-screen textarea:focus, #globalSearchInput:focus {
+.ai-screen textarea:focus, #globalSearchInput:focus,
+.lang-switch:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: none;
 }
+/* 移除 textarea 右下角拖拽手柄（两条直线）；高度由自动增高/内容决定 */
+textarea { resize: none; }
+.editor-area { resize: none; }

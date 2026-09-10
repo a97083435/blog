@@ -260,9 +260,10 @@
   transition: border-color .15s, box-shadow .15s;
 }
 .ab-input:hover:not(:focus), .ab-select:hover:not(:focus), .ab-textarea:hover:not(:focus) { border-color: var(--ab-primary); }
-.ab-input:focus, .ab-select:focus, .ab-textarea:focus { border-color: var(--ab-primary); box-shadow: 0 0 0 3px var(--ab-primary-weak); }
+/* 聚焦：仅边框高亮（单层），无外环 ring */
+.ab-input:focus, .ab-select:focus, .ab-textarea:focus { border-color: var(--ab-primary); box-shadow: none; }
 select.ab-select { cursor: pointer; padding-right: 30px; }
-.ab-textarea { resize: vertical; min-height: 42px; line-height: 1.5; }
+.ab-textarea { resize: none; min-height: 42px; line-height: 1.5; }
 .ab-field { margin-bottom: 16px; }
 .ab-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ab-text); }
 .ab-hint { font-size: 12px; color: var(--ab-muted); margin-top: 5px; }
