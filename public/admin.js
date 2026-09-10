@@ -292,12 +292,14 @@
 
     var adminName = (cfg().footer && cfg().footer.copyrightName) || t('admin.sidebar.admin');
     var prof = readAdminProfile();
+    var siteLogo = siteLogoURL();
+    var logoLetter = esc((adminName || t('admin.sidebar.admin') || '青').slice(0, 1));
     return (
       '<aside class="ab-sider" id="abSider">' +
         '<div class="ab-sider-header">' +
           '<div class="ab-brand">' +
-            '<div class="ab-logo">' + esc((adminName || t('admin.sidebar.admin')).slice(0, 1)) + '</div>' +
-            '<div class="ab-brand-text"><b>' + esc(adminName) + '</b><span>' + esc(t('admin.sider.hint')) + '</span></div>' +
+            '<div class="ab-logo" id="abSiderLogo"' + (siteLogo ? '' : ' data-letter="' + logoLetter + '"') + '>' + siderLogoHTML(siteLogo, logoLetter) + '</div>' +
+            '<b class="ab-brand-name">' + esc(adminName) + '</b>' +
           '</div>' +
         '</div>' +
         '<nav class="ab-nav">' + groups + '</nav>' +
@@ -309,6 +311,21 @@
       '</aside>' +
       '<div class="ab-sider-mask" id="abSiderMask"></div>'
     );
+  }
+  /* 站点 Logo：优先取「设置 → 站点信息 → 站点头像」（同时用作 favicon），否则显示站点名首字 */
+  function siteLogoURL() {
+    var s = window._siteSettings || {};
+    var site = safeJson(s.site_info);
+    if (site.avatar) return site.avatar;
+    if (cfg().site && cfg().site.avatar) return cfg().site.avatar;
+    return '';
+  }
+  /* 品牌方块内容：有 logo 显示图片（加载失败回退首字），无 logo 显示首字（衬流动渐变背景） */
+  function siderLogoHTML(logo, letter) {
+    if (logo) {
+      return '<img class="ab-logo-img" src="' + esc(logo) + '" alt="" onerror="var p=this.parentNode;this.remove();var s=document.createElement(\'span\');s.textContent=p.getAttribute(\'data-letter\')||\'A\';p.appendChild(s)">';
+    }
+    return '<span>' + letter + '</span>';
   }
   /* 左下角头像：使用个人资料中设置的头像（设置 → 个人资料 → 头像 URL），无头像或加载失败时显示首字符 */
   function siderAvatarLetter(prof) {
@@ -341,6 +358,13 @@
       if (av) {
         av.setAttribute('data-letter', siderAvatarLetter({ name: prof.name }));
         av.innerHTML = siderAvatarHTML({ name: prof.name, avatar: prof.avatar });
+      }
+      var site = safeJson(s.site_info);
+      var logoEl = root.querySelector('#abSiderLogo');
+      if (logoEl) {
+        var letter = esc(((prof.name || site.name || (cfg().footer && cfg().footer.copyrightName) || t('admin.sidebar.admin')) || '青').slice(0, 1));
+        logoEl.setAttribute('data-letter', letter);
+        logoEl.innerHTML = siderLogoHTML(site.avatar || '', letter);
       }
       var nm = root.querySelector('#abSiderName');
       if (nm) nm.textContent = prof.name || (cfg().footer && cfg().footer.copyrightName) || t('admin.sidebar.admin');
