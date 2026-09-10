@@ -222,6 +222,7 @@
     "admin.sidebar.media": "媒体资源",
     "admin.sidebar.settings": "博客设置",
     "admin.sidebar.admin": "管理员",
+    "admin.sider.hint": "管理后台",
     "admin.sidebar.adminDesc": "个人博客管理员",
     "admin.sidebar.logout": "退出登录",
     "admin.header.toggleMenu": "展开/折叠菜单",

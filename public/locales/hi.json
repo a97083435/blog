@@ -165,6 +165,7 @@
   "admin.sidebar.media": "मीडिया",
   "admin.sidebar.settings": "सेटिंग्स",
   "admin.sidebar.admin": "एडमिन",
+  "admin.sider.hint": "एडमिन कंसोल",
   "admin.sidebar.adminDesc": "ब्लॉग प्रशासक",
   "admin.sidebar.logout": "लॉगआउट",
   "admin.header.toggleMenu": "मेन्यू टॉगल करें",

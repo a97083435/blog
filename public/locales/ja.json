@@ -165,6 +165,7 @@
   "admin.sidebar.media": "メディア",
   "admin.sidebar.settings": "設定",
   "admin.sidebar.admin": "管理者",
+  "admin.sider.hint": "管理画面",
   "admin.sidebar.adminDesc": "ブログ管理者",
   "admin.sidebar.logout": "ログアウト",
   "admin.header.toggleMenu": "メニュー切替",

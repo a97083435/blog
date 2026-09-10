@@ -165,6 +165,7 @@
   "admin.sidebar.media": "미디어",
   "admin.sidebar.settings": "설정",
   "admin.sidebar.admin": "관리자",
+  "admin.sider.hint": "관리 콘솔",
   "admin.sidebar.adminDesc": "블로그 관리자",
   "admin.sidebar.logout": "로그아웃",
   "admin.header.toggleMenu": "메뉴 전환",

@@ -165,6 +165,7 @@
   "admin.sidebar.media": "Media",
   "admin.sidebar.settings": "Settings",
   "admin.sidebar.admin": "Admin",
+  "admin.sider.hint": "Admin Console",
   "admin.sidebar.adminDesc": "Blog administrator",
   "admin.sidebar.logout": "Logout",
   "admin.header.toggleMenu": "Toggle menu",

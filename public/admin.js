@@ -283,7 +283,7 @@
     var NAV = getNav();
     var groups = NAV.map(function (g) {
       var items = g.items.map(function (it) {
-        var badge = (it.badge === 'pending' && pendingCount > 0) ? '<span class="ab-nav-count">' + pendingCount + '</span>' : '';
+        var badge = (it.badge === 'pending') ? '<span class="ab-nav-count" style="display:none"></span>' : '';
         return '<a class="ab-nav-item ' + (it.key === activeKey ? 'active' : '') + '" data-link="' + esc(it.href) + '">' +
           icon(it.icon, 17) + '<span class="ab-nav-text">' + esc(it.label) + '</span>' + badge + '</a>';
       }).join('');
@@ -291,24 +291,60 @@
     }).join('');
 
     var adminName = (cfg().footer && cfg().footer.copyrightName) || t('admin.sidebar.admin');
-    var langOpts = '<select id="adminLangSwitch" class="ab-lang-switch">' +
-      '<option value="zh-CN">🇨🇳 中文</option><option value="en">🇬🇧 English</option><option value="ja">🇯🇵 日本語</option><option value="ko">🇰🇷 한국어</option><option value="hi">🇮🇳 हिन्दी</option></select>';
+    var prof = readAdminProfile();
     return (
       '<aside class="ab-sider" id="abSider">' +
         '<div class="ab-sider-header">' +
-          '<div class="ab-logo">青</div>' +
-          '<div class="ab-sider-title">' + esc(adminName) + '</div>' +
-          langOpts +
+          '<div class="ab-brand">' +
+            '<div class="ab-logo">' + esc((adminName || t('admin.sidebar.admin')).slice(0, 1)) + '</div>' +
+            '<div class="ab-brand-text"><b>' + esc(adminName) + '</b><span>' + esc(t('admin.sider.hint')) + '</span></div>' +
+          '</div>' +
         '</div>' +
         '<nav class="ab-nav">' + groups + '</nav>' +
         '<div class="ab-sider-footer">' +
-          '<div class="ab-avatar">A</div>' +
-          '<div class="ab-sider-footer-text"><b>' + esc(adminName) + '</b><span>' + t('admin.sidebar.adminDesc') + '</span></div>' +
+          '<div class="ab-avatar" id="abSiderAvatar" data-letter="' + siderAvatarLetter(prof) + '">' + siderAvatarHTML(prof) + '</div>' +
+          '<div class="ab-sider-footer-text"><b id="abSiderName">' + esc(prof.name || adminName) + '</b><span>' + t('admin.sidebar.adminDesc') + '</span></div>' +
           '<button class="ab-btn-icon" id="abSiderLogout" title="' + t('admin.sidebar.logout') + '">' + icon('logout', 17) + '</button>' +
         '</div>' +
       '</aside>' +
       '<div class="ab-sider-mask" id="abSiderMask"></div>'
     );
+  }
+  /* 左下角头像：使用个人资料中设置的头像（设置 → 个人资料 → 头像 URL），无头像或加载失败时显示首字符 */
+  function siderAvatarLetter(prof) {
+    return esc((prof && prof.name || t('admin.sidebar.admin') || 'A').slice(0, 1).toUpperCase());
+  }
+  function siderAvatarHTML(prof) {
+    if (prof && prof.avatar) {
+      return '<img class="ab-avatar-img" src="' + esc(prof.avatar) + '" alt="" onerror="var p=this.parentNode;this.remove();var s=document.createElement(\'span\');s.className=\'ab-avatar-letter\';s.textContent=p.getAttribute(\'data-letter\')||\'A\';p.appendChild(s)">';
+    }
+    return '<span class="ab-avatar-letter">' + siderAvatarLetter(prof) + '</span>';
+  }
+  function readAdminProfile() {
+    try {
+      var s = JSON.parse(localStorage.getItem('qingyu.admin.profile') || 'null');
+      return (s && typeof s === 'object') ? s : {};
+    } catch (e) { return {}; }
+  }
+  function writeAdminProfile(p) {
+    try { localStorage.setItem('qingyu.admin.profile', JSON.stringify(p || {})); } catch (e) {}
+  }
+  /* 挂载后异步同步个人信息（设置 → 个人资料），就地更新左下角头像/名称，无需重挂载 */
+  function refreshSiderProfile(root) {
+    if (!cloudOn()) return;
+    api('api/settings').then(function (d) {
+      var s = (d && d.settings) || {};
+      var prof = safeJson(s.profile);
+      writeAdminProfile({ name: prof.name || '', bio: prof.bio || '', avatar: prof.avatar || '', email: prof.email || '' });
+      window._siteSettings = s;
+      var av = root.querySelector('#abSiderAvatar');
+      if (av) {
+        av.setAttribute('data-letter', siderAvatarLetter({ name: prof.name }));
+        av.innerHTML = siderAvatarHTML({ name: prof.name, avatar: prof.avatar });
+      }
+      var nm = root.querySelector('#abSiderName');
+      if (nm) nm.textContent = prof.name || (cfg().footer && cfg().footer.copyrightName) || t('admin.sidebar.admin');
+    }).catch(function () {});
   }
 
   /* ----------------------- 顶栏 ----------------------- */
@@ -324,9 +360,12 @@
         '<div class="ab-header-spacer"></div>' +
         '<div class="ab-header-right">' +
           '<button class="ab-header-btn" id="abPreview" title="' + t('admin.header.preview') + '">' + icon('external', 16) + '<span class="ab-hide-sm">' + t('admin.header.preview') + '</span></button>' +
-          '<div class="ab-dropdown">' +
-            '<button class="ab-btn-icon ab-bell" id="abBell" title="' + t('admin.header.newComment') + '">' + icon('quote', 18) + '<span class="ab-badge" id="abBellBadge" style="display:none">0</span></button>' +
-            '<div class="ab-menu" id="abBellMenu"><div class="ab-menu-item" style="color:var(--ab-muted);cursor:default">' + t('admin.header.noNewComment') + '</div></div>' +
+          '<div class="ab-lang-wrap">' +
+            '<button class="ab-btn-icon" id="abLangToggle" title="' + esc(window.langTitle ? window.langTitle() : 'Language') + '" aria-haspopup="menu" aria-expanded="false">' + icon('globe', 18) + '</button>' +
+            '<div class="ab-lang-pop" id="abLangPop" role="menu">' +
+              '<div class="ab-lang-pop-title">' + esc(window.langTitle ? window.langTitle() : 'Language') + '</div>' +
+              '<div class="ab-lang-pop-options" id="abLangPopInner"></div>' +
+            '</div>' +
           '</div>' +
           '<div class="ab-dropdown">' +
             '<button class="ab-btn-icon" id="abAvatarBtn" title="' + t('admin.header.account') + '">' + icon('lock', 18) + '</button>' +
@@ -385,6 +424,7 @@
     bindShell(root, route);
     loadPendingBadge(root, route);
     renderPage(root, route);
+    refreshSiderProfile(root);
   }
 
   function renderShell(root, route, pendingCount) {
@@ -409,12 +449,17 @@
       a.addEventListener('click', function (e) { e.preventDefault(); go(a.getAttribute('data-link')); });
     });
 
-    // 语言切换：加载新语言后重新挂载整个管理面板（无刷新）
-    var langSwitch = root.querySelector('#adminLangSwitch');
-    if (langSwitch && window.__i18n && window.__i18n.loadLocale) {
-      langSwitch.value = (window.__i18n.getLocale && window.__i18n.getLocale()) || 'zh-CN';
-      langSwitch.addEventListener('change', function () {
-        var val = langSwitch.value;
+    // 语言切换（右上角 🌐 弹层，复刻前台首页的样式与效果：SVG 国旗 + 选项弹层）
+    var langToggle = root.querySelector('#abLangToggle');
+    var langPop = root.querySelector('#abLangPop');
+    if (langToggle && langPop && window.__i18n) {
+      var langInner = root.querySelector('#abLangPopInner');
+      if (langInner) langInner.innerHTML = (typeof window.langOptionsHTML === 'function') ? window.langOptionsHTML() : '';
+      langToggle.addEventListener('click', function (e) { e.stopPropagation(); langPop.classList.toggle('open'); });
+      langPop.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-lang]');
+        if (!b) return;
+        var val = b.getAttribute('data-lang');
         var currentPath = (typeof window.currentRoute === 'function') ? window.currentRoute().path : '/admin';
         window.__i18n.loadLocale(val).then(function () {
           mount(root, currentPath);
@@ -446,10 +491,6 @@
       }, t('confirm.yes'));
     });
 
-    // 通知铃铛
-    var bell = root.querySelector('#abBell');
-    var bellMenu = root.querySelector('#abBellMenu');
-    bell.addEventListener('click', function (e) { e.stopPropagation(); bellMenu.classList.toggle('open'); });
     // 头像下拉
     var avBtn = root.querySelector('#abAvatarBtn');
     var avMenu = root.querySelector('#abAvatarMenu');
@@ -470,7 +511,7 @@
     if (!window.__abDocCloseBound) {
       window.__abDocCloseBound = true;
       document.addEventListener('click', function () {
-        var ms = document.querySelectorAll('.ab-menu.open');
+        var ms = document.querySelectorAll('.ab-menu.open, .ab-lang-pop.open');
         ms.forEach(function (m) { m.classList.remove('open'); });
       });
     }
@@ -479,21 +520,10 @@
   function loadPendingBadge(root, route) {
     if (!cloudOn()) return;
     api('api/comments?status=pending').then(function (d) {
-      var list = (d && d.comments) || [];
-      var badge = root.querySelector('#abBellBadge');
-      var menu = root.querySelector('#abBellMenu');
-      if (badge && list.length) {
-        badge.style.display = ''; badge.textContent = list.length;
-      }
-      if (menu) {
-        if (list.length) {
-          menu.innerHTML = list.slice(0, 6).map(function (c) {
-            return '<div class="ab-menu-item" data-link="/admin/comments/pending" style="white-space:normal;line-height:1.4">' +
-              '<div><b>' + esc(c.author || t('admin.comments.anonymous')) + '</b><br><span class="ab-text-sm ab-muted">' + esc((c.content || '').slice(0, 28)) + '</span></div></div>';
-          }).join('') + '<div class="ab-menu-sep"></div><div class="ab-menu-item" data-link="/admin/comments/pending">' + t('admin.header.viewAllPending') + '</div>';
-          menu.querySelectorAll('[data-link]').forEach(function (a) { a.addEventListener('click', function () { go(a.getAttribute('data-link')); }); });
-        }
-      }
+      var n = ((d && d.comments) || []).length;
+      if (n <= 0) return;
+      var cnt = root.querySelector('#abSider [data-link="/admin/comments/pending"] .ab-nav-count');
+      if (cnt) { cnt.textContent = n; cnt.style.display = ''; }
     }).catch(function () {});
   }
 
@@ -1307,6 +1337,7 @@
     // 同步到前台全局变量，确保前台渲染时读取到最新的站点设置
     window._siteSettings = settingsCache;
     syncDraftFromServer();
+    writeAdminProfile(settingsDraft.profile);
     fillSettings(content);
   }
   /** 从服务端数据初始化草稿（仅首次或重置时调用，避免覆盖用户未保存的输入） */
@@ -1412,6 +1443,7 @@
       });
       // 同步到前台全局变量，使站点名称/头像/简介等设置立即生效（无需刷新整页）
       window._siteSettings = settingsCache;
+      writeAdminProfile(payload.profile);
       toast(t('admin.settings.saved'), 'ok');
     } catch (e) { toast(t('admin.settings.saveFail') + (e.message || e), 'err'); }
   }
