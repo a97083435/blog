@@ -71,10 +71,15 @@
   background: linear-gradient(135deg, var(--ab-primary), var(--ab-primary-2), var(--ab-primary));
   background-size: 220% 220%; animation: abLogoFlow 5s ease-in-out infinite;
   color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;
-  letter-spacing: 0; box-shadow: 0 2px 6px rgba(0,0,0,.14); overflow: hidden;
+  letter-spacing: 0; box-shadow: 0 2px 6px rgba(0,0,0,.14); overflow: hidden; position: relative;
 }
 @keyframes abLogoFlow { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-.ab-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 9px; }
+/* Logo 不铺满：object-fit:contain + 内边距，让 Logo 居中嵌在流动渐变底衬上，四周露出渐变边缘（一体感），hover 轻放大 */
+.ab-logo-img {
+  width: 100%; height: 100%; object-fit: contain; padding: 8px; box-sizing: border-box;
+  display: block; border-radius: 9px; transition: transform .18s ease; filter: drop-shadow(0 1px 2px rgba(0,0,0,.22));
+}
+.ab-brand:hover .ab-logo-img { transform: scale(1.08); }
 .ab-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .ab-brand-name { font-weight: 700; font-size: 14px; line-height: 1; display: inline-block; color: var(--ab-sidebar-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ab-sider.collapsed .ab-brand-name,
