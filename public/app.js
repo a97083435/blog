@@ -3058,6 +3058,8 @@ async function route() {
   }
   updateSEO(path);
   bindGlobal();
+  /* 播放器等全站组件监听路由变化（如后台页隐藏播放器） */
+  try { window.dispatchEvent(new CustomEvent('qy:route')); } catch (e) {}
 }
 
 /* ---------- SEO：动态更新 meta 标签 ---------- */

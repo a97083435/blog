@@ -19,7 +19,7 @@
 
   var DEFAULT_LANG = 'zh-CN';
   /* 语言 JSON 缓存版本：修改 locales/*.json 后递增，强制浏览器拉新文件 */
-  var I18N_VER = '3';
+  var I18N_VER = '4';
   var _locale = DEFAULT_LANG;
   var _translations = {};
 
@@ -78,6 +78,17 @@
     "about.title": "关于",
     "about.desc": "一个零依赖、双击即开的轻量博客",
     "about.posts": "篇内容",
+    "player.none": "未播放",
+    "player.playlist": "播放列表",
+    "player.empty": "暂无音乐",
+    "player.volume": "音量",
+    "player.play": "播放",
+    "player.pause": "暂停",
+    "player.prev": "上一首",
+    "player.next": "下一首",
+    "player.seek": "播放进度",
+    "player.close": "关闭",
+    "player.unknown": "未知曲目",
     "about.tags": "个标签",
     "about.totalWords": "总字数",
     "about.latestUpdate": "最新更新",
