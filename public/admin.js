@@ -1325,8 +1325,8 @@
         '<div class="ab-muted" style="font-size:12.5px;margin-bottom:10px">' + t('admin.music.dropHint') + '</div>' +
         '<div class="ab-row" style="gap:8px;flex-wrap:wrap">' +
           '<input class="ab-input" id="abMusicFile" type="file" accept="audio/*" style="max-width:280px;flex:1 1 200px" aria-label="' + t('admin.music.chooseFile') + '">' +
-          '<input class="ab-input" id="abMusicArtist" placeholder="' + t('admin.music.artistPh') + '" style="max-width:180px;flex:1 1 130px" autocomplete="off">' +
           '<input class="ab-input" id="abMusicTitle" placeholder="' + t('admin.music.titlePh') + '" style="max-width:220px;flex:1 1 160px" autocomplete="off">' +
+          '<input class="ab-input" id="abMusicArtist" placeholder="' + t('admin.music.artistPh') + '" style="max-width:180px;flex:1 1 130px" autocomplete="off">' +
           '<button type="button" class="ab-btn primary" id="abMusicUpload">' + icon('upload', 15) + ' ' + t('admin.music.upload') + '</button>' +
         '</div>' +
         '<div class="ab-muted" id="abMusicMsg" style="font-size:12.5px;margin-top:8px">' + t('admin.music.r2Hint') + '</div>' +
@@ -1339,16 +1339,16 @@
     bindMusic(content);
     loadMusic(content);
   }
-  /** 从文件名解析「歌手-歌曲名」（取第一个 - 分割，歌名里的 - 保留） */
+  /** 从文件名解析「歌曲名-歌手」：歌手名固定为最后一段（取最后一个 - 分割，歌名里的 - 保留） */
   function parseMusicFilename(name) {
     var base = String(name || '').replace(/\.[^.]+$/, '');
-    var idx = base.indexOf('-');
+    var idx = base.lastIndexOf('-');
     if (idx > 0) {
-      var a = base.slice(0, idx).trim();
-      var t = base.slice(idx + 1).trim();
-      if (a && t) return { artist: a, title: t };
+      var title = base.slice(0, idx).trim();
+      var artist = base.slice(idx + 1).trim();
+      if (title && artist) return { title: title, artist: artist };
     }
-    return { artist: '', title: base };
+    return { title: base, artist: '' };
   }
   function bindMusic(content) {
     var drop = content.querySelector('#abMusicDrop');
@@ -1399,11 +1399,11 @@
     }
     body.innerHTML = list.map(function (s) {
       return '<tr data-mid="' + enc(s.id) + '">' +
-        '<td><div style="display:flex;align-items:center;gap:10px;min-width:0">' +
-          (s.cover ? '<img src="' + esc(s.cover) + '" alt="" style="width:34px;height:34px;border-radius:8px;object-fit:cover;flex:0 0 auto">'
-            : '<span style="flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--ab-primary-weak);color:var(--ab-primary)">' + icon('music', 17) + '</span>') +
-          '<div style="min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">' + esc(s.title) + '</div>' +
-          '<div class="ab-muted" style="font-size:12px">' + esc(s.artist || '—') + '</div></div></div></td>' +
+        '<td><div style="display:flex;align-items:center;gap:11px;min-width:0">' +
+          (s.cover ? '<img src="' + esc(s.cover) + '" alt="" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex:0 0 auto">'
+            : '<span style="flex:0 0 auto;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--ab-primary-weak);color:var(--ab-primary)">' + icon('music', 18) + '</span>') +
+          '<div style="min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:15px;color:var(--ab-text)">' + esc(s.title) + '</div>' +
+          '<div class="ab-muted" style="font-size:12.5px;margin-top:2px">' + esc(s.artist || '—') + '</div></div></div></td>' +
         '<td class="ab-muted">' + fmtSize(s.size) + '</td>' +
         '<td class="col-actions"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
           '<audio controls preload="none" src="' + esc(s.url) + '" style="height:30px;width:170px;max-width:100%"></audio>' +

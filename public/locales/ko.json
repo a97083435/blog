@@ -310,7 +310,7 @@
   "admin.music.uploadFail": "업로드 실패",
   "admin.music.putFail": "업로드 실패: R2 버킷 CORS 규칙(사이트 도메인의 PUT 및 content-type 헤더 허용)과 네트워크를 확인하세요",
   "admin.music.chooseFile": "오디오 파일 선택",
-  "admin.music.dropHint": "오디오 파일을 여기로 드래그하거나 클릭하여 선택하세요. 파일명이「가수-곡명」이면 자동으로 인식해 채웁니다",
+  "admin.music.dropHint": "오디오 파일을 여기로 드래그하거나 클릭하여 선택하세요. 파일명이「곡명-가수」이면 자동으로 인식해 채웁니다",
   "admin.music.r2Hint": "오디오는 Cloudflare R2로 직접 업로드: 브라우저 → 사전 서명 PUT → 버킷 (R2 egress 무료, 서버 중계 없음)",
   "admin.music.r2Missing": "R2 공개 도메인(R2_PUBLIC_BASE)이 설정되지 않음 — Cloudflare 대시보드에서 커스텀 도메인을 먼저 바인딩하세요",
   "admin.music.titlePh": "곡 제목",
