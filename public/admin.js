@@ -274,6 +274,7 @@
       ] },
       { group: t('admin.sidebar.contentSettings'), items: [
         { key: 'media', label: t('admin.sidebar.media'), icon: 'image', href: '/admin/media' },
+        { key: 'music', label: t('admin.sidebar.musicManage'), icon: 'music', href: '/admin/music' },
         { key: 'settings', label: t('admin.sidebar.settings'), icon: 'sitemap', href: '/admin/settings' }
       ] }
     ];
@@ -419,6 +420,7 @@
     if (path === '/admin/comments') return { key: 'comments', page: 'comments', filter: 'all' };
     if (path === '/admin/comments/pending') return { key: 'comments-pending', page: 'comments', filter: 'pending' };
     if (path === '/admin/media') return { key: 'media', page: 'media' };
+    if (path === '/admin/music') return { key: 'music', page: 'music' };
     if (path === '/admin/settings') return { key: 'settings', page: 'settings' };
     return { key: 'dashboard', page: 'dashboard' };
   }
@@ -560,6 +562,7 @@
     if (route.page === 'tags') return pageTags(content);
     if (route.page === 'comments') return pageComments(content, route.filter);
     if (route.page === 'media') return pageMedia(content);
+    if (route.page === 'music') return pageMusic(content);
     if (route.page === 'settings') return pageSettings(content);
   }
 
@@ -1308,6 +1311,142 @@
   }
 
   /* ====================== 博客设置 ====================== */
+  /* ====================== 音乐管理（R2 直传 + D1 列表） ====================== */
+  function pageMusic(content) {
+    content.innerHTML = '<div class="ab-page-head"><div><h1 class="ab-page-title">' + t('admin.music.title') + '</h1>' +
+      '<p class="ab-page-sub">' + t('admin.music.desc') + '</p></div></div>';
+    if (!cloudOn()) {
+      content.insertAdjacentHTML('beforeend', '<div class="ab-card"><div class="ab-empty"><div class="ab-empty-ico">🎵</div><p>' + t('admin.music.cloudOnly') + '</p></div></div>');
+      return;
+    }
+    content.insertAdjacentHTML('beforeend',
+      '<div class="ab-card" style="margin-bottom:14px">' +
+        '<div class="ab-section-title">' + icon('upload', 16) + ' ' + t('admin.music.upload') + '</div>' +
+        '<div class="ab-row" style="gap:8px;flex-wrap:wrap">' +
+          '<input class="ab-input" id="abMusicFile" type="file" accept="audio/*" style="max-width:300px;flex:1 1 220px" aria-label="' + t('admin.music.chooseFile') + '">' +
+          '<input class="ab-input" id="abMusicTitle" placeholder="' + t('admin.music.titlePh') + '" style="max-width:200px;flex:1 1 150px">' +
+          '<input class="ab-input" id="abMusicArtist" placeholder="' + t('admin.music.artistPh') + '" style="max-width:160px;flex:1 1 120px">' +
+          '<button type="button" class="ab-btn primary" id="abMusicUpload">' + icon('upload', 15) + ' ' + t('admin.music.upload') + '</button>' +
+        '</div>' +
+        '<div class="ab-muted" id="abMusicMsg" style="font-size:12.5px;margin-top:8px">' + t('admin.music.r2Hint') + '</div>' +
+        '<div class="ab-progress" id="abMusicBar" style="display:none;height:6px;border-radius:999px;background:var(--ab-border);margin-top:10px;overflow:hidden">' +
+          '<div id="abMusicBarFill" style="width:0%;height:100%;background:var(--ab-primary);transition:width .2s"></div></div>' +
+      '</div>' +
+      '<div class="ab-card"><div class="ab-table-wrap"><table class="ab-table"><thead><tr>' +
+        '<th>' + t('admin.music.colTitle') + '</th><th>' + t('admin.music.colSize') + '</th><th class="col-actions">' + t('admin.music.colActions') + '</th>' +
+      '</tr></thead><tbody id="abMusicBody"></tbody></table></div></div>');
+    bindMusic(content);
+    loadMusic(content);
+  }
+  function bindMusic(content) {
+    var file = content.querySelector('#abMusicFile');
+    var title = content.querySelector('#abMusicTitle');
+    var upload = content.querySelector('#abMusicUpload');
+    if (file) file.addEventListener('change', function () {
+      var f = this.files && this.files[0];
+      if (f && title && !title.value.trim()) title.value = f.name.replace(/\.[^.]+$/, '');
+    });
+    if (upload) upload.addEventListener('click', function () { uploadMusic(content); });
+  }
+  function fmtSize(n) {
+    n = Number(n) || 0;
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1048576).toFixed(1) + ' MB';
+  }
+  async function loadMusic(content) {
+    var body = content.querySelector('#abMusicBody');
+    if (!body) return;
+    body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px"><span class="ab-spin"></span> ' + t('admin.postList.loading') + '</td></tr>';
+    var d;
+    try { d = await api('api/music'); } catch (e) {
+      body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px" class="ab-muted">' + esc(e.message || e) + '</td></tr>';
+      return;
+    }
+    var list = (d && d.music) || [];
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:34px" class="ab-muted">' + t('admin.music.empty') + '</td></tr>';
+      return;
+    }
+    body.innerHTML = list.map(function (s) {
+      return '<tr data-mid="' + enc(s.id) + '">' +
+        '<td><div style="display:flex;align-items:center;gap:10px;min-width:0">' +
+          (s.cover ? '<img src="' + esc(s.cover) + '" alt="" style="width:34px;height:34px;border-radius:8px;object-fit:cover;flex:0 0 auto">'
+            : '<span style="flex:0 0 auto;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--ab-primary-weak);color:var(--ab-primary)">' + icon('music', 17) + '</span>') +
+          '<div style="min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600">' + esc(s.title) + '</div>' +
+          '<div class="ab-muted" style="font-size:12px">' + esc(s.artist || '—') + '</div></div></div></td>' +
+        '<td class="ab-muted">' + fmtSize(s.size) + '</td>' +
+        '<td class="col-actions"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
+          '<audio controls preload="none" src="' + esc(s.url) + '" style="height:30px;width:170px;max-width:100%"></audio>' +
+          '<button type="button" class="ab-btn sm" data-act="edit" title="' + t('admin.music.edit') + '">' + icon('pen', 13) + '</button>' +
+          '<button type="button" class="ab-btn sm danger" data-act="del" title="' + t('admin.music.delete') + '">' + icon('trash', 13) + '</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join('');
+    body.querySelectorAll('button[data-act]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var tr = btn.closest('tr');
+        var id = tr && tr.getAttribute('data-mid');
+        if (!id) return;
+        if (btn.getAttribute('data-act') === 'del') confirmModal(t('admin.music.delete'), esc(t('admin.music.deleteConfirm')), async function () {
+          try {
+            await api('api/music/' + id, { method: 'DELETE' });
+            loadMusic(content); // 音乐表仅 3 列，不走 seamlessRemoveRow（其按 6 列判断），直接全量刷新
+            toast(t('admin.music.deleted'), 'ok');
+          } catch (e) { toast(esc(e.message || e), 'err'); }
+        }, t('admin.music.delete'));
+        else editMusic(content, id, tr);
+      });
+    });
+  }
+  function editMusic(content, id, tr) {
+    var t0 = tr.querySelector('td:first-child div:nth-child(2) div:first-child');
+    var title = window.prompt(t('admin.music.titlePh'), t0 ? t0.textContent.trim() : '');
+    if (!title || !title.trim()) return;
+    var artist = window.prompt(t('admin.music.artistPh'), '');
+    api('api/music/' + id, { method: 'PUT', body: JSON.stringify({ title: title.trim(), artist: ((artist || '').trim()) }) })
+      .then(function () { loadMusic(content); toast(t('admin.postSaved'), 'ok'); })
+      .catch(function (e) { toast(esc(e.message || e), 'err'); });
+  }
+  async function uploadMusic(content) {
+    var fileEl = content.querySelector('#abMusicFile');
+    var file = fileEl && fileEl.files && fileEl.files[0];
+    if (!file) { toast(t('admin.music.chooseFile'), 'err'); return; }
+    var msg = content.querySelector('#abMusicMsg');
+    var bar = content.querySelector('#abMusicBar');
+    var fill = content.querySelector('#abMusicBarFill');
+    var btn = content.querySelector('#abMusicUpload');
+    var title = (content.querySelector('#abMusicTitle').value || '').trim() || file.name.replace(/\.[^.]+$/, '');
+    var artist = (content.querySelector('#abMusicArtist').value || '').trim();
+    if (btn) btn.disabled = true;
+    if (bar) bar.style.display = 'block';
+    if (fill) fill.style.width = '0%';
+    if (msg) msg.textContent = '';
+    try {
+      var u = await api('api/music/upload-url', { method: 'POST', body: JSON.stringify({ filename: file.name, size: file.size }) });
+      if (!u || !u.uploadUrl) throw new Error((u && u.error) || t('admin.music.uploadFail'));
+      if (!u.publicUrl) throw new Error(t('admin.music.r2Missing'));
+      var done = await new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('PUT', u.uploadUrl);
+        xhr.setRequestHeader('Content-Type', u.contentType || 'audio/mpeg');
+        xhr.upload.onprogress = function (e) { if (e.lengthComputable && fill) fill.style.width = Math.round(e.loaded / e.total * 100) + '%'; };
+        xhr.onload = function () { (xhr.status >= 200 && xhr.status < 300) ? resolve(true) : reject(new Error('HTTP ' + xhr.status)); };
+        xhr.onerror = function () { reject(new Error(t('admin.music.uploadFail'))); };
+        xhr.send(file);
+      });
+      await api('api/music', { method: 'POST', body: JSON.stringify({ title: title, artist: artist, url: u.publicUrl, size: file.size }) });
+      if (fill) fill.style.width = '100%';
+      if (msg) { msg.textContent = t('admin.music.uploadOk'); msg.style.color = 'var(--ab-ok, #4a9d5f)'; }
+      if (fileEl) fileEl.value = '';
+      loadMusic(content);
+    } catch (e) {
+      if (msg) { msg.textContent = esc(e.message || e); msg.style.color = 'var(--ab-danger, #d9534f)'; }
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
   function pageSettings(content) {
     content.innerHTML = '<div class="ab-page-head"><div><h1 class="ab-page-title">' + t('admin.settings.title') + '</h1><p class="ab-page-sub">' + t('admin.settings.desc') + '</p></div>' +
       (cloudOn() ? '<button class="ab-btn primary" id="abSaveSettings">' + icon('save', 15) + ' ' + t('admin.settings.save') + '</button>' : '<span class="ab-chip" style="background:var(--ab-primary-weak);color:var(--ab-primary)">' + t('admin.categories.staticHint') + '</span>') + '</div>' +

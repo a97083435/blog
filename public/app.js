@@ -66,7 +66,13 @@ function svgIcon(name, size) {
     palette: '<svg ' + s + ' ' + c + '><path d="M12 3a9 9 0 1 0 5.4 16.2A2.4 2.4 0 0 0 15.6 17h-.9a2.6 2.6 0 0 1-2.6-2.6c0-1.4 1.1-2.6 2.6-2.6h1.4A3.9 3.9 0 0 0 20.2 8 9 9 0 0 0 12 3z"/><circle cx="7.4" cy="11.3" r="1"/><circle cx="10.6" cy="7.2" r="1"/><circle cx="15.4" cy="8.6" r="1"/></svg>',
     globe: '<svg ' + s + ' ' + c + '><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15.5 15.5 0 0 1 0 18M12 3a15.5 15.5 0 0 0 0 18"/></svg>',
     spark: '<svg ' + s + ' ' + c + '><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>',
-    copy: '<svg ' + s + ' ' + c + '><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>'
+    copy: '<svg ' + s + ' ' + c + '><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
+    music: '<svg ' + s + ' ' + c + '><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+    play: '<svg ' + s + ' ' + c + '><path d="M7 4.5v15l13-7.5z"/></svg>',
+    pause: '<svg ' + s + ' ' + c + '><path d="M7 4.5h3.4v15H7zM13.6 4.5H17v15h-3.4z"/></svg>',
+    prev: '<svg ' + s + ' ' + c + '><path d="M6 5v14M19 5l-9 7 9 7z"/></svg>',
+    next: '<svg ' + s + ' ' + c + '><path d="M18 5v14M5 5l9 7-9 7z"/></svg>',
+    volume: '<svg ' + s + ' ' + c + '><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>'
   };
   return I[name] || '';
 }

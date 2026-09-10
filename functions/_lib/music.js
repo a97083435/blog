@@ -1,0 +1,194 @@
+/* ============================================================
+ * 音乐模块（Cloudflare R2 直传 + D1 播放列表元数据）
+ * ------------------------------------------------------------
+ * 上传方式：浏览器直传 R2（S3 兼容预签名 URL，SigV4），
+ *   Worker 只负责签发临时 PUT URL，不中转文件内容：
+ *   · R2 egress 免费 → 播放流量不占 Worker 带宽
+ *   · Worker 请求体上限 100MB 的问题天然规避
+ * 环境变量（wrangler secret / CI secret）：
+ *   · R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_ENDPOINT
+ *       （Cloudflare 控制台 → R2 → 管理 API 令牌，S3 兼容凭据）
+ *   · R2_BUCKET        存储桶名（如 qingyu-music）
+ *   · R2_PUBLIC_BASE   公开读取基址（桶绑定的自定义域名，如
+ *       https://music.example.com；末尾不带斜杠）
+ * 降级：未配置 R2 凭据时，读取播放列表仍可用（D1），上传返回 503。
+ * ============================================================ */
+import { getCorsHeaders, json, corsPreflight, isWriteAuthed } from './api-core.js';
+
+const enc = new TextEncoder();
+
+/* ---------- 本地 D1 / 鉴权小工具（避免改动 api-core 内部） ---------- */
+async function dbAll(db, sql) {
+  const args = Array.prototype.slice.call(arguments, 2);
+  const { results } = await db.prepare(sql).bind.apply(db.prepare(sql), args).all();
+  return results || [];
+}
+async function dbRun(db, sql) {
+  const args = Array.prototype.slice.call(arguments, 2);
+  await db.prepare(sql).bind.apply(db.prepare(sql), args).run();
+}
+function unauthorized(request, env) {
+  return json({ error: '未授权' }, 401, request, env);
+}
+
+/* ---------- SigV4（AWS Signature Version 4，HMAC-SHA256） ---------- */
+function hexify(buf) {
+  const b = new Uint8Array(buf);
+  let s = '';
+  for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
+  return s;
+}
+async function hmac(keyBytes, dataStr) {
+  const key = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(dataStr)));
+}
+async function signingKey(secret, dateStamp, region, service) {
+  const dk = await hmac(enc.encode('AWS4' + secret), dateStamp);
+  const rk = await hmac(dk, region);
+  const sk = await hmac(rk, service);
+  return hmac(sk, 'aws4_request');
+}
+/** 生成 R2 S3 兼容的预签名 PUT URL（有效期 1 小时，UNSIGNED-PAYLOAD） */
+async function presignPut(env, key, expiresSec) {
+  expiresSec = expiresSec || 3600;
+  const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
+  const host = new URL(endpoint).host;
+  const path = '/' + env.R2_BUCKET + '/' + key;
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const region = 'auto';
+  const service = 's3';
+  const scope = dateStamp + '/' + region + '/' + service + '/aws4_request';
+  const qp = {
+    'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
+    'X-Amz-Credential': env.R2_ACCESS_KEY_ID + '/' + scope,
+    'X-Amz-Date': amzDate,
+    'X-Amz-Expires': String(expiresSec),
+    'X-Amz-SignedHeaders': 'host'
+  };
+  const canonicalQuery = Object.keys(qp).sort()
+    .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(qp[k]); })
+    .join('&');
+  const canonicalHeaders = 'host:' + host + '\n';
+  const canonicalRequest = ['PUT', path, canonicalQuery, canonicalHeaders, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(canonicalRequest));
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, hexify(digest)].join('\n');
+  const keyBytes = await signingKey(env.R2_SECRET_ACCESS_KEY, dateStamp, region, service);
+  const signature = hexify(await hmac(keyBytes, stringToSign));
+  return endpoint + path + '?' + canonicalQuery + '&X-Amz-Signature=' + signature;
+}
+
+/* ---------- 常量与工具 ---------- */
+const AUDIO_EXTS = { mp3: 'audio/mpeg', m4a: 'audio/mp4', ogg: 'audio/ogg', oga: 'audio/ogg', wav: 'audio/wav', aac: 'audio/aac', opus: 'audio/ogg', flac: 'audio/flac' };
+const MAX_SIZE = 30 * 1024 * 1024; // 单曲 ≤ 30MB
+
+function r2Configured(env) {
+  return !!(env && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_ENDPOINT && env.R2_BUCKET);
+}
+function randomId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+function normalizeTrack(row) {
+  return {
+    id: row.id, title: row.title, artist: row.artist || '', url: row.url,
+    cover: row.cover || '', size: Number(row.size) || 0, duration: Number(row.duration) || 0,
+    sort: Number(row.sort) || 0, date: row.created_at || ''
+  };
+}
+
+/* ============================================================
+ * GET /api/music（公开）→ 播放列表
+ * POST /api/music（管理）→ 上传完成后注册元数据（url 为已传至 R2 的公开地址）
+ * ============================================================ */
+export async function handleMusic(request, env) {
+  if (!env || !env.DB) return json({ error: '数据库未配置' }, 500, request, env);
+  if (request.method === 'OPTIONS') return corsPreflight(request, env);
+
+  if (request.method === 'GET') {
+    const list = await dbAll(env.DB, 'SELECT * FROM music ORDER BY sort ASC, created_at ASC');
+    return json({ ok: true, music: (list || []).map(normalizeTrack) }, 200, request, env, { 'Cache-Control': 's-maxage=60, max-age=30' });
+  }
+
+  if (request.method === 'POST') {
+    if (!(await isWriteAuthed(request, env))) return unauthorized(request, env);
+    const body = await request.json().catch(function () { return null; });
+    const title = String((body && body.title) || '').trim().slice(0, 200);
+    const url = String((body && body.url) || '').trim();
+    if (!title || !url) return json({ error: '缺少 title / url' }, 400, request, env);
+    const id = 'song-' + randomId();
+    const artist = String((body && body.artist) || '').trim().slice(0, 200);
+    const cover = String((body && body.cover) || '').trim().slice(0, 500);
+    const size = Number((body && body.size) || 0) || 0;
+    const duration = Number((body && body.duration) || 0) || 0;
+    const sort = Number((body && body.sort) || 0) || 0;
+    const created_at = new Date().toISOString().slice(0, 10);
+    await dbRun(env.DB, 'INSERT INTO music (id,title,artist,url,cover,size,duration,sort,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+      id, title, artist, url, cover, size, duration, sort, created_at);
+    return json({ ok: true, track: { id, title, artist, url, cover, size, duration, sort, date: created_at } }, 201, request, env, { 'Cache-Control': 'no-store' });
+  }
+
+  return json({ error: 'Method not allowed' }, 405, request, env);
+}
+
+/* ============================================================
+ * POST /api/music/upload-url（管理）→ 返回 R2 预签名 PUT URL
+ *   入参 { filename: "demo.mp3", size: 5242880 }
+ *   返回 { uploadUrl, publicUrl, key, contentType, expiresIn }
+ * ============================================================ */
+export async function handleMusicUploadUrl(request, env) {
+  if (!env || !env.DB) return json({ error: '数据库未配置' }, 500, request, env);
+  if (request.method === 'OPTIONS') return corsPreflight(request, env);
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, request, env);
+  if (!(await isWriteAuthed(request, env))) return unauthorized(request, env);
+  if (!r2Configured(env)) {
+    return json({ error: 'R2 未配置（缺少 R2 凭据 / R2_BUCKET），无法上传' }, 503, request, env);
+  }
+
+  const body = await request.json().catch(function () { return null; });
+  const filename = String((body && body.filename) || '').trim();
+  const size = Number((body && body.size) || 0) || 0;
+  const m = /\.([a-zA-Z0-9]+)$/.exec(filename);
+  const ext = m ? m[1].toLowerCase() : '';
+  if (!AUDIO_EXTS[ext]) return json({ error: '不支持的音频格式（mp3 / m4a / ogg / wav / aac / opus / flac）' }, 400, request, env);
+  if (size <= 0 || size > MAX_SIZE) return json({ error: '文件大小需在 1B ~ 30MB 之间' }, 400, request, env);
+
+  const key = 'music/' + randomId() + '.' + ext;
+  const contentType = AUDIO_EXTS[ext];
+  const uploadUrl = await presignPut(env, key, 3600);
+  const publicBase = String(env.R2_PUBLIC_BASE || '').replace(/\/+$/, '');
+  const publicUrl = publicBase ? publicBase + '/' + key : (() => {
+    // 未配置公开域名时给出可用提示（正式使用请绑定自定义域名）
+    return '';
+  })();
+
+  return json({ ok: true, uploadUrl, publicUrl, key, contentType, expiresIn: 3600 }, 200, request, env, { 'Cache-Control': 'no-store' });
+}
+
+/* ============================================================
+ * PUT /api/music/:id（管理）→ 编辑元数据
+ * DELETE /api/music/:id（管理）→ 移除曲目（R2 对象保留，由运维侧清理）
+ * ============================================================ */
+export async function handleMusicId(request, env, id) {
+  if (!env || !env.DB) return json({ error: '数据库未配置' }, 500, request, env);
+  if (request.method === 'OPTIONS') return corsPreflight(request, env);
+  if (!(await isWriteAuthed(request, env))) return unauthorized(request, env);
+
+  if (request.method === 'PUT') {
+    const body = await request.json().catch(function () { return null; });
+    const title = String((body && body.title) || '').trim().slice(0, 200);
+    const artist = String((body && body.artist) || '').trim().slice(0, 200);
+    const cover = String((body && body.cover) || '').trim().slice(0, 500);
+    const sort = Number((body && body.sort) || 0) || 0;
+    const duration = Number((body && body.duration) || 0) || 0;
+    if (!title) return json({ error: '缺少 title' }, 400, request, env);
+    await dbRun(env.DB, 'UPDATE music SET title=?, artist=?, cover=?, sort=?, duration=? WHERE id=?', title, artist, cover, sort, duration, id).catch(function () {});
+    return json({ ok: true }, 200, request, env, { 'Cache-Control': 'no-store' });
+  }
+
+  if (request.method === 'DELETE') {
+    await dbRun(env.DB, 'DELETE FROM music WHERE id = ?', id).catch(function () {});
+    return json({ ok: true }, 200, request, env, { 'Cache-Control': 'no-store' });
+  }
+
+  return json({ error: 'Method not allowed' }, 405, request, env);
+}

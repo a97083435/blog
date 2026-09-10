@@ -11,6 +11,7 @@ import { onRequest as aiPing } from './functions/api/ai/ping.js';
 import { onRequest as aiSummary } from './functions/api/ai/summary.js';
 import { onRequest as aiAssist } from './functions/api/ai/assist.js';
 import { onRequest as aiComments } from './functions/api/ai/comments.js';
+import { handleMusic, handleMusicId, handleMusicUploadUrl } from './functions/_lib/music.js';
 
 export default {
   async fetch(request, env) {
@@ -115,6 +116,17 @@ export default {
     }
     if (url.pathname === '/api/ai/comments') {
       return aiComments({ request, env });
+    }
+    // 音乐（播放列表读取公开；上传需管理会话，R2 直传）
+    if (url.pathname === '/api/music/upload-url') {
+      return handleMusicUploadUrl(request, env);
+    }
+    if (url.pathname === '/api/music') {
+      return handleMusic(request, env);
+    }
+    mm = url.pathname.match(/^\/api\/music\/([^/]+)$/);
+    if (mm) {
+      return handleMusicId(request, env, decodeURIComponent(mm[1]));
     }
 
     // 未知 /api/* 路径：返回 JSON 404，绝不回退到 index.html（避免 API 调用方收到 HTML）
