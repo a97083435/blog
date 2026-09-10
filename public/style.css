@@ -938,7 +938,7 @@ html[data-theme="dark"] .post-card .mini-tags span {
   margin-right: auto;
 }
 
-.post-header { margin-bottom: 26px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+.post-header { margin-bottom: 26px; padding-bottom: 18px; border-bottom: 1px solid var(--border); text-align: center; }
 .post-header h1 { margin: 0 0 10px; font-size: 28px; line-height: 1.35; font-family: var(--font-display); }
 .post-header .meta {
   color: var(--muted);
@@ -947,6 +947,7 @@ html[data-theme="dark"] .post-card .mini-tags span {
   gap: 12px;
   align-items: center;
   flex-wrap: wrap;
+  justify-content: center;
 }
 /* 文章底部标签（左） */
 .af-tags { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -2487,3 +2488,34 @@ kbd {
 .ai-screen-spam { color: #d9534f; font-weight: 600; }
 .ai-screen-ok { color: #4a9d5f; }
 .ai-pending { color: var(--muted); }
+
+/* ============================================================
+ * 输入框统一（圆角卡片质感，与写作台编辑框观感一致）
+ * 覆盖：写作台字段 / 评论区 / 加密 / 管理门禁 / 留言板 / AI 检测 / 全局搜索
+ * 强调色聚焦 ring 统一；hover 边框微亮
+ * ============================================================ */
+.field input[type="text"], .field input[type="date"], .field input[type="datetime-local"], .field textarea,
+.comment-form input, .comment-form textarea,
+.lock-form input, .gate-form input,
+.gb-form-row input[type="text"], .guestbook-form textarea,
+.ai-screen textarea, #globalSearchInput {
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: 14px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.field input[type="text"]:hover:not(:focus), .field input[type="date"]:hover:not(:focus), .field input[type="datetime-local"]:hover:not(:focus), .field textarea:hover:not(:focus),
+.comment-form input:hover:not(:focus), .comment-form textarea:hover:not(:focus),
+.lock-form input:hover:not(:focus), .gate-form input:hover:not(:focus),
+.gb-form-row input[type="text"]:hover:not(:focus), .guestbook-form textarea:hover:not(:focus),
+.ai-screen textarea:hover:not(:focus), #globalSearchInput:hover:not(:focus) {
+  border-color: var(--accent);
+}
+.field input:focus, .field textarea:focus,
+.comment-form input:focus, .comment-form textarea:focus,
+.lock-form input:focus, .gate-form input:focus,
+.gb-form-row input[type="text"]:focus, .guestbook-form textarea:focus,
+.ai-screen textarea:focus, #globalSearchInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}

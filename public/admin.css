@@ -255,11 +255,13 @@
 .ab-search { position: relative; flex: 1 1 220px; max-width: 320px; }
 .ab-search input { width: 100%; }
 .ab-input, .ab-select, .ab-textarea {
-  width: 100%; padding: 9px 12px; border: 1px solid var(--ab-border-strong); border-radius: var(--ab-radius-sm);
+  width: 100%; padding: 9px 13px; border: 1px solid var(--ab-border-strong); border-radius: 10px;
   background: var(--ab-card); color: var(--ab-text); font-size: 14px; font-family: inherit; outline: none;
   transition: border-color .15s, box-shadow .15s;
 }
+.ab-input:hover:not(:focus), .ab-select:hover:not(:focus), .ab-textarea:hover:not(:focus) { border-color: var(--ab-primary); }
 .ab-input:focus, .ab-select:focus, .ab-textarea:focus { border-color: var(--ab-primary); box-shadow: 0 0 0 3px var(--ab-primary-weak); }
+select.ab-select { cursor: pointer; padding-right: 30px; }
 .ab-textarea { resize: vertical; min-height: 42px; line-height: 1.5; }
 .ab-field { margin-bottom: 16px; }
 .ab-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--ab-text); }
