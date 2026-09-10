@@ -309,6 +309,7 @@
   "admin.music.uploadOk": "अपलोड सफल",
   "admin.music.uploadFail": "अपलोड विफल",
   "admin.music.chooseFile": "ऑडियो फ़ाइल चुनें",
+  "admin.music.dropHint": "ऑडियो फ़ाइल को यहाँ खींचकर छोड़ें या चुनने के लिए क्लिक करें। फ़ाइल नाम जैसे कलाकार-शीर्षक.mp3 स्वतः पार्स होता है",
   "admin.music.r2Hint": "ऑडियो सीधे Cloudflare R2 पर अपलोड होता है: ब्राउज़र → प्री-साइन्ड PUT → बकेट (R2 egress मुफ़्त, सर्वर रिले नहीं)",
   "admin.music.r2Missing": "R2 सार्वजनिक डोमेन (R2_PUBLIC_BASE) कॉन्फ़िगर नहीं है — पहले Cloudflare डैशबोर्ड में कस्टम डोमेन बाँधें",
   "admin.music.titlePh": "ट्रैक शीर्षक",

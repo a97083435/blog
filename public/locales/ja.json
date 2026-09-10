@@ -309,6 +309,7 @@
   "admin.music.uploadOk": "アップロード完了",
   "admin.music.uploadFail": "アップロード失敗",
   "admin.music.chooseFile": "音声ファイルを選択",
+  "admin.music.dropHint": "音声ファイルをここにドラッグ＆ドロップ、またはクリックして選択。ファイル名が「アーティスト-曲名」なら自動で読み取ります",
   "admin.music.r2Hint": "音声は Cloudflare R2 へ直接アップロード：ブラウザ → 署名付き PUT → バケット（R2 の egress は無料、サーバー中継なし）",
   "admin.music.r2Missing": "R2 公開ドメイン（R2_PUBLIC_BASE）が未設定 — Cloudflare ダッシュボードでカスタムドメインを先にバインドしてください",
   "admin.music.titlePh": "曲名",

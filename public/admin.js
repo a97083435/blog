@@ -1320,32 +1320,61 @@
       return;
     }
     content.insertAdjacentHTML('beforeend',
-      '<div class="ab-card" style="margin-bottom:14px">' +
+      '<div class="ab-uploaddrop" id="abMusicDrop"><div class="ab-card">' +
         '<div class="ab-section-title">' + icon('upload', 16) + ' ' + t('admin.music.upload') + '</div>' +
+        '<div class="ab-muted" style="font-size:12.5px;margin-bottom:10px">' + t('admin.music.dropHint') + '</div>' +
         '<div class="ab-row" style="gap:8px;flex-wrap:wrap">' +
-          '<input class="ab-input" id="abMusicFile" type="file" accept="audio/*" style="max-width:300px;flex:1 1 220px" aria-label="' + t('admin.music.chooseFile') + '">' +
-          '<input class="ab-input" id="abMusicTitle" placeholder="' + t('admin.music.titlePh') + '" style="max-width:200px;flex:1 1 150px">' +
-          '<input class="ab-input" id="abMusicArtist" placeholder="' + t('admin.music.artistPh') + '" style="max-width:160px;flex:1 1 120px">' +
+          '<input class="ab-input" id="abMusicFile" type="file" accept="audio/*" style="max-width:280px;flex:1 1 200px" aria-label="' + t('admin.music.chooseFile') + '">' +
+          '<input class="ab-input" id="abMusicArtist" placeholder="' + t('admin.music.artistPh') + '" style="max-width:180px;flex:1 1 130px" autocomplete="off">' +
+          '<input class="ab-input" id="abMusicTitle" placeholder="' + t('admin.music.titlePh') + '" style="max-width:220px;flex:1 1 160px" autocomplete="off">' +
           '<button type="button" class="ab-btn primary" id="abMusicUpload">' + icon('upload', 15) + ' ' + t('admin.music.upload') + '</button>' +
         '</div>' +
         '<div class="ab-muted" id="abMusicMsg" style="font-size:12.5px;margin-top:8px">' + t('admin.music.r2Hint') + '</div>' +
         '<div class="ab-progress" id="abMusicBar" style="display:none;height:6px;border-radius:999px;background:var(--ab-border);margin-top:10px;overflow:hidden">' +
           '<div id="abMusicBarFill" style="width:0%;height:100%;background:var(--ab-primary);transition:width .2s"></div></div>' +
-      '</div>' +
+      '</div></div>' +
       '<div class="ab-card"><div class="ab-table-wrap"><table class="ab-table"><thead><tr>' +
         '<th>' + t('admin.music.colTitle') + '</th><th>' + t('admin.music.colSize') + '</th><th class="col-actions">' + t('admin.music.colActions') + '</th>' +
       '</tr></thead><tbody id="abMusicBody"></tbody></table></div></div>');
     bindMusic(content);
     loadMusic(content);
   }
+  /** 从文件名解析「歌手-歌曲名」（取第一个 - 分割，歌名里的 - 保留） */
+  function parseMusicFilename(name) {
+    var base = String(name || '').replace(/\.[^.]+$/, '');
+    var idx = base.indexOf('-');
+    if (idx > 0) {
+      var a = base.slice(0, idx).trim();
+      var t = base.slice(idx + 1).trim();
+      if (a && t) return { artist: a, title: t };
+    }
+    return { artist: '', title: base };
+  }
   function bindMusic(content) {
+    var drop = content.querySelector('#abMusicDrop');
     var file = content.querySelector('#abMusicFile');
+    var artist = content.querySelector('#abMusicArtist');
     var title = content.querySelector('#abMusicTitle');
     var upload = content.querySelector('#abMusicUpload');
+    function fillFromName(name) {
+      var p = parseMusicFilename(name);
+      if (artist && p.artist && !artist.value.trim()) artist.value = p.artist;
+      if (title && p.title && !title.value.trim()) title.value = p.title;
+    }
     if (file) file.addEventListener('change', function () {
       var f = this.files && this.files[0];
-      if (f && title && !title.value.trim()) title.value = f.name.replace(/\.[^.]+$/, '');
+      if (f) fillFromName(f.name);
     });
+    if (drop) {
+      drop.addEventListener('dragover', function (e) { e.preventDefault(); drop.classList.add('ab-drop-over'); });
+      drop.addEventListener('dragleave', function (e) { e.preventDefault(); drop.classList.remove('ab-drop-over'); });
+      drop.addEventListener('drop', function (e) {
+        e.preventDefault();
+        drop.classList.remove('ab-drop-over');
+        var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (f) { fillFromName(f.name); uploadMusic(content, f); }
+      });
+    }
     if (upload) upload.addEventListener('click', function () { uploadMusic(content); });
   }
   function fmtSize(n) {
@@ -1408,16 +1437,20 @@
       .then(function () { loadMusic(content); toast(t('admin.postSaved'), 'ok'); })
       .catch(function (e) { toast(esc(e.message || e), 'err'); });
   }
-  async function uploadMusic(content) {
+  async function uploadMusic(content, fileOverride) {
     var fileEl = content.querySelector('#abMusicFile');
-    var file = fileEl && fileEl.files && fileEl.files[0];
+    var file = fileOverride || (fileEl && fileEl.files && fileEl.files[0]);
     if (!file) { toast(t('admin.music.chooseFile'), 'err'); return; }
     var msg = content.querySelector('#abMusicMsg');
     var bar = content.querySelector('#abMusicBar');
     var fill = content.querySelector('#abMusicBarFill');
     var btn = content.querySelector('#abMusicUpload');
-    var title = (content.querySelector('#abMusicTitle').value || '').trim() || file.name.replace(/\.[^.]+$/, '');
-    var artist = (content.querySelector('#abMusicArtist').value || '').trim();
+    var parsed = parseMusicFilename(file.name);
+    // 拖拽直传：以文件名解析结果为准（输入框仅供预览/修改）；点击上传：优先保留用户已填值
+    var title = fileOverride
+      ? (parsed.title || file.name.replace(/\.[^.]+$/, ''))
+      : ((content.querySelector('#abMusicTitle').value || '').trim() || parsed.title || file.name.replace(/\.[^.]+$/, ''));
+    var artist = fileOverride ? parsed.artist : ((content.querySelector('#abMusicArtist').value || '').trim() || parsed.artist || '');
     if (btn) btn.disabled = true;
     if (bar) bar.style.display = 'block';
     if (fill) fill.style.width = '0%';
