@@ -1388,7 +1388,7 @@
     if (!body) return;
     body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px"><span class="ab-spin"></span> ' + t('admin.postList.loading') + '</td></tr>';
     var d;
-    try { d = await api('api/music'); } catch (e) {
+    try { d = await api('api/music?_=' + Date.now()); } catch (e) {
       body.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:30px" class="ab-muted">' + esc(e.message || e) + '</td></tr>';
       return;
     }

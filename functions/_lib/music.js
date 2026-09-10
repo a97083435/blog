@@ -27,6 +27,11 @@ async function dbRun(db, sql) {
   const args = Array.prototype.slice.call(arguments, 2);
   await db.prepare(sql).bind.apply(db.prepare(sql), args).run();
 }
+async function dbGet(db, sql) {
+  const args = Array.prototype.slice.call(arguments, 2);
+  const row = await db.prepare(sql).bind.apply(db.prepare(sql), args).first();
+  return row || null;
+}
 function unauthorized(request, env) {
   return json({ error: '未授权' }, 401, request, env);
 }
@@ -87,6 +92,47 @@ function r2Configured(env) {
 }
 function randomId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+/* ---------- 删除对象（与上传同一桶，Worker 代发 SigV4 签名 DELETE） ---------- */
+/** 生成 SigV4 Authorization 头（供 r2DeleteObject 使用，导出便于交叉验证） */
+export async function sigv4AuthHeader(env, method, path) {
+  const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
+  const host = new URL(endpoint).host;
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const scope = dateStamp + '/auto/s3/aws4_request';
+  const canonicalRequest = [method.toUpperCase(), path, '', 'host:' + host + '\n', 'host', 'UNSIGNED-PAYLOAD'].join('\n');
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(canonicalRequest));
+  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, hexify(digest)].join('\n');
+  const keyBytes = await signingKey(env.R2_SECRET_ACCESS_KEY, dateStamp, 'auto', 's3');
+  const signature = hexify(await hmac(keyBytes, stringToSign));
+  return {
+    amzDate: amzDate,
+    authorization: 'AWS4-HMAC-SHA256 Credential=' + env.R2_ACCESS_KEY_ID + '/' + scope + ', SignedHeaders=host, Signature=' + signature
+  };
+}
+/** 删除 R2 对象；S3 DELETE 幂等，对象不存在（404/204）视为成功 */
+export async function r2DeleteObject(env, key) {
+  const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
+  const path = '/' + env.R2_BUCKET + '/' + key;
+  const sig = await sigv4AuthHeader(env, 'DELETE', path);
+  const res = await fetch(endpoint + path, {
+    method: 'DELETE',
+    headers: { 'Authorization': sig.authorization }
+  });
+  if (res.status !== 204 && res.status !== 200 && res.status !== 404) {
+    throw new Error('R2 对象删除失败 HTTP ' + res.status);
+  }
+  return true;
+}
+/** 从公开 URL 提取对象 key（仅本站 music/ 前缀的上传对象；外链返回空串不删） */
+export function extractR2Key(publicUrl) {
+  try {
+    const p = new URL(String(publicUrl || '')).pathname;
+    if (p.indexOf('/music/') === 0) return p.slice(1);
+  } catch (e) { /* ignore */ }
+  return '';
 }
 function normalizeTrack(row) {
   return {
@@ -186,6 +232,14 @@ export async function handleMusicId(request, env, id) {
   }
 
   if (request.method === 'DELETE') {
+    // 与 R2 同步删除：先删对象，成功后再删元数据（避免留下孤儿对象/幽灵曲目）
+    const row = await dbGet(env.DB, 'SELECT url FROM music WHERE id = ?', id);
+    if (row && row.url) {
+      const key = extractR2Key(row.url);
+      if (key && r2Configured(env)) {
+        await r2DeleteObject(env, key); // 失败抛错 → 500，保留元数据，前端可见错误
+      }
+    }
     await dbRun(env.DB, 'DELETE FROM music WHERE id = ?', id).catch(function () {});
     return json({ ok: true }, 200, request, env, { 'Cache-Control': 'no-store' });
   }
