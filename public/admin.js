@@ -1465,7 +1465,7 @@
         xhr.setRequestHeader('Content-Type', u.contentType || 'audio/mpeg');
         xhr.upload.onprogress = function (e) { if (e.lengthComputable && fill) fill.style.width = Math.round(e.loaded / e.total * 100) + '%'; };
         xhr.onload = function () { (xhr.status >= 200 && xhr.status < 300) ? resolve(true) : reject(new Error('HTTP ' + xhr.status)); };
-        xhr.onerror = function () { reject(new Error(t('admin.music.uploadFail'))); };
+        xhr.onerror = function () { reject(new Error(t('admin.music.putFail'))); };
         xhr.send(file);
       });
       await api('api/music', { method: 'POST', body: JSON.stringify({ title: title, artist: artist, url: u.publicUrl, size: file.size }) });

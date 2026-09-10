@@ -49,7 +49,7 @@ async function signingKey(secret, dateStamp, region, service) {
   return hmac(sk, 'aws4_request');
 }
 /** 生成 R2 S3 兼容的预签名 PUT URL（有效期 1 小时，UNSIGNED-PAYLOAD） */
-async function presignPut(env, key, expiresSec) {
+export async function presignPut(env, key, expiresSec) {
   expiresSec = expiresSec || 3600;
   const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
   const host = new URL(endpoint).host;

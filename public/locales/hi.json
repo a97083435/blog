@@ -308,6 +308,7 @@
   "admin.music.uploading": "अपलोड हो रहा है…",
   "admin.music.uploadOk": "अपलोड सफल",
   "admin.music.uploadFail": "अपलोड विफल",
+  "admin.music.putFail": "अपलोड विफल: R2 बकेट CORS नियम (साइट डोमेन से PUT और content-type हेडर की अनुमति) और नेटवर्क जाँचें",
   "admin.music.chooseFile": "ऑडियो फ़ाइल चुनें",
   "admin.music.dropHint": "ऑडियो फ़ाइल को यहाँ खींचकर छोड़ें या चुनने के लिए क्लिक करें। फ़ाइल नाम जैसे कलाकार-शीर्षक.mp3 स्वतः पार्स होता है",
   "admin.music.r2Hint": "ऑडियो सीधे Cloudflare R2 पर अपलोड होता है: ब्राउज़र → प्री-साइन्ड PUT → बकेट (R2 egress मुफ़्त, सर्वर रिले नहीं)",
