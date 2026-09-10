@@ -96,16 +96,16 @@ function randomId() {
 
 /* ---------- 删除对象（与上传同一桶，Worker 代发 SigV4 签名 DELETE） ---------- */
 /** 生成 SigV4 Authorization 头（供 r2DeleteObject 使用，导出便于交叉验证）
- *  注意：服务端 Authorization 头签名必须显式携带并签名 x-amz-content-sha256，
- *  否则 R2 按实际 body（空串）哈希校验 → 403 SignatureDoesNotMatch。 */
+ *  服务端 Authorization 头签名必须显式携带并签名 x-amz-content-sha256 与 x-amz-date，
+ *  否则 R2 按实际 body 哈希 / 缺日期校验 → 403/400（SignatureDoesNotMatch / No date provided）。 */
 export async function sigv4AuthHeader(env, method, path) {
   const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
   const host = new URL(endpoint).host;
   const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
   const dateStamp = amzDate.slice(0, 8);
   const scope = dateStamp + '/auto/s3/aws4_request';
-  const canonicalHeaders = 'host:' + host + '\nx-amz-content-sha256:UNSIGNED-PAYLOAD\n';
-  const signedHeaders = 'host;x-amz-content-sha256';
+  const canonicalHeaders = 'host:' + host + '\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:' + amzDate + '\n';
+  const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
   const canonicalRequest = [method.toUpperCase(), path, '', canonicalHeaders, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
   const digest = await crypto.subtle.digest('SHA-256', enc.encode(canonicalRequest));
   const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, hexify(digest)].join('\n');
@@ -125,7 +125,8 @@ export async function r2DeleteObject(env, key) {
     method: 'DELETE',
     headers: {
       'Authorization': sig.authorization,
-      'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD'
+      'X-Amz-Content-Sha256': 'UNSIGNED-PAYLOAD',
+      'X-Amz-Date': sig.amzDate
     }
   });
   if (res.status !== 204 && res.status !== 200 && res.status !== 404) {
