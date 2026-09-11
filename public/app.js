@@ -1520,7 +1520,8 @@ function renderCard(p) {
     + '<div class="meta"><span class="date">' + esc(p.date || '') + '</span>' + badges + '</div>'
     + '<h2>' + esc(p.title || '') + '</h2>'
     + '<div class="excerpt">' + esc(excerpt) + '</div>'
-    + (tags ? '<div class="mini-tags">' + tags + '</div>' : '')
+    // 标签区恒渲染（无标签时为空容器）：固定高度占位，保证张卡片等高、布局协调
+    + '<div class="mini-tags">' + (tags || '') + '</div>'
     + '</div>'
     + renderPostThumb(p)
     + '</a>';
