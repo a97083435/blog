@@ -112,8 +112,13 @@ html[data-theme="dark"][data-accent="dusk"] {
 
 html { scroll-behavior: smooth; background: var(--bg); }
 
-/* 桌面端最小宽度：窗口缩到常见桌面最低分辨率（1024px）以下时出现横向滚动，
- * 布局不再无限压缩（避免「缩到没有宽度」）；移动端 ≤768px 仍为响应式不设限（见下方媒体查询） */
+/* 最小宽度分层（任何端都不能无限压缩）：
+ *  · 移动端（≤768px）：绝对下限 320px（手机端最小宽度，如 iPhone SE 320px），缩到其下出横向滚动
+ *  · 桌面端（>768px）：更高阈值 1024px（桌面最低常见分辨率），缩到其下出横向滚动
+ * 两段互斥、置于 body 之后，保证不被后续覆盖 */
+@media (max-width: 768px) {
+  body { min-width: 320px; }
+}
 @media (min-width: 769px) {
   body { min-width: 1024px; }
 }
@@ -2377,8 +2382,6 @@ kbd {
 /* 桌面端隐藏的东西 */
 .mobile-only { display: none; }
 @media (max-width: 768px) {
-  /* 移动端不设最小宽度（保持响应式） */
-  body { min-width: 0; }
   /* 移动端隐藏桌面元素 */
   .main-nav { display: none; }
   .topbar-actions .lang-switch,
