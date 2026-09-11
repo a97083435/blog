@@ -19,7 +19,7 @@
 
   var DEFAULT_LANG = 'zh-CN';
   /* 语言 JSON 缓存版本：修改 locales/*.json 后递增，强制浏览器拉新文件 */
-  var I18N_VER = '4';
+  var I18N_VER = '5';
   var _locale = DEFAULT_LANG;
   var _translations = {};
 
