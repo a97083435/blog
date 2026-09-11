@@ -847,6 +847,16 @@
       slot.querySelectorAll('[data-abai]').forEach(function (b) {
         b.addEventListener('click', function () { abAiDo(b.getAttribute('data-abai'), b); });
       });
+      // 结果区的「应用/复制/收起」按钮是动态插入的，用事件委托统一绑定
+      // （此前未绑定 → 点击无反应）
+      var out = slot.querySelector('#abAiOut');
+      if (out) {
+        out.addEventListener('click', function (e) {
+          var b = e.target && e.target.closest ? e.target.closest('[data-abai-use]') : null;
+          if (!b || !out.contains(b)) return;
+          abAiApply(content, b.getAttribute('data-abai-use'));
+        });
+      }
     });
   }
   function abAiDo(action, btn) {
@@ -873,11 +883,20 @@
       });
   }
   function abAiResultHTML(action, result) {
-    var useLabel = action === 'title' ? t('ai.assist.applyTitle') : action === 'tags' ? t('ai.assist.applyTags') : t('ai.assist.pasteEnd');
-    var useAct = action === 'title' ? 'title' : action === 'tags' ? 'tags' : 'paste';
+    // 润色/翻译：主操作是「替换原文」（直接覆盖源文本）；同时保留「插入末尾」备选
+    var isReplace = action === 'polish' || action === 'translate';
+    var useLabel = action === 'title' ? t('ai.assist.applyTitle')
+      : action === 'tags' ? t('ai.assist.applyTags')
+      : (isReplace ? t('ai.assist.replaceBody') : t('ai.assist.pasteEnd'));
+    var useAct = action === 'title' ? 'title' : action === 'tags' ? 'tags' : (isReplace ? 'replace' : 'paste');
+    var extraPaste = '';
+    if (isReplace) {
+      extraPaste = '<button type="button" class="ab-btn sm ghost" data-abai-use="paste">' + icon('download', 12) + ' ' + esc(t('ai.assist.pasteEnd')) + '</button>';
+    }
     return '<div class="ab-ai-result"><pre>' + esc(result) + '</pre>'
       + '<div class="ab-row" style="gap:8px;margin-top:8px;flex-wrap:wrap">'
       + '<button type="button" class="ab-btn sm primary" data-abai-use="' + useAct + '">' + esc(useLabel) + '</button>'
+      + extraPaste
       + '<button type="button" class="ab-btn sm ghost" data-abai-use="copy">' + icon('copy', 12) + ' ' + esc(t('ai.assist.copy')) + '</button>'
       + '<button type="button" class="ab-btn sm ghost" data-abai-use="hide">' + esc(t('ai.assist.hide')) + '</button>'
       + '</div></div>';
@@ -908,6 +927,14 @@
       if (area) {
         area.value = area.value ? area.value.replace(/\s*$/, '') + '\n\n' + text : text;
         area.dispatchEvent(new Event('input'));
+        out.innerHTML = '';
+      }
+    } else if (use === 'replace') {
+      // 润色/翻译：直接替换原文（覆盖编辑区全文），立即刷新预览与字数
+      var area2 = content.querySelector('#abBody');
+      if (area2 && text) {
+        area2.value = text;
+        area2.dispatchEvent(new Event('input'));
         out.innerHTML = '';
       }
     }

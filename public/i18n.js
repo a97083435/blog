@@ -52,6 +52,7 @@
     "ai.assist.applyTitle": "应用到标题",
     "ai.assist.applyTags": "填入标签",
     "ai.assist.pasteEnd": "插入到正文末尾",
+    "ai.assist.replaceBody": "替换原文",
     "ai.assist.copy": "复制",
     "ai.assist.hide": "收起",
     "ai.comments.summarize": "AI 评论汇总",
