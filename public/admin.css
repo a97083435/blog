@@ -330,11 +330,12 @@
 .ab-input:focus, .ab-select:focus, .ab-textarea:focus { border-color: var(--ab-primary); box-shadow: var(--ab-ring); }
 select.ab-select { cursor: pointer; padding-right: 30px; }
 .ab-textarea { resize: none; min-height: 44px; line-height: 1.5; }
+/* 音乐上传拖放区：默认干净无边框（卡片本身足够），拖文件悬停时才显示主色虚线提示 */
 .ab-uploaddrop {
-  border: 1.5px dashed var(--ab-border-strong);
-  border-radius: var(--ab-radius);
+  border: 1.5px dashed transparent;
+  border-radius: calc(var(--ab-radius) + 2px);
   padding: 2px;
-  transition: border-color .15s, background .15s;
+  transition: border-color .18s, background .18s;
 }
 .ab-uploaddrop .ab-card { margin-bottom: 0; }
 .ab-uploaddrop.ab-drop-over { border-color: var(--ab-primary); background: var(--ab-primary-weak); }
