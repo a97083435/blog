@@ -289,7 +289,7 @@
   "admin.tags.renameOk": "Renamed",
   "admin.tags.deleteConfirm": "Delete tag \"{name}\"?",
   "admin.media.title": "Media Library",
-  "admin.media.desc": "Upload and manage images (stored in D1, max 2MB recommended)",
+  "admin.media.desc": "Upload & manage images (R2 direct upload, ≤ 10MB each)",
   "admin.media.upload": "Upload Image",
   "admin.media.cloudOnly": "Media library requires cloud mode (Cloudflare)",
   "admin.media.colImage": "Image",
@@ -300,7 +300,7 @@
   "admin.media.deleteConfirm": "Delete this image from library?",
   "admin.media.deleted": "Deleted",
   "admin.media.notImage": "Not an image",
-  "admin.media.tooLarge": "Exceeds 2MB",
+  "admin.media.tooLarge": "Exceeds 10MB",
   "admin.media.uploaded": "Uploaded",
   "admin.media.uploadFail": "Upload failed: ",
   "admin.media.readFail": "Read failed",
@@ -458,5 +458,6 @@
   "guestbook.fillBoth": "Please fill in name and content",
   "guestbook.postAnon": "Post",
   "guestbook.noteTag": "Message",
-  "guestbook.ideaTag": "Optimization"
+  "guestbook.ideaTag": "Optimization",
+  "admin.media.r2Missing": "R2 storage not configured, upload unavailable"
 }

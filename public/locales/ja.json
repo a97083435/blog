@@ -289,7 +289,7 @@
   "admin.tags.renameOk": "名前を変更しました",
   "admin.tags.deleteConfirm": "タグ「{name}」を削除しますか？",
   "admin.media.title": "メディアライブラリ",
-  "admin.media.desc": "画像のアップロードと管理（D1に保存、推奨最大2MB）",
+  "admin.media.desc": "画像のアップロード・管理（R2 直アップロード、1枚 ≤ 10MB）",
   "admin.media.upload": "画像をアップロード",
   "admin.media.cloudOnly": "メディアライブラリにはクラウドモード（Cloudflare）が必要です",
   "admin.media.colImage": "画像",
@@ -300,7 +300,7 @@
   "admin.media.deleteConfirm": "この画像をライブラリから削除しますか？",
   "admin.media.deleted": "削除しました",
   "admin.media.notImage": "画像ではありません",
-  "admin.media.tooLarge": "2MBを超えています",
+  "admin.media.tooLarge": "10MB を超えています",
   "admin.media.uploaded": "アップロードしました",
   "admin.media.uploadFail": "アップロードに失敗しました：",
   "admin.media.readFail": "読み込みに失敗しました",
@@ -458,5 +458,6 @@
   "guestbook.fillBoth": "ニックネームと内容を入力してください",
   "guestbook.postAnon": "投稿する",
   "guestbook.noteTag": "メッセージ",
-  "guestbook.ideaTag": "改善案"
+  "guestbook.ideaTag": "改善案",
+  "admin.media.r2Missing": "R2 ストレージが未設定のためアップロードできません"
 }

@@ -289,7 +289,7 @@
   "admin.tags.renameOk": "पुनर्नाम हो गया",
   "admin.tags.deleteConfirm": "टैग \"{name}\" हटाएं?",
   "admin.media.title": "मीडिया लाइब्रेरी",
-  "admin.media.desc": "इमेज अपलोड और प्रबंधित करें (D1 में संग्रहीत, अधिकतम 2MB अनुशंसित)",
+  "admin.media.desc": "छवि अपलोड करें और प्रबंधित करें (R2 डायरेक्ट अपलोड, 1 छवि ≤ 10MB)",
   "admin.media.upload": "इमेज अपलोड करें",
   "admin.media.cloudOnly": "मीडिया लाइब्रेरी के लिए क्लाउड मोड (Cloudflare) आवश्यक है",
   "admin.media.colImage": "इमेज",
@@ -300,7 +300,7 @@
   "admin.media.deleteConfirm": "लाइब्रेरी से यह इमेज हटाएं?",
   "admin.media.deleted": "हटा दिया गया",
   "admin.media.notImage": "यह इमेज नहीं है",
-  "admin.media.tooLarge": "2MB से अधिक",
+  "admin.media.tooLarge": "10MB से अधिक",
   "admin.media.uploaded": "अपलोड हो गया",
   "admin.media.uploadFail": "अपलोड विफल: ",
   "admin.media.readFail": "पढ़ना विफल",
@@ -458,5 +458,6 @@
   "guestbook.fillBoth": "कृपया नाम और सामग्री भरें",
   "guestbook.postAnon": "पोस्ट करें",
   "guestbook.noteTag": "संदेश",
-  "guestbook.ideaTag": "सुधार"
+  "guestbook.ideaTag": "सुधार",
+  "admin.media.r2Missing": "R2 स्टोरेज कॉन्फ़िगर नहीं है, अपलोड उपलब्ध नहीं"
 }

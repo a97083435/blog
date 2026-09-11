@@ -1328,22 +1328,25 @@
     for (var i = 0; i < files.length; i++) {
       var file = files[i];
       if (!/^image\//.test(file.type)) { toast(file.name + ' ' + t('admin.media.notImage'), 'err'); continue; }
-      if (file.size > 2 * 1048576) { toast(file.name + ' ' + t('admin.media.tooLarge'), 'err'); continue; }
+      if (file.size > 10 * 1048576) { toast(file.name + ' ' + t('admin.media.tooLarge'), 'err'); continue; }
       try {
-        var dataUrl = await readAsDataURL(file);
-        await api('api/media', { method: 'POST', body: JSON.stringify({ name: file.name, url: dataUrl, type: file.type, size: file.size }) });
+        // R2 直传（与音乐上传同款）：先取预签名 PUT URL → XHR 直传 R2 → 注册元数据（url 为公开地址）
+        var u = await api('api/media/upload-url', { method: 'POST', body: JSON.stringify({ filename: file.name, size: file.size }) });
+        if (!u || !u.uploadUrl) throw new Error((u && u.error) || t('admin.media.uploadFail'));
+        if (!u.publicUrl) throw new Error(t('admin.media.r2Missing'));
+        var done = await new Promise(function (resolve, reject) {
+          var xhr = new XMLHttpRequest();
+          xhr.open('PUT', u.uploadUrl);
+          xhr.setRequestHeader('Content-Type', u.contentType || file.type || 'application/octet-stream');
+          xhr.onload = function () { (xhr.status >= 200 && xhr.status < 300) ? resolve(true) : reject(new Error('HTTP ' + xhr.status)); };
+          xhr.onerror = function () { reject(new Error(t('admin.media.uploadFail'))); };
+          xhr.send(file);
+        });
+        await api('api/media', { method: 'POST', body: JSON.stringify({ name: file.name, url: u.publicUrl, type: u.contentType || file.type, size: file.size }) });
         toast(t('admin.media.uploaded') + ' ' + file.name, 'ok');
       } catch (e) { toast(t('admin.media.uploadFail') + (e.message || e), 'err'); }
     }
     loadMedia(content);
-  }
-  function readAsDataURL(file) {
-    return new Promise(function (res, rej) {
-      var r = new FileReader();
-      r.onload = function () { res(r.result); };
-      r.onerror = function () { rej(new Error(t('admin.media.readFail'))); };
-      r.readAsDataURL(file);
-    });
   }
 
   /* ====================== 博客设置 ====================== */

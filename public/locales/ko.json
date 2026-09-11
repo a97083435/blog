@@ -289,7 +289,7 @@
   "admin.tags.renameOk": "이름 변경됨",
   "admin.tags.deleteConfirm": "\"{name}\" 태그를 삭제하시겠습니까?",
   "admin.media.title": "미디어 라이브러리",
-  "admin.media.desc": "이미지 업로드 및 관리 (D1에 저장, 최대 2MB 권장)",
+  "admin.media.desc": "이미지 업로드 및 관리（R2 직접 업로드, 1장 ≤ 10MB）",
   "admin.media.upload": "이미지 업로드",
   "admin.media.cloudOnly": "미디어 라이브러리는 클라우드 모드(Cloudflare)가 필요합니다",
   "admin.media.colImage": "이미지",
@@ -300,7 +300,7 @@
   "admin.media.deleteConfirm": "라이브러리에서 이 이미지를 삭제하시겠습니까?",
   "admin.media.deleted": "삭제됨",
   "admin.media.notImage": "이미지가 아닙니다",
-  "admin.media.tooLarge": "2MB를 초과합니다",
+  "admin.media.tooLarge": "10MB 초과",
   "admin.media.uploaded": "업로드됨",
   "admin.media.uploadFail": "업로드 실패: ",
   "admin.media.readFail": "읽기 실패",
@@ -458,5 +458,6 @@
   "guestbook.fillBoth": "닉네임과 내용을 입력해 주세요",
   "guestbook.postAnon": "게시",
   "guestbook.noteTag": "메시지",
-  "guestbook.ideaTag": "개선안"
+  "guestbook.ideaTag": "개선안",
+  "admin.media.r2Missing": "R2 저장소가 구성되지 않아 업로드할 수 없습니다"
 }

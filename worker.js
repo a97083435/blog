@@ -6,12 +6,13 @@
  *   · 其余请求 → 静态资源（由 wrangler.workers.toml [assets] 绑定提供）
  * 部署：npx wrangler deploy
  * ============================================================ */
-import { handlePosts, handlePostId, handleFeed, handleComments, handleCommentId, handleSitemap, handleSiteFiles, handleStats, handleAdminSetup, handleAdminLogin, handleAdminLogout, getCorsHeaders, handleCommentsList, handleCommentUpdate, handleCommentDeleteGlobal, handleMedia, handleMediaId, handleSettings, handleAdminPassword, handleStatsTrend } from './functions/_lib/api-core.js';
+import { handlePosts, handlePostId, handleFeed, handleComments, handleCommentId, handleSitemap, handleSiteFiles, handleStats, handleAdminSetup, handleAdminLogin, handleAdminLogout, getCorsHeaders, handleCommentsList, handleCommentUpdate, handleCommentDeleteGlobal, handleMedia, handleMediaId, handleSettings, handleAdminPassword, handleStatsTrend, dbFirst } from './functions/_lib/api-core.js';
 import { onRequest as aiPing } from './functions/api/ai/ping.js';
 import { onRequest as aiSummary } from './functions/api/ai/summary.js';
 import { onRequest as aiAssist } from './functions/api/ai/assist.js';
 import { onRequest as aiComments } from './functions/api/ai/comments.js';
 import { handleMusic, handleMusicId, handleMusicUploadUrl } from './functions/_lib/music.js';
+import { handleMediaUploadUrl, deleteMediaObject } from './functions/_lib/media.js';
 
 export default {
   async fetch(request, env) {
@@ -60,6 +61,9 @@ export default {
     if (url.pathname === '/api/media') {
       return handleMedia(request, env);
     }
+    if (url.pathname === '/api/media/upload-url') {
+      return handleMediaUploadUrl(request, env);
+    }
     if (url.pathname === '/api/settings') {
       return handleSettings(request, env);
     }
@@ -73,7 +77,13 @@ export default {
     }
     let mm = url.pathname.match(/^\/api\/media\/([^/]+)$/);
     if (mm) {
-      return handleMediaId(request, env, decodeURIComponent(mm[1]));
+      const mid = decodeURIComponent(mm[1]);
+      // 删除媒体：先删 R2 对象（若 url 是本站 media/ 前缀），再删 D1 元数据
+      if (request.method === 'DELETE') {
+        const row = env && env.DB ? await dbFirst(env.DB, 'SELECT url FROM media WHERE id = ?', mid).catch(() => null) : null;
+        if (row && row.url) { try { await deleteMediaObject(env, row.url); } catch (e) { /* R2 删除失败不阻塞 */ } }
+      }
+      return handleMediaId(request, env, mid);
     }
     if (url.pathname === '/api/feed.xml') {
       return handleFeed(request, env);

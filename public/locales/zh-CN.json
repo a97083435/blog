@@ -289,7 +289,7 @@
   "admin.tags.renameOk": "已重命名",
   "admin.tags.deleteConfirm": "删除标签「{name}」，确定？",
   "admin.media.title": "媒体资源",
-  "admin.media.desc": "上传与管理图片（云端存储于 D1，单张建议 ≤ 2MB）",
+  "admin.media.desc": "上传与管理图片（R2 直传云端存储，单张建议 ≤ 10MB）",
   "admin.media.upload": "上传图片",
   "admin.media.cloudOnly": "媒体库需在云端模式（Cloudflare）下使用",
   "admin.media.colImage": "图片",
@@ -300,7 +300,7 @@
   "admin.media.deleteConfirm": "确定从媒体库删除该图片？",
   "admin.media.deleted": "已删除",
   "admin.media.notImage": "不是图片",
-  "admin.media.tooLarge": "超过 2MB",
+  "admin.media.tooLarge": "超过 10MB",
   "admin.media.uploaded": "已上传",
   "admin.media.uploadFail": "上传失败：",
   "admin.media.readFail": "读取失败",
@@ -458,5 +458,6 @@
   "guestbook.fillBoth": "请填写昵称和内容",
   "guestbook.postAnon": "发布",
   "guestbook.noteTag": "留言",
-  "guestbook.ideaTag": "优化方案"
+  "guestbook.ideaTag": "优化方案",
+  "admin.media.r2Missing": "R2 存储未配置，无法上传"
 }
