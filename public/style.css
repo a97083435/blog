@@ -2336,23 +2336,34 @@ kbd {
   .admin-posts-table { display: block; overflow-x: auto; }
   .field-protect { flex-wrap: wrap; }
   .field-protect .protect-pwd { width: 100%; margin-left: 0; }
-  .post-card { gap: 14px; padding: 14px; min-height: 160px; height: 168px; overflow: hidden; }
+}
+
+/* ---------- 文章卡片（≤992px：平板 + 手机通用） ----------
+ * 卡片等高：卡片固定高度 + 标签贴底（margin-top:auto），标题/摘要行数变化不影响卡片高度。
+ * 标题/摘要用纯 line-clamp（不设 min/max-height）：iOS Safari/安卓 line-clamp 原生生效，
+ * 恰好 2 行 + 省略号，第 3 行完全隐藏；若给 line-clamp 元素加显式高度，WebKit 会按该高度硬裁，
+ * 露出第 3 行的「文字头」（iPhone 17 上标题两行下方看到残字的原因）。
+ * 覆盖 ≤992px（含 768px 平板、720px 以下手机）——各大品牌手机统一适配。 */
+@media (max-width: 992px) {
+  .post-card { gap: 14px; padding: 14px; min-height: 160px; height: 200px; overflow: hidden; }
   .post-card-main { padding: 0; min-height: 0; overflow: hidden; }  /* min-height:0 + overflow:hidden：内容再长也不把标签挤出卡片外 */
   .post-thumb { width: 180px; height: 120px; border-radius: 10px; }
   .post-thumb-ph svg { width: 22px; height: 22px; }
-  /* —— 卡片等高：内容区各段固定占位（标题 2 行 / 摘要 2 行 / meta 单行 / 标签单行），
-     所有卡片按 min-height 等高 → 右侧缩略图垂直居中位置整齐一致 —— */
   .post-card h2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    max-height: 2.92em;    /* 兜底：即使 line-clamp 失效，第 3 行也被 max-height 裁掉 */
-    min-height: 2.92em;    /* 2 行标题高度（行高 1.4×2，略加补偿保证 1/2 行标题严格等高） */
   }
-  .post-card .excerpt { min-height: 3.1em; max-height: 3.1em; }   /* 2 行摘要高度（行高 ≈1.55 × 2），上/下界同时限定 */
+  .post-card .excerpt {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   .post-card .meta { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
-  .post-card .mini-tags { flex-wrap: nowrap; overflow: hidden; height: 22px; align-items: center; flex-shrink: 0; }  /* 标签区恒定一行高度（空/有标签等高，spans 垂直居中）；flex-shrink:0 防止被挤出裁切 */
+  /* 标签：允许换行（最多 2 行），spans 单个不折行；2 行内完整显示不被截取 */
+  .post-card .mini-tags { flex-wrap: wrap; overflow: hidden; max-height: 52px; align-items: center; flex-shrink: 0; }
   .post-card .mini-tags span { white-space: nowrap; }
 }
 
@@ -2398,7 +2409,7 @@ kbd {
 /* iPhone 17（约 393px）/ iPhone 17 Pro Max（约 440px）等窄屏：
    缩略图圆角固定尺寸，同时保证左侧内容区有足够宽度（标题/摘要不被挤爆） */
 @media (max-width: 480px) {
-  .post-card { gap: 12px; padding: 12px; min-height: 140px; height: 176px; overflow: hidden; }
+  .post-card { gap: 12px; padding: 12px; min-height: 140px; height: 192px; overflow: hidden; }
   .post-card-main { padding: 0; }
   .post-thumb { width: 150px; height: 100px; border-radius: 10px; }
   .post-thumb-ph svg { width: 20px; height: 20px; }
