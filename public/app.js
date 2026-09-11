@@ -1515,11 +1515,16 @@ function renderCard(p) {
   if (p.pinned) badges += '<span class="pin">' + svgIcon('pin', 13) + ' ' + t('post.pin') + '</span>';
   var tags = normalizeTags(p).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('');
   var excerpt = p.excerpt || stripMd(p.content || '').slice(0, 100);
+  // 云端可 AI 摘要的文章：摘要位标记 data-ai-excerpt，aiFillSlots 异步拉取 AI 摘要后替换；
+  // 没有 AI 摘要（未生成/未启用/拉取失败）时保持默认摘要兜底
+  var aiExcerpt = (_cloudOn() && !p.enc && !(Number(p.protected || 0) === 1))
+    ? ' data-ai-excerpt="' + esc(p.id) + '"'
+    : '';
   return '<a class="post-card" href="' + esc(href(postUrl(p.id))) + '">'
     + '<div class="post-card-main">'
     + '<div class="meta"><span class="date">' + esc(p.date || '') + '</span>' + badges + '</div>'
     + '<h2>' + esc(p.title || '') + '</h2>'
-    + '<div class="excerpt">' + esc(excerpt) + '</div>'
+    + '<div class="excerpt"' + aiExcerpt + '>' + esc(excerpt) + '</div>'
     // 标签区恒渲染（无标签时为空容器）：固定高度占位，保证张卡片等高、布局协调
     + '<div class="mini-tags">' + (tags || '') + '</div>'
     + '</div>'
@@ -3234,6 +3239,23 @@ function aiFillSlots() {
     if (as) as.innerHTML = ok ? aiAssistBarHTML() : '';
     var cs = document.getElementById('aiCommentsSlot');
     if (cs) cs.innerHTML = ok ? aiCommentsBarHTML() : '';
+    // 文章卡片摘要：有 AI 摘要（已生成缓存）→ 替换默认摘要在摘要位展示；无 → 保持默认兜底
+    if (ok) aiFillCardExcerpts();
+  });
+}
+/** 卡片摘要 AI 化：遍历带 data-ai-excerpt 的摘要元素，异步拉取该文 AI 摘要并替换；
+ *  没有缓存摘要 / AI 未启用 / 拉取失败 → 保持默认摘要兜底不动。 */
+function aiFillCardExcerpts() {
+  var els = document.querySelectorAll('.post-card .excerpt[data-ai-excerpt]');
+  if (!els.length) return;
+  Array.prototype.forEach.call(els, function (el) {
+    var slug = el.getAttribute('data-ai-excerpt');
+    if (!slug) return;
+    apiFetch('api/ai/summary?slug=' + encodeURIComponent(slug) + '&lang=' + encodeURIComponent(aiLang()), { method: 'GET' })
+      .then(function (d) {
+        if (d && d.summary && el.isConnected) el.textContent = d.summary;
+      })
+      .catch(function () { /* 拉取失败：保留默认摘要 */ });
   });
 }
 function aiSummaryBtnHTML(slug) {

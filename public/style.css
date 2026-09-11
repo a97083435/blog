@@ -2337,7 +2337,7 @@ kbd {
   .field-protect { flex-wrap: wrap; }
   .field-protect .protect-pwd { width: 100%; margin-left: 0; }
   .post-card { gap: 14px; padding: 14px; min-height: 160px; height: 168px; overflow: hidden; }
-  .post-card-main { padding: 0; }
+  .post-card-main { padding: 0; min-height: 0; overflow: hidden; }  /* min-height:0 + overflow:hidden：内容再长也不把标签挤出卡片外 */
   .post-thumb { width: 180px; height: 120px; border-radius: 10px; }
   .post-thumb-ph svg { width: 22px; height: 22px; }
   /* —— 卡片等高：内容区各段固定占位（标题 2 行 / 摘要 2 行 / meta 单行 / 标签单行），
@@ -2347,11 +2347,12 @@ kbd {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    min-height: 2.92em;   /* 2 行标题高度（行高 1.4×2，略加补偿保证 1/2 行标题严格等高） */
+    max-height: 2.92em;    /* 兜底：即使 line-clamp 失效，第 3 行也被 max-height 裁掉 */
+    min-height: 2.92em;    /* 2 行标题高度（行高 1.4×2，略加补偿保证 1/2 行标题严格等高） */
   }
-  .post-card .excerpt { min-height: 3.1em; }   /* 2 行摘要高度（行高 ≈1.55 × 2） */
+  .post-card .excerpt { min-height: 3.1em; max-height: 3.1em; }   /* 2 行摘要高度（行高 ≈1.55 × 2），上/下界同时限定 */
   .post-card .meta { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
-  .post-card .mini-tags { flex-wrap: nowrap; overflow: hidden; height: 22px; align-items: center; }  /* 标签区恒定一行高度（空/有标签等高，spans 垂直居中） */
+  .post-card .mini-tags { flex-wrap: nowrap; overflow: hidden; height: 22px; align-items: center; flex-shrink: 0; }  /* 标签区恒定一行高度（空/有标签等高，spans 垂直居中）；flex-shrink:0 防止被挤出裁切 */
   .post-card .mini-tags span { white-space: nowrap; }
 }
 
