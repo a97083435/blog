@@ -22,7 +22,15 @@
     volume: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
     close: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5l14 14M19 5L5 19"/></svg>'
   };
-  function icon(name, size) { return ICONS[name] || ''; }
+  function icon(name, size) {
+    var s = ICONS[name];
+    if (!s) return '';
+    if (size && size > 0) {
+      // 按需替换 SVG 尺寸（封面/列表用 14-17px，按钮/FAB 用默认 18-22px）
+      return s.replace(/(<svg\s+width=")\d+(" height=")\d+/, '$1' + size + '$2' + size);
+    }
+    return s;
+  }
 
   var tracks = [];
   var currentIndex = -1;
@@ -241,6 +249,7 @@
     setPlayIcon(false);
     setFabPlaying(false);
     curTimeEl.textContent = '0:00';
+    durTimeEl.textContent = '0:00';
     seekInput.value = 0;
     clearLast();
   }

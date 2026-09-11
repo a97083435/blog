@@ -38,14 +38,14 @@ async function purgeTags(env, tags) {
 }
 
 /* ---------- 通用 DB 辅助 ---------- */
-async function dbAll(db, sql, ...params) {
+export async function dbAll(db, sql, ...params) {
   const r = await db.prepare(sql).bind(...params).all();
   return (r && r.results) || [];
 }
-async function dbFirst(db, sql, ...params) {
+export async function dbFirst(db, sql, ...params) {
   return await db.prepare(sql).bind(...params).first();
 }
-async function dbRun(db, sql, ...params) {
+export async function dbRun(db, sql, ...params) {
   await db.prepare(sql).bind(...params).run();
 }
 
@@ -90,7 +90,7 @@ export function corsPreflight(request, env) {
 }
 
 /** 401 统一响应（缺少/无效凭证） */
-function unauthorized(request, env) {
+export function unauthorized(request, env) {
   return json({ error: '未授权：请先登录获取会话 token，并在请求头携带 Authorization: Bearer <token>' }, 401, request, env);
 }
 

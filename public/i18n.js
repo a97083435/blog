@@ -427,14 +427,17 @@
   /**
    * 确定 locale JSON 的基础路径。
    * 策略：从 <base href> 或当前脚本 src 推断，确保在子页面也能正确加载。
+   * 结果惰性缓存：base/script src 在页面生命周期内不变，避免每次语言切换重复扫描 DOM。
    */
+  var _baseDirCache = null;
   function _baseDir() {
+    if (_baseDirCache) return _baseDirCache;
     // 优先使用 <base href>
     try {
       var base = document.querySelector('base');
       if (base && base.href) {
         var u = new URL(base.href, location.href);
-        return u.href.replace(/\/+$/, '');
+        return (_baseDirCache = u.href.replace(/\/+$/, ''));
       }
     } catch (e) {}
     // 回退：从 i18n.js 自身的 src 推断（如 /i18n.js → ''）
@@ -444,12 +447,12 @@
         var src = scripts[i].getAttribute('src') || '';
         if (/i18n\.js$/.test(src)) {
           var url = new URL(src, location.href);
-          return url.href.replace(/\/[^\/]*$/, '');
+          return (_baseDirCache = url.href.replace(/\/[^\/]*$/, ''));
         }
       }
     } catch (e) {}
     // 最终回退
-    return location.origin || '';
+    return (_baseDirCache = location.origin || '');
   }
 
   /** 检测浏览器首选语言 → 映射到支持的语言 */
@@ -507,12 +510,15 @@
   }
 
   /** 翻译函数：t('key') 或 t('key', { var: value }) */
+  var _varReCache = {};
   function t(key, vars) {
     var str = _translations[key];
     if (str === undefined || str === null) str = key;
     if (vars && typeof str === 'string') {
       Object.keys(vars).forEach(function (k) {
-        str = str.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]);
+        // 缓存已编译的正则，避免列表渲染/弹窗等场景反复构造
+        var re = _varReCache[k] || (_varReCache[k] = new RegExp('\\{' + k + '\\}', 'g'));
+        str = str.replace(re, vars[k]);
       });
     }
     return str;

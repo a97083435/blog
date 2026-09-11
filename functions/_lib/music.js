@@ -13,28 +13,9 @@
  *       https://music.example.com；末尾不带斜杠）
  * 降级：未配置 R2 凭据时，读取播放列表仍可用（D1），上传返回 503。
  * ============================================================ */
-import { getCorsHeaders, json, corsPreflight, isWriteAuthed } from './api-core.js';
+import { getCorsHeaders, json, corsPreflight, isWriteAuthed, unauthorized, dbAll, dbFirst, dbRun } from './api-core.js';
 
 const enc = new TextEncoder();
-
-/* ---------- 本地 D1 / 鉴权小工具（避免改动 api-core 内部） ---------- */
-async function dbAll(db, sql) {
-  const args = Array.prototype.slice.call(arguments, 2);
-  const { results } = await db.prepare(sql).bind.apply(db.prepare(sql), args).all();
-  return results || [];
-}
-async function dbRun(db, sql) {
-  const args = Array.prototype.slice.call(arguments, 2);
-  await db.prepare(sql).bind.apply(db.prepare(sql), args).run();
-}
-async function dbGet(db, sql) {
-  const args = Array.prototype.slice.call(arguments, 2);
-  const row = await db.prepare(sql).bind.apply(db.prepare(sql), args).first();
-  return row || null;
-}
-function unauthorized(request, env) {
-  return json({ error: '未授权' }, 401, request, env);
-}
 
 /* ---------- SigV4（AWS Signature Version 4，HMAC-SHA256） ---------- */
 function hexify(buf) {
@@ -53,34 +34,44 @@ async function signingKey(secret, dateStamp, region, service) {
   const sk = await hmac(rk, service);
   return hmac(sk, 'aws4_request');
 }
+/* 公共签名参数：endpoint 规范化 / host / amzDate / scope（presign 与 Authorization 头共用） */
+async function r2SignParams(env) {
+  const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
+  const host = new URL(endpoint).host;
+  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+  const dateStamp = amzDate.slice(0, 8);
+  const scope = dateStamp + '/auto/s3/aws4_request';
+  return { endpoint, host, amzDate, dateStamp, scope };
+}
+/* 公共签名管线：canonicalRequest → digest → stringToSign → signingKey → hmac。
+ * presignPut（预签名 URL）与 sigv4AuthHeader（Authorization 头）共用，避免两套签名逻辑漂移。 */
+async function signS3(env, method, path, canonicalQuery, canonicalHeaders, signedHeaders) {
+  const p = await r2SignParams(env);
+  const canonicalRequest = [method.toUpperCase(), path, canonicalQuery || '', canonicalHeaders, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(canonicalRequest));
+  const stringToSign = ['AWS4-HMAC-SHA256', p.amzDate, p.scope, hexify(digest)].join('\n');
+  const keyBytes = await signingKey(env.R2_SECRET_ACCESS_KEY, p.dateStamp, 'auto', 's3');
+  const signature = hexify(await hmac(keyBytes, stringToSign));
+  return { params: p, signature };
+}
 /** 生成 R2 S3 兼容的预签名 PUT URL（有效期 1 小时，UNSIGNED-PAYLOAD） */
 export async function presignPut(env, key, expiresSec) {
   expiresSec = expiresSec || 3600;
-  const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
-  const host = new URL(endpoint).host;
+  const p = await r2SignParams(env);
   const path = '/' + env.R2_BUCKET + '/' + key;
-  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
-  const dateStamp = amzDate.slice(0, 8);
-  const region = 'auto';
-  const service = 's3';
-  const scope = dateStamp + '/' + region + '/' + service + '/aws4_request';
   const qp = {
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
-    'X-Amz-Credential': env.R2_ACCESS_KEY_ID + '/' + scope,
-    'X-Amz-Date': amzDate,
+    'X-Amz-Credential': env.R2_ACCESS_KEY_ID + '/' + p.scope,
+    'X-Amz-Date': p.amzDate,
     'X-Amz-Expires': String(expiresSec),
     'X-Amz-SignedHeaders': 'host'
   };
   const canonicalQuery = Object.keys(qp).sort()
     .map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(qp[k]); })
     .join('&');
-  const canonicalHeaders = 'host:' + host + '\n';
-  const canonicalRequest = ['PUT', path, canonicalQuery, canonicalHeaders, 'host', 'UNSIGNED-PAYLOAD'].join('\n');
-  const digest = await crypto.subtle.digest('SHA-256', enc.encode(canonicalRequest));
-  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, hexify(digest)].join('\n');
-  const keyBytes = await signingKey(env.R2_SECRET_ACCESS_KEY, dateStamp, region, service);
-  const signature = hexify(await hmac(keyBytes, stringToSign));
-  return endpoint + path + '?' + canonicalQuery + '&X-Amz-Signature=' + signature;
+  const canonicalHeaders = 'host:' + p.host + '\n';
+  const s = await signS3(env, 'PUT', path, canonicalQuery, canonicalHeaders, 'host');
+  return p.endpoint + path + '?' + canonicalQuery + '&X-Amz-Signature=' + s.signature;
 }
 
 /* ---------- 常量与工具 ---------- */
@@ -99,21 +90,13 @@ function randomId() {
  *  服务端 Authorization 头签名必须显式携带并签名 x-amz-content-sha256 与 x-amz-date，
  *  否则 R2 按实际 body 哈希 / 缺日期校验 → 403/400（SignatureDoesNotMatch / No date provided）。 */
 export async function sigv4AuthHeader(env, method, path) {
-  const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
-  const host = new URL(endpoint).host;
-  const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
-  const dateStamp = amzDate.slice(0, 8);
-  const scope = dateStamp + '/auto/s3/aws4_request';
-  const canonicalHeaders = 'host:' + host + '\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:' + amzDate + '\n';
+  const p = await r2SignParams(env);
+  const canonicalHeaders = 'host:' + p.host + '\nx-amz-content-sha256:UNSIGNED-PAYLOAD\nx-amz-date:' + p.amzDate + '\n';
   const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
-  const canonicalRequest = [method.toUpperCase(), path, '', canonicalHeaders, signedHeaders, 'UNSIGNED-PAYLOAD'].join('\n');
-  const digest = await crypto.subtle.digest('SHA-256', enc.encode(canonicalRequest));
-  const stringToSign = ['AWS4-HMAC-SHA256', amzDate, scope, hexify(digest)].join('\n');
-  const keyBytes = await signingKey(env.R2_SECRET_ACCESS_KEY, dateStamp, 'auto', 's3');
-  const signature = hexify(await hmac(keyBytes, stringToSign));
+  const s = await signS3(env, method, path, '', canonicalHeaders, signedHeaders);
   return {
-    amzDate: amzDate,
-    authorization: 'AWS4-HMAC-SHA256 Credential=' + env.R2_ACCESS_KEY_ID + '/' + scope + ', SignedHeaders=' + signedHeaders + ', Signature=' + signature
+    amzDate: p.amzDate,
+    authorization: 'AWS4-HMAC-SHA256 Credential=' + env.R2_ACCESS_KEY_ID + '/' + p.scope + ', SignedHeaders=' + signedHeaders + ', Signature=' + s.signature
   };
 }
 /** 删除 R2 对象；S3 DELETE 幂等，对象不存在（404/204）视为成功 */
@@ -179,7 +162,7 @@ export async function handleMusic(request, env) {
     const created_at = new Date().toISOString().slice(0, 10);
     await dbRun(env.DB, 'INSERT INTO music (id,title,artist,url,cover,size,duration,sort,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
       id, title, artist, url, cover, size, duration, sort, created_at);
-    return json({ ok: true, track: { id, title, artist, url, cover, size, duration, sort, date: created_at } }, 201, request, env, { 'Cache-Control': 'no-store' });
+    return json({ ok: true, track: normalizeTrack({ id, title, artist, url, cover, size, duration, sort, created_at }) }, 201, request, env, { 'Cache-Control': 'no-store' });
   }
 
   return json({ error: 'Method not allowed' }, 405, request, env);
@@ -211,10 +194,7 @@ export async function handleMusicUploadUrl(request, env) {
   const contentType = AUDIO_EXTS[ext];
   const uploadUrl = await presignPut(env, key, 3600);
   const publicBase = String(env.R2_PUBLIC_BASE || '').replace(/\/+$/, '');
-  const publicUrl = publicBase ? publicBase + '/' + key : (() => {
-    // 未配置公开域名时给出可用提示（正式使用请绑定自定义域名）
-    return '';
-  })();
+  const publicUrl = publicBase ? publicBase + '/' + key : '';
 
   return json({ ok: true, uploadUrl, publicUrl, key, contentType, expiresIn: 3600 }, 200, request, env, { 'Cache-Control': 'no-store' });
 }
@@ -236,13 +216,18 @@ export async function handleMusicId(request, env, id) {
     const sort = Number((body && body.sort) || 0) || 0;
     const duration = Number((body && body.duration) || 0) || 0;
     if (!title) return json({ error: '缺少 title' }, 400, request, env);
-    await dbRun(env.DB, 'UPDATE music SET title=?, artist=?, cover=?, sort=?, duration=? WHERE id=?', title, artist, cover, sort, duration, id).catch(function () {});
+    // D1 写入失败必须报错（不吞），否则前端误以为修改成功
+    try {
+      await dbRun(env.DB, 'UPDATE music SET title=?, artist=?, cover=?, sort=?, duration=? WHERE id=?', title, artist, cover, sort, duration, id);
+    } catch (e) {
+      return json({ error: '数据库更新失败：' + (e && e.message) }, 500, request, env, { 'Cache-Control': 'no-store' });
+    }
     return json({ ok: true }, 200, request, env, { 'Cache-Control': 'no-store' });
   }
 
   if (request.method === 'DELETE') {
     // 与 R2 同步删除：先删对象，成功后再删元数据（避免留下孤儿对象/幽灵曲目）
-    const row = await dbGet(env.DB, 'SELECT url FROM music WHERE id = ?', id);
+    const row = await dbFirst(env.DB, 'SELECT url FROM music WHERE id = ?', id);
     if (row && row.url) {
       const key = extractR2Key(row.url);
       if (key && r2Configured(env)) {
@@ -253,7 +238,12 @@ export async function handleMusicId(request, env, id) {
         }
       }
     }
-    await dbRun(env.DB, 'DELETE FROM music WHERE id = ?', id).catch(function () {});
+    // D1 删除失败必须报错（不吞），否则前端误以为成功
+    try {
+      await dbRun(env.DB, 'DELETE FROM music WHERE id = ?', id);
+    } catch (e) {
+      return json({ error: '数据库删除失败：' + (e && e.message) }, 500, request, env, { 'Cache-Control': 'no-store' });
+    }
     return json({ ok: true }, 200, request, env, { 'Cache-Control': 'no-store' });
   }
 
