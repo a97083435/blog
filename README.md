@@ -164,7 +164,6 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 │   ├── deploy.yml                   # GitHub Actions 自动部署到 Workers
 │   └── migrate-kv-to-d1.yml         # 手动触发 KV → D1 迁移
 ├── seed.js                          # 导入示例文章到云端 API
-├── _addtheme.py                     # 历史脚本：注入主题切换（已固化进源码，无需再跑）
 ├── wrangler.toml                    # Cloudflare Pages 配置
 ├── wrangler.workers.toml            # Cloudflare Workers 配置
 ├── smoke-test.js                    # 冒烟测试
@@ -210,7 +209,7 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 | 评论管理 | 全局评论列表，审核 / 删除，回复链追踪；**删除 / 审核无感刷新**（行级淡出 + 就地更新状态徽章，不整表重载） |
 | **AI 评论汇总** | 评论页一键汇总近期评论要点（1 小时缓存）+ 单条评论垃圾检测 |
 | 标签管理 | 标签重命名 / 删除（批量更新所有相关文章） |
-| 媒体资源库 | 图片上传（base64 存 D1） |
+| 媒体资源库 | 图片上传（浏览器直传 R2 签名 URL，元数据存 D1）；旧 base64/外链记录兼容显示 |
 | **音乐管理** | 音频上传（浏览器直传 R2 签名 URL，显示上传进度）；**文件名自动识别「歌曲名-歌手」** 预填；列表行内试听 / 删除（**删除与 R2 对象同步**）；曲目多时列表卡片内滚动、表头吸顶 |
 | 博客设置 | 站点信息（含站点头像，同时也是左上角品牌 Logo 与 favicon）/ 个人资料（头像显示在左下角）/ 导航菜单 |
 | 一键导出 | 同时导出 posts.js / feed.xml / sitemap.xml，覆盖即发布 |

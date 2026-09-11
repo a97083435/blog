@@ -224,7 +224,8 @@ export async function handleMusicId(request, env, id) {
     try {
       await dbRun(env.DB, 'UPDATE music SET title=?, artist=?, cover=?, sort=?, duration=? WHERE id=?', title, artist, cover, sort, duration, id);
     } catch (e) {
-      return json({ error: '数据库更新失败：' + (e && e.message) }, 500, request, env, { 'Cache-Control': 'no-store' });
+      console.error('[music] DB update failed:', e && e.message);
+      return json({ error: '数据库更新失败，请稍后重试' }, 500, request, env, { 'Cache-Control': 'no-store' });
     }
     return json({ ok: true }, 200, request, env, { 'Cache-Control': 'no-store' });
   }
@@ -238,7 +239,7 @@ export async function handleMusicId(request, env, id) {
         try {
           await r2DeleteObject(env, key);
         } catch (e) {
-          return json({ error: 'R2 对象删除失败：' + (e && e.message) }, 502, request, env, { 'Cache-Control': 'no-store' });
+          return json({ error: 'R2 对象删除失败，请稍后重试' }, 502, request, env, { 'Cache-Control': 'no-store' });
         }
       }
     }
@@ -246,7 +247,8 @@ export async function handleMusicId(request, env, id) {
     try {
       await dbRun(env.DB, 'DELETE FROM music WHERE id = ?', id);
     } catch (e) {
-      return json({ error: '数据库删除失败：' + (e && e.message) }, 500, request, env, { 'Cache-Control': 'no-store' });
+      console.error('[music] DB delete failed:', e && e.message);
+      return json({ error: '数据库删除失败，请稍后重试' }, 500, request, env, { 'Cache-Control': 'no-store' });
     }
     return json({ ok: true }, 200, request, env, { 'Cache-Control': 'no-store' });
   }

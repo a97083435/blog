@@ -13,7 +13,6 @@ var _searchOpen = false;   // 顶部导航搜索是否展开
 var _searchDocBound = false;   // document 级外部点击监听是否已绑定
 var _commentsCache = {};
 var _statsCache = {};
-var _routeTimer = null;
 
 /* ---------- 基础工具 ---------- */
 /* ---------- main theme (dark / light) ---------- */
@@ -504,7 +503,6 @@ function stampHeadingNumbers(headings) {
 /* ---------- 配置与数据 ---------- */
 // 云端模式下从 D1 加载的运行时站点设置（由 bootstrap 拉取并合并进 getConfig）
 var _siteSettings = null;
-function getSiteSettings() { return _siteSettings; }
 function parseJsonSafe(v) {
   if (v == null) return {};
   if (typeof v === 'object') return v;
@@ -554,6 +552,11 @@ function getSiteAuthor() {
 
 function getStaticPosts() {
   return (typeof window !== 'undefined' && Array.isArray(window.BLOG_POSTS)) ? window.BLOG_POSTS : [];
+}
+
+/** 仅返回已发布文章（过滤草稿），用于前台公开页面（首页/归档/标签/关于/搜索等） */
+function getPublishedPosts() {
+  return getStaticPosts().filter(function (p) { return (p.status || 'published') !== 'draft'; });
 }
 
 function slug(s) { return String(s || '').toLowerCase().replace(/[^\w\u4e00-\u9fa5-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64); }
@@ -638,7 +641,7 @@ function sortPagePosts(posts) {
 function globalSearch(query, limit) {
   var q = String(query || '').trim().toLowerCase();
   if (!q) return [];
-  var posts = sortPagePosts(getStaticPosts());
+  var posts = sortPagePosts(getPublishedPosts());
   var hits = [];
   posts.forEach(function (p) {
     var hay = ((p.search || '') + ' ' + (p.title || '') + ' ' + (p.excerpt || '') + ' ' + (p.content || '') + ' ' + (p.tags || []).join(' ')).toLowerCase();
@@ -1101,7 +1104,6 @@ function ensureAdminBundle() {
   if (!_adminBundlePromise) {
     _adminBundlePromise = new Promise(function (resolve) {
       function done() { resolve(!!(window.QingyuAdmin && window.QingyuAdmin.mount)); }
-      window.__qingyuAdminManual = true;
       if (!document.querySelector('link[data-admin-css]')) {
         var l = document.createElement('link');
         l.rel = 'stylesheet'; l.href = 'admin.css'; l.setAttribute('data-admin-css', '1');
@@ -1141,17 +1143,6 @@ function buildPostsJs() {
   return out;
 }
 
-/** 读取草稿：key='__new' 返回最近一次「保存/发布文章」的条目（总是 push 到最后），
- *  其余返回指定 id 的条目；找不到返回 null */
-function loadDraftFromStore(key) {
-  try {
-    var arr = JSON.parse(localStorage.getItem('qingyu.drafts') || '[]');
-    if (!Array.isArray(arr)) return null;
-    if (key === '__new') return arr.length ? arr[arr.length - 1] : null;
-    return arr.find(function (d) { return d && d.id === key; }) || null;
-  } catch (e) { return null; }
-}
-
 function saveDraftToStore(key, val) {
   try {
     var keyS = String(key || '');
@@ -1173,7 +1164,9 @@ function buildFeedXmlClient(posts, maxItems) {
   var cfg = getConfig();
   var base = cfg.siteUrl || (typeof location !== 'undefined' ? location.origin : '');
   base = String(base || '').replace(/\/+$/, '');
-  var list = (posts || []).slice().sort(sortPosts).slice(0, maxItems || 20);
+  // 与云端 buildFeedXml 对齐：排除加密文章与草稿（公开产物不外泄）
+  var list = (posts || []).filter(function (p) { return !(p && p.protected) && (p.status || 'published') !== 'draft'; })
+    .slice().sort(sortPosts).slice(0, maxItems || 20);
   var items = list.map(function (p) {
     var link = base + postUrl(p.id);
     // description 输出渲染后的 HTML（而非 Markdown 源码），阅读器直接显示富文本
@@ -1419,7 +1412,7 @@ function pagerHtml(page, totalPages) {
 
 function renderHome() {
   var cfg = getConfig();
-  var posts = sortPagePosts(getStaticPosts());
+  var posts = sortPagePosts(getPublishedPosts());
   var cur = currentRoute();
   var tag = cur.query.tag || '';
   var ads = cfg.ads || {};
@@ -1652,7 +1645,7 @@ function renderCommentTree(list, canDel) {
 async function renderPost(id) {
   var cur = currentRoute();
   var html = renderNav(cur.path);
-  var posts = getStaticPosts();
+  var posts = getPublishedPosts();
   var post = posts.find(function (p) { return p.id === id; });
   html += '<main class="container page-fade"><div class="post-body">';
   if (!post) {
@@ -1853,7 +1846,7 @@ async function renderPost(id) {
 }
 
 function renderArchive() {
-  var posts = sortPagePosts(getStaticPosts());
+  var posts = sortPagePosts(getPublishedPosts());
   var byYear = {};
   posts.forEach(function (p) {
     var yr = (p.date || '').slice(0, 4) || t('archive.unknown');
@@ -1881,7 +1874,7 @@ function renderArchive() {
 }
 
 function renderAbout() {
-  var posts = getStaticPosts();
+  var posts = getPublishedPosts();
   var tags = {};
   var totalWords = 0;
   var latest = '';
@@ -1928,7 +1921,7 @@ function renderAbout() {
 }
 
 function renderTags() {
-  var posts = getStaticPosts();
+  var posts = getPublishedPosts();
   var counts = {};
   posts.forEach(function (p) {
     normalizeTags(p).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; });
@@ -2543,7 +2536,7 @@ function bindWriteEvents() {
 
   var btnRss = document.querySelector('#btnRss');
   if (btnRss) btnRss.addEventListener('click', function () {
-    saveFileFriendly('feed.xml', buildFeedXmlClient(getStaticPosts(), 20), t('export.exported') + ' feed.xml', t('export.downloaded') + ' feed.xml');
+    saveFileFriendly('feed.xml', buildFeedXmlClient(getPublishedPosts(), 20), t('export.exported') + ' feed.xml', t('export.downloaded') + ' feed.xml');
   });
 
   var btnSitemap = document.querySelector('#btnSitemap');
@@ -2555,7 +2548,7 @@ function bindWriteEvents() {
   var btnExportAll = document.querySelector('#btnExportAll');
   if (btnExportAll) btnExportAll.addEventListener('click', function () {
     saveFileFriendly('posts.js', buildPostsJs(), t('export.exported') + ' posts.js', t('export.downloaded') + ' posts.js');
-    saveFileFriendly('feed.xml', buildFeedXmlClient(getStaticPosts(), 20), t('export.exported') + ' feed.xml', t('export.downloaded') + ' feed.xml');
+    saveFileFriendly('feed.xml', buildFeedXmlClient(getPublishedPosts(), 20), t('export.exported') + ' feed.xml', t('export.downloaded') + ' feed.xml');
     saveFileFriendly('sitemap.xml', buildSitemapClient(), t('export.exported') + ' sitemap.xml', t('export.downloaded') + ' sitemap.xml');
   });
 
@@ -2861,7 +2854,7 @@ function buildSitemapClient() {
   var cfg = getConfig();
   var base = cfg.siteUrl || (typeof location !== 'undefined' ? location.origin : '');
   base = String(base || '').replace(/\/+$/, '');
-  var posts = sortPagePosts(getStaticPosts());
+  var posts = sortPagePosts(getPublishedPosts());
   var lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'];
   lines.push('  <url><loc>' + esc(base + '/') + '</loc></url>');
   lines.push('  <url><loc>' + esc(base + '/about') + '</loc></url>');
@@ -2946,17 +2939,6 @@ function navigate(path, query) {
 function serializeQuery(query) {
   var kv = Object.keys(query || {}).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(query[k]); });
   return kv.length ? '?' + kv.join('&') : '';
-}
-/** 旧 hash 里解析查询（编辑文章等），兼容两种情况 */
-function parseQuery(source) {
-  var q = {};
-  var str = String(source != null ? source : (useHashMode() ? location.hash : location.search));
-  var m = str.match(/[?&]([^=]+)=([^&]*)/g);
-  if (m) m.forEach(function (kv) {
-    var p = kv.replace(/^[?&]/, '').split('=');
-    try { q[decodeURIComponent(p[0])] = decodeURIComponent(p[1]); } catch (e) {}
-  });
-  return q;
 }
 
 var _i18nReady = false;

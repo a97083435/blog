@@ -187,7 +187,7 @@ export function buildFeedXml(posts, siteUrl, opts) {
   const base = String(siteUrl || '').replace(/\/+$/, '');
   const title = o.title || '轻语博客';
   const desc = o.description || '一个零依赖的轻量博客';
-  const list = sortByDateDesc(posts).filter((p) => !p.protected).slice(0, o.maxItems || 20);
+  const list = sortByDateDesc(posts).filter((p) => !p.protected && p.status !== 'draft').slice(0, o.maxItems || 20);
   const items = list.map((p) => {
     const link = base + '/posts/' + encodeURIComponent(p.id) + '/';
     const content = p.content || '';
@@ -263,10 +263,9 @@ export async function handlePosts(request, env) {
   if (request.method === 'POST' && !(await isWriteAuthed(request, env))) return unauthorized(request, env);
 
   if (request.method === 'GET') {
-    // 列表只返回摘要（不含 content/enc），正文按需通过 /api/posts/:id 加载。
-    // 非加密文章附带 search 字段（正文前若干字符），供云端模式前端全文搜索使用；
-    // 加密文章绝不外泄任何正文线索。
-    const all = sortByDateDesc(await readPosts(env));
+    // 列表只返回已发布文章的摘要（不含 content/enc），草稿不对外暴露；
+    // 正文按需通过 /api/posts/:id 加载；非加密文章附带 search 字段供前端搜索使用。
+    const all = sortByDateDesc(await readPosts(env)).filter((p) => p.status !== 'draft');
     const summary = all.map((p) => {
       if (!p.protected) {
         const s = String(p.content || '');
@@ -306,6 +305,10 @@ export async function handlePostId(request, env, id) {
   if (request.method === 'GET') {
     const p = exist ? postFromRow(exist) : null;
     if (!p) return json({ error: '未找到该内容' }, 404, request, env);
+    // 草稿只对作者可见：未登录（无写权限）时对外不可读，避免草稿全文泄漏
+    if (p.status === 'draft' && !(await isWriteAuthed(request, env))) {
+      return json({ error: '未找到该内容' }, 404, request, env);
+    }
     // 单篇详情可稍长缓存（含正文/密文），写操作会使缓存自然过期
     return json({ ok: true, post: p }, 200, request, env, { 'Cache-Control': READ_CACHE, 'Cache-Tag': TAG_POSTS + ',post:' + id });
   }
@@ -486,7 +489,7 @@ export function buildSitemapXml(posts, siteUrl) {
     row(base + '/archive'),
     row(base + '/guestbook')
   ];
-  sortByDateDesc(posts).forEach((p) => {
+  sortByDateDesc(posts).filter((p) => p.status !== 'draft').forEach((p) => {
     lines.push(row(base + '/posts/' + encodeURIComponent(p.id) + '/', p.date || ''));
   });
   lines.push('</urlset>');
@@ -795,12 +798,12 @@ export async function handleAdminSetup(request, env) {
   try { hash = await deriveKey(password, salt, iter); }
   catch (e) {
     console.error('[admin:setup] deriveKey failed:', e && e.message, e);
-    return json({ error: '密码哈希计算失败（服务端）: ' + (e && e.message) }, 500, request, env);
+    return json({ error: '密码哈希计算失败，请稍后重试' }, 500, request, env);
   }
   try { await setAdminAuth(env, { salt, hash, iter, mustChange: false }); }
   catch (e) {
     console.error('[admin:setup] D1 write failed:', e && e.message, e);
-    return json({ error: '数据库写入失败（服务端）: ' + (e && e.message) }, 500, request, env);
+    return json({ error: '数据库写入失败，请稍后重试' }, 500, request, env);
   }
   return json({ ok: true, message: '管理员密码已设置' }, 201, request, env);
 }

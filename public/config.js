@@ -84,7 +84,6 @@ window.BLOG_CONFIG = {
     startYear: 2019,
     copyrightName: "Qingyu'Blog"
   },
-
   ads: {
     enabled: true,   // ← 填好下方真实广告代码后，改为 true 才会显示
     // AdSense 发布商 ID（ca-pub-xxxx），启用广告时由前端自动加载 adsbygoogle.js 库。
@@ -93,8 +92,8 @@ window.BLOG_CONFIG = {
     // ── 广告位模板（在 AdSense 后台「广告 → 按广告单元」创建「展示广告」后复制生成的代码）──
     // 把下面三处的 YOUR_SLOT_ID 替换成你自己的广告位 ID，并把 enabled 改为 true 即可。
     // 注意：只需放 <ins> + (adsbygoogle||[]).push({}) 这两段，库脚本由 client 自动加载，勿重复粘贴。
-    belowSearch: '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-4096395942817870" data-ad-slot="YOUR_SLOT_ID" data-ad-format="auto" data-full-width-responsive="true"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({})</script>',
-    between: '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-4096395942817870" data-ad-slot="YOUR_SLOT_ID" data-ad-format="auto" data-full-width-responsive="true"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({})</script>',
+    belowSearch: '',
+    between: '',
     betweenEvery: 3,   // 首页列表每 3 篇插入一个 between 广告
     content: '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-4096395942817870" data-ad-slot="9532226266" data-ad-format="auto" data-full-width-responsive="true"></ins><script>(adsbygoogle = window.adsbygoogle || []).push({})</script>'
   }

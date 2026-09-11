@@ -33,7 +33,11 @@ function makeCtx(extra) {
     documentElement: { setAttribute() {}, getAttribute: () => 'light' },
     querySelector: (sel) => (sel === '#app' ? appEl : stubEl()),
     querySelectorAll: () => [],
+    getElementById: () => stubEl(),
+    getElementsByClassName: () => [],
+    getElementsByTagName: () => [],
     createElement: () => Object.assign(stubEl(), { click() {}, set href(v) {} }),
+    createTextNode: () => ({}),
     body: { appendChild() {}, removeChild() {}, style: {} },
     head: { appendChild() {}, removeChild() {} },
     addEventListener() {},
@@ -1294,8 +1298,8 @@ tests.push(['导航栏搜索：图标点击展开，实时命中并带摘要', a
 tests.push(['file:// 本地预览：顶部导航与页脚链接均为 hash 且点击可跳转', async () => {
   // 构造 file:// 环境（本地双击 index.html 直开）
   let appEl = { innerHTML: '' };
-  const stubEl2 = () => ({ innerHTML: '', querySelectorAll: () => [], addEventListener() {}, value: '', getAttribute: () => null, textContent: '' });
-  const doc2 = { title: '', documentElement: { setAttribute() {} }, querySelector: (s) => s === '#app' ? appEl : stubEl2(), querySelectorAll: () => [], createElement: () => stubEl2(), body: { appendChild() {} }, addEventListener() {} };
+  const stubEl2 = () => ({ innerHTML: '', querySelectorAll: () => [], addEventListener() {}, value: '', getAttribute: () => null, textContent: '', style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false }, setAttribute() {}, removeAttribute() {}, querySelector: () => null, closest: () => null, focus() {}, click() {}, disabled: false, appendChild() {}, removeChild() {}, remove() {}, });
+  const doc2 = { title: '', documentElement: { setAttribute() {} }, querySelector: (s) => s === '#app' ? appEl : stubEl2(), querySelectorAll: () => [], getElementById: () => stubEl2(), createElement: () => stubEl2(), createTextNode: () => ({}), body: { appendChild() {}, style: {} }, head: { appendChild() {}, removeChild() {} }, addEventListener() {} };
   const winListeners = {};
   const win2 = { BLOG_POSTS: [], addEventListener: (ev, fn) => { winListeners[ev] = fn; }, matchMedia: () => ({ matches: false }), scrollTo() {}, crypto };
   let hash = '';
@@ -1306,6 +1310,7 @@ tests.push(['file:// 本地预览：顶部导航与页脚链接均为 hash 且�
   };
   const ctx2 = {
     window: win2, document: doc2, location: loc2,
+    navigator: { language: 'zh-CN' },
     history: { pushState() {} },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     confirm: () => true, setTimeout, clearTimeout, URLSearchParams, Blob: function () {},
@@ -1315,7 +1320,11 @@ tests.push(['file:// 本地预览：顶部导航与页脚链接均为 hash 且�
   };
   win2.BLOG_CONFIG = { mode: 'static' };
   vm.createContext(ctx2);
+  // i18n 先于 app.js 加载并暴露 t()（与 boot() 一致），否则导航/页脚渲染 t() 报错
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'i18n.js'), 'utf8'), ctx2, { filename: 'i18n.js' });
+  ctx2.t = (k, v) => win2.__i18n.t(k, v);
   vm.runInContext(fs.readFileSync(path.join(PUB, 'posts.js'), 'utf8'), ctx2, { filename: 'posts.js' });
+  win2.BLOG_POSTS = TEST_POSTS;
   vm.runInContext(fs.readFileSync(path.join(PUB, 'app.js'), 'utf8'), ctx2, { filename: 'app.js' });
   await win2.__bootPromise;
   const html = appEl.innerHTML;
@@ -1466,9 +1475,9 @@ tests.push(['hash 模式翻页：file:// 下点击下一页能切换内容、URL
   // file:// 环境，且让 document 真正捕获点击监听（供真正点击流转测）
   let appEl = { innerHTML: '' };
   const classListStub = { add() {}, remove() {}, contains: () => false, toggle() {} };
-  const stubEl2 = () => ({ innerHTML: '', querySelectorAll: () => [], addEventListener() {}, value: '', getAttribute: () => null, textContent: '', parentNode: null, classList: classListStub });
+  const stubEl2 = () => ({ innerHTML: '', querySelectorAll: () => [], addEventListener() {}, value: '', getAttribute: () => null, textContent: '', parentNode: null, classList: classListStub, style: {}, dataset: {}, setAttribute() {}, removeAttribute() {}, querySelector: () => null, closest: () => null, focus() {}, click() {}, disabled: false, appendChild() {}, removeChild() {}, remove() {} });
   const docListeners = {};
-  const doc2 = { title: '', documentElement: { setAttribute() {} }, querySelector: (s) => s === '#app' ? appEl : stubEl2(), querySelectorAll: () => [], createElement: () => stubEl2(), body: { appendChild() {} }, addEventListener: (ev, fn) => { (docListeners[ev] = docListeners[ev] || []).push(fn); } };
+  const doc2 = { title: '', documentElement: { setAttribute() {} }, querySelector: (s) => s === '#app' ? appEl : stubEl2(), querySelectorAll: () => [], getElementById: () => stubEl2(), getElementsByClassName: () => [], createElement: () => stubEl2(), createTextNode: () => ({}), body: { appendChild() {}, style: {} }, head: { appendChild() {}, removeChild() {} }, addEventListener: (ev, fn) => { (docListeners[ev] = docListeners[ev] || []).push(fn); } };
   const winListeners = {};
   const win2 = { BLOG_POSTS: [], addEventListener: (ev, fn) => { winListeners[ev] = fn; }, matchMedia: () => ({ matches: false }), scrollTo() {}, crypto };
   let hash = '#/';
@@ -1479,6 +1488,7 @@ tests.push(['hash 模式翻页：file:// 下点击下一页能切换内容、URL
   };
   const ctx2 = {
     window: win2, document: doc2, location: loc2,
+    navigator: { language: 'zh-CN' },
     history: { pushState() {} },
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     confirm: () => true, setTimeout, clearTimeout, URLSearchParams, Blob: function () {},
@@ -1488,6 +1498,9 @@ tests.push(['hash 模式翻页：file:// 下点击下一页能切换内容、URL
   };
   win2.BLOG_CONFIG = { mode: 'static', pageSize: 3 };
   vm.createContext(ctx2);
+  // i18n 先于 app.js 加载并暴露 t()（与 boot() 一致）
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'i18n.js'), 'utf8'), ctx2, { filename: 'i18n.js' });
+  ctx2.t = (k, v) => win2.__i18n.t(k, v);
   // 用足够多文章触发分页（posts.js 之后、app.js 之前覆写 BLOG_POSTS）
   const many = [];
   for (let i = 0; i < 9; i++) many.push({ id: 'hp' + i, title: '标题' + i, date: '2024-01-0' + (i + 1), content: '内容' + i, tags: ['t'] });
