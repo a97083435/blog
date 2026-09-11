@@ -37,6 +37,11 @@ jobs:
         with:
           node-version: 24
 
+      # 一次性全局安装 wrangler（CI 镜像层缓存 → 首次快，之后直接用 wrangler 命令）
+      # 避免下方 migrations 循环与 secret 写入里每次 npx --yes 重复解析/网络检查
+      - name: Setup wrangler CLI
+        run: npm install -g wrangler@3.90.0
+
       - name: Check required secrets
         env:
           BLOG_KV_ID: ${{ secrets.BLOG_KV_ID }}
@@ -55,14 +60,15 @@ jobs:
           fi
           echo "✅ 必要 Secrets 齐全（值不会打印）"
 
-      # 诊断：验证凭证账户，便于定位 8000007 类错误
+      # 诊断：验证凭证账户，便于定位 8000007 类错误（仅手动触发时运行，日常 push 跳过节省时间）
       - name: Diagnose account & worker
+        if: github.event_name == 'workflow_dispatch'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           echo "=== 账户 $CLOUDFLARE_ACCOUNT_ID ==="
-          npx --yes wrangler@3.90.0 whoami 2>&1 | head -20 || true
+          wrangler whoami 2>&1 | head -20 || true
 
       # 生成带真实 KV id 的部署配置（wrangler 对 kv 的 id 不支持 {env.} 内插，
       # 必须显式替换占位符；文件放在仓库根目录，保证 worker.js/public 的相对路径正确）
@@ -106,7 +112,7 @@ jobs:
           # 查询某表是否存在指定列（用于 ALTER 类迁移的幂等跳过）
           check_col() {
             local tbl="$1" col="$2"
-            npx --yes wrangler@3.90.0 d1 execute blog --remote --config wrangler.workers.ci.toml \
+            wrangler d1 execute blog --remote --config wrangler.workers.ci.toml \
               --command "SELECT COUNT(*) AS n FROM pragma_table_info('$tbl') WHERE name='$col'" --json 2>/dev/null \
               | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['results'][0]['n'] if d and d[0].get('results') else 0)" 2>/dev/null || echo 0
           }
@@ -128,7 +134,7 @@ jobs:
               echo "→ 列已存在，跳过（幂等）"
               continue
             fi
-            out=$(npx --yes wrangler@3.90.0 d1 execute blog --remote --config wrangler.workers.ci.toml --file="$f" 2>&1)
+            out=$(wrangler d1 execute blog --remote --config wrangler.workers.ci.toml --file="$f" 2>&1)
             code=$?
             if [ $code -ne 0 ]; then
               # 兜底：万一上面的列查询不可用（如 D1 不支持 pragma_table_info），
@@ -167,24 +173,24 @@ jobs:
           NAME_ARG: ${{ secrets.PAGES_PROJECT_NAME != '' && format('--name {0}', secrets.PAGES_PROJECT_NAME) || '' }}
         run: |
           if [ -n "$BLOG_ADMIN_SETUP_KEY" ]; then
-            echo "$BLOG_ADMIN_SETUP_KEY" | npx --yes wrangler@3.90.0 secret put BLOG_ADMIN_SETUP_KEY --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$BLOG_ADMIN_SETUP_KEY" | wrangler secret put BLOG_ADMIN_SETUP_KEY --config wrangler.workers.ci.toml $NAME_ARG
           fi
           if [ -n "$BLOG_WRITE_TOKEN" ]; then
-            echo "$BLOG_WRITE_TOKEN" | npx --yes wrangler@3.90.0 secret put BLOG_WRITE_TOKEN --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$BLOG_WRITE_TOKEN" | wrangler secret put BLOG_WRITE_TOKEN --config wrangler.workers.ci.toml $NAME_ARG
           fi
           # CF_API_TOKEN 同时作为「发布即清缓存」的运行时凭证（purgeTags 需要 Zone·Cache Purge 权限）
           if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "$CLOUDFLARE_API_TOKEN" | npx --yes wrangler@3.90.0 secret put CF_API_TOKEN --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$CLOUDFLARE_API_TOKEN" | wrangler secret put CF_API_TOKEN --config wrangler.workers.ci.toml $NAME_ARG
           fi
           # R2（音乐直传）：配置了才写入；R2 未配置时音乐上传接口自动降级为 503，不影响其余功能
           if [ -n "$R2_ACCESS_KEY_ID" ] && [ -n "$R2_SECRET_ACCESS_KEY" ] && [ -n "$R2_ENDPOINT" ] && [ -n "$R2_BUCKET" ]; then
-            echo "$R2_ACCESS_KEY_ID"     | npx --yes wrangler@3.90.0 secret put R2_ACCESS_KEY_ID     --config wrangler.workers.ci.toml $NAME_ARG
-            echo "$R2_SECRET_ACCESS_KEY" | npx --yes wrangler@3.90.0 secret put R2_SECRET_ACCESS_KEY --config wrangler.workers.ci.toml $NAME_ARG
-            echo "$R2_ENDPOINT"          | npx --yes wrangler@3.90.0 secret put R2_ENDPOINT          --config wrangler.workers.ci.toml $NAME_ARG
-            echo "$R2_BUCKET"            | npx --yes wrangler@3.90.0 secret put R2_BUCKET            --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$R2_ACCESS_KEY_ID"     | wrangler secret put R2_ACCESS_KEY_ID     --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$R2_SECRET_ACCESS_KEY" | wrangler secret put R2_SECRET_ACCESS_KEY --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$R2_ENDPOINT"          | wrangler secret put R2_ENDPOINT          --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$R2_BUCKET"            | wrangler secret put R2_BUCKET            --config wrangler.workers.ci.toml $NAME_ARG
           fi
           # R2 公开读取域名（音频播放地址基址）；有货才写
           if [ -n "$R2_PUBLIC_BASE" ]; then
-            echo "$R2_PUBLIC_BASE" | npx --yes wrangler@3.90.0 secret put R2_PUBLIC_BASE --config wrangler.workers.ci.toml $NAME_ARG
+            echo "$R2_PUBLIC_BASE" | wrangler secret put R2_PUBLIC_BASE --config wrangler.workers.ci.toml $NAME_ARG
           fi
           rm -f wrangler.workers.ci.toml
