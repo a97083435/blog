@@ -95,9 +95,10 @@
   <!-- 后台样式按需加载：仅访问后台路由时由 app.js 动态注入 -->
   <!-- 预连接字体 CDN，降低首字节延迟 -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <!-- 字体：正文改用系统宋体栈（各 OS 自带，零加载延迟）。
-       旧版加载 jsDelivr 的思源宋体 VF 全量分片（160+ woff2 请求）严重拖慢首屏，已移除；
+  <!-- 字体：正文思源宋体用本地常用字子集（单文件 woff2，同域 + 缓存），
+       替代旧 jsDelivr 160+ 分片方案（每设备首次 73s 累计请求）；生僻字回退系统宋体栈；
        --font-display 品牌大字走本地分片字体（result.css）同域、体积小，保持常规加载 -->
+  <link rel="stylesheet" href="fonts/source-han-serif/sc-common.css">
   <link rel="stylesheet" href="fonts/dreamserif/result.css">
   <script defer src="config.js"></script>
   <script defer src="posts.js"></script>
