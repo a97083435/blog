@@ -969,6 +969,7 @@ function _cloudOn() {
 }
 
 var _cloudDetected = false;   // boot 时置位：/api/posts 拉取成功 = 云端在线
+var _cloudReady = false;      // 云端探测是否已完成（成功或失败都置位，避免首页永远显示加载动画）
 
 function needAdminSetup() {
   return !_cfgPwd() && !_localPwd();
@@ -1385,14 +1386,17 @@ function homePageSize() {
 }
 
 /* 计算当前分页并渲染「卡片列表 + 翻页器」 */
-function homeListHtml(filtered, ads, adsEnabled, page, pageSize, emptyMsg) {
+function homeListHtml(filtered, ads, adsEnabled, page, pageSize, emptyMsg, emptyExtra) {
   var total = filtered.length;
   var totalPages = pageSize > 0 ? Math.max(1, Math.ceil(total / pageSize)) : 1;
   if (page < 1) page = 1;
   if (page > totalPages) page = totalPages;
   var pageItems = pageSize > 0 ? filtered.slice((page - 1) * pageSize, page * pageSize) : filtered;
   var list = renderCardList(pageItems, ads, adsEnabled);
-  if (!pageItems.length) list = '<div class="empty"><div class="big">' + svgIcon('doc', 36) + '</div><p>' + (emptyMsg || t('home.noPosts')) + '</p></div>';
+  if (!pageItems.length) {
+    list = '<div class="empty"><div class="big">' + svgIcon('doc', 36) + '</div><p>' + (emptyMsg || t('home.noPosts')) + '</p>'
+      + (emptyExtra || '') + '</div>';
+  }
   var pager = pagerHtml(page, totalPages);
   // 不分页时翻页器不渲染，其 32px 下边距随之消失，末尾文章会贴住底部导航 ——
   // 此时给列表容器加 list-nopager 类，由 CSS 补齐同等间距
@@ -1430,11 +1434,42 @@ function renderHome() {
   html += renderHomeTagRow(posts, tag);
   if (adsEnabled && ads.belowSearch) html += '<div class="ad-slot"><span class="ad-label">' + t('ad.label') + '</span>' + ads.belowSearch + '</div>';
   var filtered = tag ? posts.filter(function (p) { return (p.tags || []).indexOf(tag) >= 0; }) : posts;
-  var body = homeListHtml(filtered, ads, adsEnabled, page, pageSize);
+  var body;
+  // 云端探测中且尚无数据 → 显示加载动画（避免先渲染「还没有文章」空态，等数据到了才变列表）
+  var cloudProbing = !_cloudReady && (cfg.mode === 'api' || cfg.mode === 'auto');
+  if (cloudProbing && !filtered.length) {
+    body = { html: '<div id="listContainer" class="list-nopager">' + homeLoadingHtml() + '</div>', page: 1, totalPages: 1 };
+  } else {
+    // 云端已确认在线且列表为空 → 「你还未发布文章」+ 写文章引导；静态空（或探测失败）→ 原「还没有文章」
+    var cloudEmpty = _cloudReady && _cloudOn() && !filtered.length;
+    var emptyMsg = cloudEmpty ? t('home.noPostsCloud') : t('home.noPosts');
+    var emptyExtra = cloudEmpty
+      ? '<a class="btn btn-sm btn-primary" style="margin-top:14px" href="' + esc(href('/admin/posts/new')) + '" data-no-hijack="1">' + svgIcon('pen', 14) + ' ' + t('admin.dashboard.goWrite') + '</a>'
+      : '';
+    body = homeListHtml(filtered, ads, adsEnabled, page, pageSize, emptyMsg, emptyExtra);
+  }
   html += '<div id="homeBody">' + body.html + '</div>';
   html += '</main>';
   html += renderFooter();
   return html;
+}
+
+/* 云端文章加载动画：与首页卡片同构的骨架屏（shimmer），顶部一行「正在拉取文章…」 */
+function homeLoadingHtml() {
+  var card = function () {
+    return '<div class="sk-card">'
+      + '<div class="sk-line" style="width:35%"></div>'
+      + '<div class="sk-line" style="width:90%;height:13px"></div>'
+      + '<div class="sk-line" style="width:70%;height:13px"></div>'
+      + '<div class="sk-row">'
+      + '<span class="sk-chip"></span><span class="sk-chip"></span>'
+      + '</div>'
+      + '</div>';
+  };
+  return '<div class="home-loading" role="status" aria-label="' + esc(t('home.loadingCloud')) + '">'
+    + '<div class="home-loading-head">' + svgIcon('spinner', 15) + '<span>' + esc(t('home.loadingCloud')) + '</span></div>'
+    + '<div class="home-loading-grid">' + card() + card() + card() + '</div>'
+    + '</div>';
 }
 
 function searchIconSvg() {
@@ -3708,12 +3743,15 @@ window.__bootPromise = (async function () {
   window.addEventListener('popstate', function () { route(); });
 
   if (cfg.mode === 'api' || cfg.mode === 'auto') {
+    // 首次渲染（上方 route()）会显示加载动画；探测完成（成功或失败）后置位并重渲染，
+    // 否则首页会一直停在「正在拉取文章…」
     try {
       var resp = await apiFetch('api/posts');
       var data = resp || {};
       if (data && Array.isArray(data.posts)) {
         var wasCloud = _cloudDetected;
         _cloudDetected = true;   // 云端在线：后续登录用 /api/admin/*
+        _cloudReady = true;
         if (data.posts.length) {
           var existing = (Array.isArray(window.BLOG_POSTS) ? window.BLOG_POSTS : []);
           var byId = {};
@@ -3732,10 +3770,17 @@ window.__bootPromise = (async function () {
           });
           window.BLOG_POSTS = Object.keys(byId).map(function (k) { return byId[k]; });
         }
-        // 探测成功：模式或数据有变化则重渲染一次（切换云端 UI、刷新列表数据）
+        // 探测成功：模式或数据有变化则重渲染一次（切换云端 UI、刷新列表数据；
+        // 0 篇也用 !wasCloud 重渲染 → 从加载动画变为「你还未发布文章」空态）
         if (!wasCloud || data.posts.length) route();
+      } else {
+        _cloudReady = true;
       }
-    } catch (e) { /* 超时/失败 → 保持静态模式 */ }
+    } catch (e) {
+      // 超时/失败 → 保持静态模式；置位 ready 并重渲染，避免首页卡在加载动画
+      _cloudReady = true;
+      route();
+    }
 
     // 拉取站点设置（导航菜单 / 站点信息 / 个人资料），合并进运行时配置并重渲染一次。
     // GET /api/settings 为公开接口；失败时保持静态配置，不影响站点运行。

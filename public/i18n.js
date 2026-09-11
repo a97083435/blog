@@ -67,6 +67,8 @@
     "search.close": "关闭搜索",
     "home.latest": "最新发布",
     "home.noPosts": "这里还没有文章。",
+    "home.loadingCloud": "正在拉取文章…",
+    "home.noPostsCloud": "你还未发布文章",
     "home.loadFail": "加载文章列表失败",
     "home.categoryLabel": "标签",
     "featured.title": "精选文章",

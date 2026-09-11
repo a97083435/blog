@@ -42,6 +42,8 @@
   "search.close": "Close search",
   "home.latest": "Latest Posts",
   "home.noPosts": "No posts yet.",
+  "home.loadingCloud": "Fetching posts…",
+  "home.noPostsCloud": "You haven't published any posts yet",
   "home.loadFail": "Failed to load posts",
   "featured.title": "Featured Articles",
   "archive.title": "Archive",

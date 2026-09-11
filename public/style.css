@@ -2791,6 +2791,39 @@ textarea { resize: none; }
 .mp-eq i:nth-child(3) { height: 9px; animation-delay: .3s; }
 @keyframes mpEq { 0%,100% { transform: scaleY(.55); } 50% { transform: scaleY(1); } }
 
+/* ---------- 云端文章加载动画（首页骨架屏） ----------
+ * 云端探测期间代替「还没有文章」空态显示；顶部一行 spinner + 文案，
+ * 下方是与首页卡片同构的骨架占位（shimmer 扫光）。 */
+.home-loading { padding: 6px 0 18px; }
+.home-loading-head {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13.5px; color: var(--muted, #9b8f83);
+  margin-bottom: 14px;
+}
+.home-loading-head .spin-icon { width: 15px; height: 15px; animation: qy-spin .9s linear infinite; }
+.home-loading-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.sk-card {
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #ece7e0);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 11px;
+}
+.sk-line {
+  height: 14px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg-soft, #f3efe8) 25%, var(--border, #ece7e0) 45%, var(--bg-soft, #f3efe8) 65%);
+  background-size: 220% 100%;
+  animation: sk-shimmer 1.3s ease-in-out infinite;
+}
+.sk-row { display: flex; gap: 8px; margin-top: 2px; }
+.sk-chip {
+  width: 52px; height: 17px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--bg-soft, #f3efe8) 25%, var(--border, #ece7e0) 45%, var(--bg-soft, #f3efe8) 65%);
+  background-size: 220% 100%;
+  animation: sk-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes sk-shimmer { 0% { background-position: 120% 0; } 100% { background-position: -100% 0; } }
+
 /* 移动端 */
 @media (max-width: 560px) {
   .mp-fab-wrap { right: 16px; bottom: 20px; width: 50px; height: 50px; transform: translateX(calc(100% - 12px)); }
