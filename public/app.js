@@ -3439,6 +3439,34 @@ function bindGlobal() {
   populateLangSwitch();
   bindMobileSidebar();
   aiInit();
+  // 广告占位符：有广告（静态内容或 AdSense 已填充）才显示，无广告保持隐藏
+  initAdSlots(app());
+}
+
+/* ---------- 广告占位符显隐 ----------
+ * .ad-slot 框（虚线占位）默认隐藏，避免 AdSense 未返回广告时在文章/列表里留下空虚线框：
+ *  · 内容是静态 HTML（非广告联盟 ins）→ 直接显示
+ *  · 内容是 <ins class="adsbygoogle"> → 轮询等待 AdSense 填充（ins 内出现 iframe/子节点）后显示；
+ *    约 12s 仍未填充（无广告可展示）→ 保持隐藏
+ * 每次路由渲染后（bindGlobal）调用；DOM 被替换时轮询自动终止（isConnected 检查）。 */
+function initAdSlots(scope) {
+  if (!scope || !scope.querySelectorAll) return;
+  Array.prototype.forEach.call(scope.querySelectorAll('.ad-slot'), function (slot) {
+    var ins = slot.querySelector('ins.adsbygoogle');
+    if (!ins) { slot.classList.add('has-ad'); return; }  // 静态广告内容：直接显示
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries++;
+      var filled = !!(ins.querySelector('iframe') || (ins.children && ins.children.length > 0));
+      if (filled) {
+        clearInterval(timer);
+        slot.classList.add('has-ad');
+      } else if (!slot.isConnected || tries >= 24) {
+        // DOM 已被替换，或 ~12s 未填充（无广告返回）→ 终止，保持隐藏
+        clearInterval(timer);
+      }
+    }, 500);
+  });
 }
 
 /* 主题色「颜色下拉」：桌面顶栏 + 手机侧栏统一形态。
