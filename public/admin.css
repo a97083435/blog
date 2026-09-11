@@ -109,7 +109,7 @@
 }
 .ab-brand:hover .ab-logo-img { transform: scale(1.08); }
 .ab-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
-.ab-brand-name { font-weight: 700; font-size: 14.5px; line-height: 1; display: inline-block; color: var(--ab-sider-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab-brand-name { font-weight: 700; font-size: 14.5px; display: inline-block; color: var(--ab-sider-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ab-sider.collapsed .ab-brand-name,
 .ab-sider.collapsed .ab-nav-text,
 .ab-sider.collapsed .ab-nav-group-title,

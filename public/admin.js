@@ -996,8 +996,8 @@
     content.innerHTML =
       '<div class="ab-page-head"><div><h1 class="ab-page-title">' + (route.isNew ? t('admin.editor.newPost') : t('admin.editor.editPost')) + '</h1><p class="ab-page-sub">' + t('editor.markdownHint') + '</p></div></div>' +
       '<div class="ab-editor-head">' +
-        '<input class="ab-input" id="abTitle" placeholder="' + t('admin.editor.titlePlaceholder') + '" style="font-size:16px;font-weight:600">' +
-        '<div class="ab-editor-meta">' +
+        '<div class="ab-editor-meta" style="align-items:end">' +
+          '<input class="ab-input" id="abTitle" placeholder="' + t('admin.editor.titlePlaceholder') + '" style="font-size:16px;font-weight:600">' +
           '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.tagsPlaceholder') + '</label><input class="ab-input" id="abTags" placeholder="' + t('admin.editor.tagsExample') + '"></div>' +
         '</div>' +
         '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.coverPlaceholder') + '</label><div class="ab-row"><input class="ab-input" id="abCover" placeholder="https://…"><button class="ab-btn sm" id="abPickCover">' + t('admin.editor.selectMedia') + '</button></div></div>' +
