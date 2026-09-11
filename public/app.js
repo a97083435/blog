@@ -1544,6 +1544,64 @@ function firstImageFrom(content) {
   return m2 ? m2[1] : '';
 }
 
+/* ---------- 手机卡片摘要行数自适应 ----------
+ * 手机端（≤768px）：标题实际渲染行数决定摘要可显示行数，把标签上方留白让给摘要：
+ *   · 标题 1 行 → 摘要最多 4 行（加 .clamp-4）
+ *   · 标题 2 行 → 摘要最多 3 行（默认）
+ * iOS Safari（iPhone）特化：禁止系统字号放大（-webkit-text-size-adjust 见 CSS），
+ * 行数与字号在横竖屏旋转后保持一致；这里用 Range.getClientRects 数行，
+ * 该 API 在 iOS/安卓 Safari/Chrome/Firefox 均稳定，且在 -webkit-line-clamp 约束下返回
+ * 实际可见的行盒，不会受摘要是否 clamp 影响。
+ * 桌面/平板（>768px）不执行 —— 摘要固定 3 行由 CSS 负责。 */
+function countRenderedLines(el) {
+  if (!el || !el.firstChild) return 1;
+  try {
+    var range = document.createRange();
+    range.setStart(el.firstChild, 0);
+    var last = el.lastChild;
+    // 结束于最后一个文本节点（标题是纯文本，lastChild 即为文本节点）
+    range.setEnd(last, last.nodeType === 3 ? last.data.length : (last.childNodes && last.childNodes.length) || 1);
+    var rects = range.getClientRects();
+    var top = null;
+    var lines = 0;
+    for (var i = 0; i < rects.length; i++) {
+      var r = rects[i];
+      if (!r || r.height <= 0) continue;   // 跳过零高行盒（换行产生的空行）
+      if (top === null || Math.abs(r.top - top) > 1) { lines++; top = r.top; }   // 按行顶坐标去重
+    }
+    return Math.max(1, lines);
+  } catch (e) { return 1; }
+}
+function fitCardLineClamps() {
+  // 仅手机尺寸（≤768px）执行
+  var mq = null;
+  try { mq = window.matchMedia('(max-width: 768px)'); } catch (e) {}
+  if (!mq || !mq.matches) return;
+  var cards = document.querySelectorAll('.post-card');
+  Array.prototype.forEach.call(cards, function (card) {
+    var h2 = card.querySelector('h2');
+    var ex = card.querySelector('.excerpt');
+    if (!h2 || !ex || !ex.classList) return;
+    var lines = countRenderedLines(h2);
+    if (lines <= 1) ex.classList.add('clamp-4');
+    else ex.classList.remove('clamp-4');
+  });
+}
+function bindFitCardLineClamps() {
+  if (window.__fitCardBound) return;
+  window.__fitCardBound = true;
+  // 旋转/横竖屏切换后重测（iPhone 从竖屏 393px 转到横屏 852px，行数变化）
+  var timer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(timer);
+    timer = setTimeout(fitCardLineClamps, 120);
+  });
+  // 字体加载完成后再测一次（iOS 首屏字体 swapping 会使标题行数变化）
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { fitCardLineClamps(); }).catch(function () {});
+  }
+}
+
 /* ---------- 文章详情本地缓存 ----------
  * 云端正文（content）缓存到 localStorage：首次点击拉取后存入；
  * 再次点击先显示缓存（秒开），同时后台重新拉取最新数据（SWR），
@@ -2956,7 +3014,7 @@ async function route() {
   var path = r.path;
   var q = r.query;
 
-  if (path === '/') { app().innerHTML = renderHome(); }
+  if (path === '/') { app().innerHTML = renderHome(); fitCardLineClamps(); }
   else if (path.indexOf('/posts/') === 0) {
     // /posts/<别名>/  或  /posts/<别名>/edit
     var rest = path.slice('/posts/'.length); // 已去尾斜杠
@@ -3444,6 +3502,7 @@ function bindGlobal() {
   populateLangSwitch();
   bindMobileSidebar();
   aiInit();
+  bindFitCardLineClamps();   // 手机卡片摘要行数自适应：旋转/字体加载后重测
   // 广告占位符：有广告（静态内容或 AdSense 已填充）才显示，无广告保持隐藏
   initAdSlots(app());
 }
