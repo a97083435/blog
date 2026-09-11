@@ -950,7 +950,7 @@ html[data-theme="dark"] .post-card .mini-tags span {
 }
 
 .post-header { margin-bottom: 26px; padding-bottom: 18px; border-bottom: 1px solid var(--border); text-align: center; }
-.post-header h1 { margin: 0 0 10px; font-size: 28px; line-height: 1.35; font-family: var(--font-heading); }
+.post-header h1 { margin: 0 0 10px; font-size: 28px; line-height: 1.35; font-family: var(--font-display); }
 .post-header .meta {
   color: var(--muted);
   font-size: 13.5px;
