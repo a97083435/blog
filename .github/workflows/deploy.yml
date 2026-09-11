@@ -170,6 +170,8 @@ jobs:
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
           R2_PUBLIC_BASE: ${{ secrets.R2_PUBLIC_BASE }}
+          R2_MEDIA_BUCKET: ${{ secrets.R2_MEDIA_BUCKET }}
+          R2_MEDIA_PUBLIC_BASE: ${{ secrets.R2_MEDIA_PUBLIC_BASE }}
           NAME_ARG: ${{ secrets.PAGES_PROJECT_NAME != '' && format('--name {0}', secrets.PAGES_PROJECT_NAME) || '' }}
         run: |
           if [ -n "$BLOG_ADMIN_SETUP_KEY" ]; then
@@ -192,5 +194,13 @@ jobs:
           # R2 公开读取域名（音频播放地址基址）；有货才写
           if [ -n "$R2_PUBLIC_BASE" ]; then
             echo "$R2_PUBLIC_BASE" | wrangler secret put R2_PUBLIC_BASE --config wrangler.workers.ci.toml $NAME_ARG
+          fi
+          # R2 媒体桶（图片直传，独立于音乐桶）：凭据与音乐共用，桶名/公开域名独立；
+          # 未配置时媒体上传接口自动降级为 503，不影响其余功能
+          if [ -n "$R2_ACCESS_KEY_ID" ] && [ -n "$R2_SECRET_ACCESS_KEY" ] && [ -n "$R2_ENDPOINT" ] && [ -n "$R2_MEDIA_BUCKET" ]; then
+            echo "$R2_MEDIA_BUCKET" | wrangler secret put R2_MEDIA_BUCKET --config wrangler.workers.ci.toml $NAME_ARG
+          fi
+          if [ -n "$R2_MEDIA_PUBLIC_BASE" ]; then
+            echo "$R2_MEDIA_PUBLIC_BASE" | wrangler secret put R2_MEDIA_PUBLIC_BASE --config wrangler.workers.ci.toml $NAME_ARG
           fi
           rm -f wrangler.workers.ci.toml

@@ -54,11 +54,13 @@ async function signS3(env, method, path, canonicalQuery, canonicalHeaders, signe
   const signature = hexify(await hmac(keyBytes, stringToSign));
   return { params: p, signature };
 }
-/** 生成 R2 S3 兼容的预签名 PUT URL（有效期 1 小时，UNSIGNED-PAYLOAD） */
-export async function presignPut(env, key, expiresSec) {
+/** 生成 R2 S3 兼容的预签名 PUT URL（有效期 1 小时，UNSIGNED-PAYLOAD）
+ *  bucket 可选：缺省用 env.R2_BUCKET（音乐桶）；媒体桶传入独立 bucket 名（如 qingyu-media） */
+export async function presignPut(env, key, expiresSec, bucket) {
   expiresSec = expiresSec || 3600;
+  const b = bucket || env.R2_BUCKET;
   const p = await r2SignParams(env);
-  const path = '/' + env.R2_BUCKET + '/' + key;
+  const path = '/' + b + '/' + key;
   const qp = {
     'X-Amz-Algorithm': 'AWS4-HMAC-SHA256',
     'X-Amz-Credential': env.R2_ACCESS_KEY_ID + '/' + p.scope,
@@ -99,10 +101,12 @@ export async function sigv4AuthHeader(env, method, path) {
     authorization: 'AWS4-HMAC-SHA256 Credential=' + env.R2_ACCESS_KEY_ID + '/' + p.scope + ', SignedHeaders=' + signedHeaders + ', Signature=' + s.signature
   };
 }
-/** 删除 R2 对象；S3 DELETE 幂等，对象不存在（404/204）视为成功 */
-export async function r2DeleteObject(env, key) {
+/** 删除 R2 对象；S3 DELETE 幂等，对象不存在（404/204）视为成功
+ *  bucket 可选：缺省用 env.R2_BUCKET（音乐桶）；媒体桶传入独立 bucket 名 */
+export async function r2DeleteObject(env, key, bucket) {
+  const b = bucket || env.R2_BUCKET;
   const endpoint = String(env.R2_ENDPOINT || '').replace(/\/+$/, '');
-  const path = '/' + env.R2_BUCKET + '/' + key;
+  const path = '/' + b + '/' + key;
   const sig = await sigv4AuthHeader(env, 'DELETE', path);
   const res = await fetch(endpoint + path, {
     method: 'DELETE',
