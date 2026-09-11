@@ -2411,7 +2411,7 @@ kbd {
 @media (max-width: 480px) {
   .post-card { gap: 12px; padding: 12px; min-height: 140px; height: 192px; overflow: hidden; }
   .post-card-main { padding: 0; }
-  .post-thumb { width: 150px; height: 100px; border-radius: 10px; }
+  .post-thumb { width: 150px; height: 120px; border-radius: 10px; }
   .post-thumb-ph svg { width: 20px; height: 20px; }
   .post-card h2 { font-size: 17px; }
   .post-card .excerpt { font-size: 13.5px; }
