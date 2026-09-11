@@ -2620,115 +2620,13 @@ function renderAdmin() {
   html += '</div></div>';
   html += '</main>' + renderFooter();
   app().innerHTML = html;
-  
-  // --- 绑定编辑器事件（与 renderWrite 保持一致） ---
-  var btnClearData = document.querySelector('#btnClearData');
-  if (btnClearData) btnClearData.addEventListener('click', function () {
-    if (!confirm(t('editor.clearConfirm'))) return;
-    var title = document.querySelector('#titleInput');
-    var date = document.querySelector('#dateInput');
-    var tags = document.querySelector('#tagInput');
-    var excerpt = document.querySelector('#excerptInput');
-    var md = document.querySelector('#mdInput');
-    var preview = document.querySelector('#previewPane');
-    var wordCount = document.querySelector('#wordCount');
-    var hint = document.querySelector('#writeTitleHint');
-    if (title) title.value = '';
-    if (date) date.value = '';
-    if (tags) tags.value = '';
-    if (excerpt) excerpt.value = '';
-    if (md) { md.value = ''; md.dispatchEvent(new Event('input')); }
-    if (preview) preview.innerHTML = '';
-    if (wordCount) wordCount.textContent = '0 ' + t('editor.wordUnit');
-    if (hint) hint.textContent = t('editor.newPost');
-    localStorage.removeItem('qingyu.edit.id');
-  });
 
-  var btnToday = document.querySelector('#btnToday');
-  if (btnToday) {
-    btnToday.addEventListener('click', function () {
-      var input = document.querySelector('#dateInput');
-      if (!input) return;
-      var now = new Date();
-      var year = now.getFullYear();
-      var month = String(now.getMonth() + 1).padStart(2, '0');
-      var day = String(now.getDate()).padStart(2, '0');
-      var hours = String(now.getHours()).padStart(2, '0');
-      var minutes = String(now.getMinutes()).padStart(2, '0');
-      input.value = year + '-' + month + '-' + day + 'T' + hours + ':' + minutes;
-      if (typeof previewContent === 'function') previewContent();
-    });
-  }
-
-  var btnDraft = document.querySelector('#btnSaveDraft');
-  if (btnDraft) btnDraft.addEventListener('click', function () { saveDraft(); });
-
-  var btnImport = document.querySelector('#btnImport');
-  var fileInput = document.querySelector('#mdFileInput');
-  if (btnImport && fileInput) {
-    btnImport.addEventListener('click', function () { fileInput.click(); });
-    fileInput.addEventListener('change', function () {
-      var file = fileInput.files && fileInput.files[0];
-      if (!file) return;
-      var reader = new FileReader();
-      reader.onload = function (e) {
-        var parsed = parseMdFile(String(e.target.result || ''), file.name);
-        var title = document.querySelector('#titleInput'); if (title) title.value = parsed.title;
-        var date = document.querySelector('#dateInput'); if (date) date.value = parsed.date;
-        var tags = document.querySelector('#tagInput'); if (tags) tags.value = parsed.tags.join(', ');
-        var excerpt = document.querySelector('#excerptInput'); if (excerpt) excerpt.value = parsed.excerpt || '';
-        var md2 = document.querySelector('#mdInput'); if (md2) md2.value = parsed.content;
-        updatePreview();
-      };
-      reader.readAsText(file);
-    });
-  }
-
-  var btnSave = document.querySelector('#btnSave');
-  if (btnSave) btnSave.addEventListener('click', function () { saveStaticArticle(); });
-
-  var btnCloud = document.querySelector('#btnCloud');
-  if (btnCloud) btnCloud.addEventListener('click', function () { cloudPublish(); });
-
-  var btnExport = document.querySelector('#btnExport');
-  if (btnExport) btnExport.addEventListener('click', function () {
-    saveFileFriendly('posts.js', buildPostsJs(), t('export.exported') + ' posts.js', t('export.downloaded') + ' posts.js');
-  });
-
-  var btnRss = document.querySelector('#btnRss');
-  if (btnRss) btnRss.addEventListener('click', function () {
-    saveFileFriendly('feed.xml', buildFeedXmlClient(getStaticPosts(), 20), t('export.exported') + ' feed.xml', t('export.downloaded') + ' feed.xml');
-  });
-
-  var btnSitemap = document.querySelector('#btnSitemap');
-  if (btnSitemap) btnSitemap.addEventListener('click', function () {
-    saveFileFriendly('sitemap.xml', buildSitemapClient(), t('export.exported') + ' sitemap.xml', t('export.downloaded') + ' sitemap.xml');
-  });
-
-  // 一键导出全部：posts.js + feed.xml + sitemap.xml 三件套一次导出（静态发布只需覆盖这三个文件）
-  var btnExportAll = document.querySelector('#btnExportAll');
-  if (btnExportAll) btnExportAll.addEventListener('click', function () {
-    saveFileFriendly('posts.js', buildPostsJs(), t('export.exported') + ' posts.js', t('export.downloaded') + ' posts.js');
-    saveFileFriendly('feed.xml', buildFeedXmlClient(getStaticPosts(), 20), t('export.exported') + ' feed.xml', t('export.downloaded') + ' feed.xml');
-    saveFileFriendly('sitemap.xml', buildSitemapClient(), t('export.exported') + ' sitemap.xml', t('export.downloaded') + ' sitemap.xml');
-  });
-
-  var btnLogout = document.querySelector('#btnLogout');
-  if (btnLogout) btnLogout.addEventListener('click', async function () {
-    await adminLogout();
-    route();
-  });
-
-  // 侧边栏退出按钮
+  // 侧边栏退出按钮（唯一后台独有；其余编辑器按钮与快捷键统一由下方 bindWriteEvents() 绑定，
+  // 避免与 renderWrite 重复 ~100 行绑定逻辑，也杜绝同一按钮被绑定两次导致点击触发双次）
   var btnLogoutSidebar = document.querySelector('#btnLogoutSidebar');
   if (btnLogoutSidebar) btnLogoutSidebar.addEventListener('click', async function () {
     await adminLogout();
     route();
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveDraft(); }
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); saveStaticArticle(); }
   });
 
   // 文章列表操作按钮（事件委托）：置顶、删除
