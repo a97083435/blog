@@ -1228,9 +1228,9 @@ function app() { return document.querySelector('#app'); }
   // 将 NAV 配置解析为带翻译文本的导航项（含可选子菜单）。
   function resolveNav(items) {
     return items.map(function (it) {
-      var n = { text: t(it.i18n), url: it.url, path: it.path };
+      var n = { text: (it.i18n ? t(it.i18n) : '') || it.text || '', url: it.url, path: it.path };
       if (it.children && it.children.length) {
-        n.children = it.children.map(function (c) { return { text: t(c.i18n), url: c.url }; });
+        n.children = it.children.map(function (c) { return { text: (c.i18n ? t(c.i18n) : '') || c.text || '', url: c.url }; });
       }
       return n;
     });
