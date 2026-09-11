@@ -860,7 +860,10 @@ html[data-theme="dark"] .gb-kind-badge.idea { color: #e6b04d; background: #3a2f1
   height: 100%;
   object-fit: cover;
   display: block;
+  opacity: 0;   /* 加载完成前隐藏，避免"白块/弹出"：加载中显示底色占位，onload 后淡入 */
+  transition: opacity 0.3s ease;
 }
+.post-thumb img.thumb-in { opacity: 1; }
 .post-thumb-ph {
   font-size: 30px;
   font-weight: 700;

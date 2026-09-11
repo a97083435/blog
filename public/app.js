@@ -1498,12 +1498,12 @@ function renderCardList(plist, ads, adsEnabled) {
   var out = '';
   plist.forEach(function (p, idx) {
     if (adsEnabled && ads.between && idx > 0 && idx % every === 0) out += '<div class="ad-slot"><span class="ad-label">' + t('ad.label') + '</span>' + ads.between + '</div>';
-    out += renderCard(p);
+    out += renderCard(p, idx);
   });
   return out;
 }
 
-function renderCard(p) {
+function renderCard(p, idx) {
   var badges = '';
   if (p.pinned) badges += '<span class="pin">' + svgIcon('pin', 13) + ' ' + t('post.pin') + '</span>';
   var tags = normalizeTags(p).map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('');
@@ -1518,19 +1518,26 @@ function renderCard(p) {
     + '<div class="meta"><span class="date">' + esc(p.date || '') + '</span>' + badges + '</div>'
     + '<h2>' + esc(p.title || '') + '</h2>'
     + '<div class="excerpt"' + aiExcerpt + '>' + esc(excerpt) + '</div>'
-    // 标签区恒渲染（无标签时为空容器）：固定高度占位，保证张卡片等高、布局协调
+    // 标签区恒渲染（无标签时为空容器）：固定高度占位，保证每张卡片等高、布局协调
     + '<div class="mini-tags">' + (tags || '') + '</div>'
     + '</div>'
-    + renderPostThumb(p)
+    + renderPostThumb(p, idx)
     + '</a>';
 }
 
-/** 文章缩略图：优先 cover 字段，其次正文第一张图；有图仅显示图，无图显示主题渐变占位（中性图片图标） */
-function renderPostThumb(p) {
+/** 文章缩略图：优先 cover 字段，其次正文第一张图；有图仅显示图，无图显示主题渐变占位（中性图片图标）。
+ *  加载速度优化：
+ *   · 前 2 张（首屏可视区）给 fetchpriority="high"，其余 "low" —— 浏览器优先拉取首屏图，
+ *     避免首屏外大图抢占带宽导致首屏缩略图"慢慢加载"；
+ *   · decoding="async"：图片解码不阻塞主线程渲染；
+ *   · onload 加 .thumb-in 类 → CSS 淡入（见 style.css），替代"啪地弹出"；
+ *   · loading="lazy" + referrerpolicy 保留既有行为。 */
+function renderPostThumb(p, idx) {
   var url = String((p && p.cover) || '').trim() || firstImageFrom(p && p.content);
   var title = (p && p.title) || '';
   if (url) {
-    return '<span class="post-thumb has-img"><img src="' + esc(url) + '" alt="' + esc(title || t('post.thumbnailAlt')) + '" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()"></span>';
+    var pri = (idx !== undefined && idx < 2) ? 'high' : 'low';
+    return '<span class="post-thumb has-img"><img src="' + esc(url) + '" alt="' + esc(title || t('post.thumbnailAlt')) + '" loading="lazy" decoding="async" fetchpriority="' + pri + '" referrerpolicy="no-referrer" onload="this.classList.add(\'thumb-in\')" onerror="this.remove()"></span>';
   }
   return '<span class="post-thumb ph"><span class="post-thumb-ph">' + svgIcon('image', 26) + '</span></span>';
 }

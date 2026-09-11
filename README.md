@@ -381,6 +381,17 @@ R2 用于存放**音乐音频本体**（元数据在 D1，`url` 指向 R2 公开
 | 同步删除 | 删除曲目时 Worker 侧签名发起 R2 DELETE（`host;x-amz-content-sha256;x-amz-date` 签名头），再删 D1 行，两者一致 |
 | 格式白名单 | mp3 / m4a / ogg / wav / aac / opus / flac，单文件 ≤ 30MB |
 
+> **💡 缩略图/封面/音频首次加载偏慢？建议在 Cloudflare 控制台给媒体、音乐子域配缓存规则。**
+> 浏览器直传的 R2 对象默认不带长缓存头，首次加载需回源；代码侧无法安全地给
+> 已直传对象补写缓存头（CORS 只放行 `content-type`，且 CopyObject 改元数据会连带清掉
+> Content-Type）。**零风险且对新旧对象都生效**的做法：
+> 1. Cloudflare 控制台 → 你的域名 → **缓存 → Cache Rules** 新建规则；
+> 2. Hostname 匹配 `media.你的域` 与 `music.你的域`（或 R2 自定义域名）；
+> 3. 缓存级别 **Cache Everything** + Edge TTL 1 个月 + **Browser TTL 1 个月**；
+> 4. 保存后首次访问仍回源一次，之后浏览器/边缘直接命中缓存，缩略图秒开。
+> 前端侧已配合优化：首屏前 2 张缩略图 `fetchpriority="high"`、全部 `decoding="async"`、
+> 加载完成淡入（`onload` → `.thumb-in`），见 `renderPostThumb`。
+
 ### Workers AI（推理）
 
 使用 Cloudflare Workers AI（默认模型 `@cf/meta/llama-3.2-3b-instruct`）提供写作辅助，按 Neurons 计费，**每天 10,000 Neurons 免费额度**（约数千次摘要级调用，超出约 $0.011/千 Neurons）：
