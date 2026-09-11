@@ -606,9 +606,28 @@ async function apiFetch(url, opts) {
       var j = await res.json();
       if (j && j.error) msg = String(j.error);
     } catch (e) { /* 非 JSON 响应体，保留状态码提示 */ }
-    throw new Error(msg);
+    var e401 = new Error(msg);
+    e401.status = res.status;
+    // 全局会话失效处理：401 且非登录/首次设密端点 → 自动退出登录状态。
+    // 抛给调用方的同时派发事件，让当前 SPA（后台/前台编辑器）主动跳转或提示。
+    if (res.status === 401 && !/api\/admin\/(login|setup)/.test(String(url))) {
+      handleSessionExpired(e401);
+    }
+    throw e401;
   }
   return res.json();
+}
+
+/* 会话失效（401）：清除本地会话并广播，由各界面自行跳转/提示。
+ * 仅当本地确实持有会话时才处理，避免「未登录访问公开接口被 401」误触发。 */
+function handleSessionExpired(err) {
+  var had = !!_sessionToken();
+  _setSessionToken('');
+  _setAdminSession(false);
+  if (!had) return;
+  try {
+    window.dispatchEvent(new CustomEvent('qy:session-expired', { detail: (err && err.status) || 401 }));
+  } catch (e) { /* 无 CustomEvent 环境忽略 */ }
 }
 
 function sortPagePosts(posts) {
@@ -3255,7 +3274,28 @@ function aiCommentsSlotHTML() {
 function aiFillSlots() {
   aiProbe().then(function (ok) {
     var s = document.getElementById('aiSummarySlot');
-    if (s) s.innerHTML = ok ? aiSummaryBtnHTML(s.getAttribute('data-slug') || '') : '';
+    if (s) {
+      var slug = s.getAttribute('data-slug') || '';
+      if (ok && slug) {
+        // 优先拉取已有缓存摘要：命中直接展示（刷新不丢），未命中显示生成按钮
+        apiFetch('api/ai/summary?slug=' + encodeURIComponent(slug) + '&lang=' + encodeURIComponent(aiLang()), { method: 'GET' })
+          .then(function (d) {
+            var el = document.getElementById('aiSummarySlot');
+            if (!el) return;
+            if (d && d.summary) {
+              el.innerHTML = aiSummaryCardHTML(d.summary, slug, !!d.cached || adminOk(), !!d.cached);
+            } else {
+              el.innerHTML = aiSummaryBtnHTML(slug);
+            }
+          })
+          .catch(function () {
+            var el = document.getElementById('aiSummarySlot');
+            if (el) el.innerHTML = aiSummaryBtnHTML(slug);
+          });
+      } else {
+        s.innerHTML = '';
+      }
+    }
     var as = document.getElementById('aiAssistSlot');
     if (as) as.innerHTML = ok ? aiAssistBarHTML() : '';
     var cs = document.getElementById('aiCommentsSlot');
@@ -3265,9 +3305,9 @@ function aiFillSlots() {
 function aiSummaryBtnHTML(slug) {
   return '<button type="button" class="btn btn-sm btn-ghost ai-btn" data-ai-action="summary" data-slug="' + esc(slug) + '">' + svgIcon('spark', 13) + ' ' + esc(t('ai.title')) + '</button>';
 }
-function aiSummaryCardHTML(summary, slug, isAdmin) {
+function aiSummaryCardHTML(summary, slug, isAdmin, cached) {
   return '<div class="ai-card">'
-    + '<div class="ai-card-head">' + svgIcon('spark', 13) + ' ' + esc(t('ai.title')) + '<span class="ai-badge">' + esc(t('ai.generated')) + '</span></div>'
+    + '<div class="ai-card-head">' + svgIcon('spark', 13) + ' ' + esc(t('ai.title')) + '<span class="ai-badge">' + esc(t(cached ? 'ai.cached' : 'ai.generated')) + '</span></div>'
     + '<div class="ai-card-body">' + esc(summary) + '</div>'
     + (isAdmin ? '<div class="ai-card-foot"><button type="button" class="btn btn-sm btn-ghost" data-ai-action="summary" data-slug="' + esc(slug) + '" data-force="1">' + svgIcon('pen', 12) + ' ' + esc(t('ai.regenerate')) + '</button></div>' : '')
     + '</div>';

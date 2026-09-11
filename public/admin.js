@@ -52,13 +52,22 @@
       return await window.apiFetch(url, opts || {});
     } catch (e) {
       // 401 = 会话过期/无效，清除 token 并跳转登录页
-      if (String(e.message || e).indexOf('HTTP 401') >= 0) {
-        toast(t('editor.loginExpired'), 'err');
-        if (window.cloudLogout) window.cloudLogout();
-        setTimeout(function () { if (window.navigate) window.navigate('/admin'); }, 800);
+      if ((e && e.status) === 401 || String(e.message || e).indexOf('HTTP 401') >= 0) {
+        sessionExpired();
       }
       throw e;
     }
+  }
+  /* 会话失效：提示 + 清除会话 + 跳回登录页（供 api 包装与全局事件共用） */
+  function sessionExpired() {
+    toast(t('editor.loginExpired'), 'err');
+    if (window.cloudLogout) window.cloudLogout(); else if (window.adminLogout) window.adminLogout();
+    setTimeout(function () { if (window.navigate) window.navigate('/admin'); }, 800);
+  }
+  /* 全局会话失效事件（前台 apiFetch 在任意 401 时派发，后台监听后自动退出登录状态） */
+  if (!window.__qySessionExpiredBound) {
+    window.__qySessionExpiredBound = true;
+    window.addEventListener('qy:session-expired', function () { sessionExpired(); });
   }
   function toast(msg, type) {
     var wrap = document.querySelector('.ab-toast-wrap');

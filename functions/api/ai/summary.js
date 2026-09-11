@@ -14,8 +14,19 @@ const DAY_WINDOW = 86400, DAY_LIMIT = 300; // 全站每日 300 次（防刷爆�
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method === 'OPTIONS') return corsPreflight(request, env);
-  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, request, env);
   if (!aiEnabled(env)) return json({ ok: false, error: 'AI 未启用' }, 404, request, env);
+  if (request.method === 'GET') {
+    // 只读：返回已有缓存摘要（不触发生成、不消耗 AI 额度）。
+    // 供前端刷新文章页时恢复已生成的摘要；未命中返回空 summary，由前端显示生成按钮。
+    const u = new URL(request.url);
+    const slug = u.searchParams.get('slug') || '';
+    const lang = normalizeLang(u.searchParams.get('lang'));
+    if (!slug) return json({ error: '缺少 slug' }, 400, request, env);
+    const cached = await aiCacheGet(env, 'sum:' + slug + ':' + lang);
+    if (cached) return json({ ok: true, summary: cached, cached: true }, 200, request, env, { 'Cache-Control': 'public, max-age=86400' });
+    return json({ ok: true, summary: '', cached: false }, 200, request, env, { 'Cache-Control': 'no-store' });
+  }
+  if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, request, env);
 
   const body = await request.json().catch(() => null);
   if (!body || !body.slug) return json({ error: '缺少 slug' }, 400, request, env);
