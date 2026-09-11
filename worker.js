@@ -158,7 +158,21 @@ export default {
         if (idx.status === 200) return idx;
         return res;
       }
-      return res;
+      // 性能：给静态资源加缓存头，避免每次刷新全量重下大文件（app.js 184KB / style.css 94KB）。
+      //  · 带扩展名的静态文件：1 小时强缓存 + 1 天 SWR（部署后 CF_ZONE_ID purge 立即生效，无陈旧感）
+      //  · 无扩展名（HTML SPA 入口）：no-cache（每次重新验证，ETag 命中即 304，体积极小）
+      try {
+        const headers = new Headers(res.headers);
+        const hasExt = /\.[a-zA-Z0-9]+$/.test(url.pathname);
+        if (hasExt && request.method === 'GET') {
+          headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+        } else if (request.method === 'GET') {
+          headers.set('Cache-Control', 'no-cache');
+        }
+        return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+      } catch (e) {
+        return res;
+      }
     }
     return new Response('Not Found', { status: 404 });
   }

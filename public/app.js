@@ -3752,6 +3752,24 @@ function renderSearchPanel(query) {
   panel.classList.add('open');
 }
 
+/* AdSense 延迟加载：首屏结束后再注入广告库，不与首屏渲染/API 抢带宽。
+ * 策略：最早 2.5s、空闲时 3.5s、兜底 5s 才开始加载广告；
+ * 广告位已有显隐控制，晚加载不影响布局 */
+function scheduleAdSense() {
+  var start = Date.now();
+  var fired = false;
+  var fire = function () { if (fired) return; fired = true; loadAdSense(); };
+  var after = function (ms) { return function () { if (Date.now() - start >= ms) fire(); }; };
+  // 空闲即触发，但最短等待 2.5s（保证首屏/API 优先）
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(after(2500), { timeout: 3500 });
+  } else {
+    setTimeout(after(2500), 3500);
+  }
+  // 兜底：最多 5s 一定开始加载广告
+  setTimeout(fire, 5000);
+}
+
 /* ---------- 广告（AdSense）----------
  * 仅在 ads.enabled && ads.client 时加载官方库脚本（adsbygoogle.js），
  * 注入到 <head>，等价于在 <head> 中放置 AdSense 提供的脚本。
@@ -3781,7 +3799,9 @@ window.__bootPromise = (async function () {
   applyTheme(getTheme());
   applyAccent(getAccent());
   bindNavClicks();
-  loadAdSense();   // 尽早把 AdSense 库挂到 head，使其能在页面渲染后即时处理广告位
+  // AdSense 库延迟加载：首屏主流程（路由/数据拉取/渲染）优先，广告库挂到空闲再注入，
+  // 避免 pagead2/adsbygoogle 全家桶（约 10~20 个第三方请求）与首屏渲染抢带宽。
+  scheduleAdSense();
 
   // 确保 i18n 翻译数据在首次渲染前加载完成
   if (window.__i18n && window.__i18n.loadLocale && !window.__i18n.isReady()) {
@@ -3796,8 +3816,15 @@ window.__bootPromise = (async function () {
   if (cfg.mode === 'api' || cfg.mode === 'auto') {
     // 首次渲染（上方 route()）会显示加载动画；探测完成（成功或失败）后置位并重渲染，
     // 否则首页会一直停在「正在拉取文章…」
+    // posts 与 settings 并行拉取：串行叠加等待（各约 0.5~1.5s 冷启动）会拖慢首屏。
+    var results = await Promise.all([
+      apiFetch('api/posts').then(function (r) { return { ok: true, data: r }; }, function () { return { ok: false, data: null }; }),
+      apiFetch('api/settings').then(function (r) { return { ok: true, data: r }; }, function () { return { ok: false, data: null }; })
+    ]);
+    var resp = results[0].ok ? results[0].data : null;
+    var sResp = results[1].ok ? results[1].data : null;
+
     try {
-      var resp = await apiFetch('api/posts');
       var data = resp || {};
       if (data && Array.isArray(data.posts)) {
         var wasCloud = _cloudDetected;
@@ -3834,9 +3861,8 @@ window.__bootPromise = (async function () {
     }
 
     // 拉取站点设置（导航菜单 / 站点信息 / 个人资料），合并进运行时配置并重渲染一次。
-    // GET /api/settings 为公开接口；失败时保持静态配置，不影响站点运行。
+    // GET /api/settings 为公开接口；已与 posts 并行拉取（sResp），失败时保持静态配置。
     try {
-      var sResp = await apiFetch('api/settings');
       if (sResp && sResp.settings) {
         var firstLoad = !_siteSettings;
         _siteSettings = sResp.settings;
