@@ -194,6 +194,12 @@
   }
   function setFabPlaying(isPlaying) {
     if (fab) fab.classList.toggle('playing', !!isPlaying);
+    // 播放中：FAB 中央图标换为声波（三竖条错相跳动）——不再转圈，避免像「加载歌曲」；
+    // 暂停/停止时恢复音符图标
+    var ic = document.getElementById('mpFabIcon');
+    if (ic) ic.innerHTML = isPlaying
+      ? '<span class="mp-eq mp-fab-eq"><i></i><i></i><i></i></span>'
+      : icon('music');
   }
   function playTrack(i, autoplay) {
     if (i < 0 || i >= tracks.length) return;

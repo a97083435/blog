@@ -2605,24 +2605,21 @@ textarea { resize: none; }
 .mp-fab-wrap.expanded .mp-fab:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28); }
 .mp-fab-icon { display: flex; align-items: center; justify-content: center; }
 
-/* 播放中：音符呼吸 + 外环旋转 */
-.mp-fab::before {
-  content: "";
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  border-top-color: var(--mp-accent);
-  opacity: 0;
-  transition: opacity .2s ease;
+/* 播放中：外环不再旋转（旋转环像「加载中」），改为中央声波条跳动（见 .mp-fab-eq）；音符图标同步替换为声波 */
+.mp-fab.playing::before { opacity: 0; animation: none; }
+.mp-fab.playing .mp-fab-icon { animation: none; }
+/* FAB 中央声波（播放中）：三竖条错相上下跳动，白色（FAB 为 accent 底，须覆盖 .mp-eq 的 accent 色），
+ * 与列表项 .mp-eq 同款节奏 */
+.mp-fab-eq.mp-eq { display: inline-flex; align-items: flex-end; gap: 3px; height: 16px; }
+.mp-fab-eq.mp-eq i {
+  width: 3px;
+  background: var(--accent-fg, #fff);
+  border-radius: 2px;
+  animation: mpEq 1s ease-in-out infinite;
 }
-.mp-fab.playing::before {
-  opacity: .8;
-  animation: mpFabSpin 1.1s linear infinite;
-}
-.mp-fab.playing .mp-fab-icon { animation: mpFabPulse 1.6s ease-in-out infinite; }
-@keyframes mpFabSpin { to { transform: rotate(360deg); } }
-@keyframes mpFabPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(.88); } }
+.mp-fab-eq.mp-eq i:nth-child(1) { height: 8px; }
+.mp-fab-eq.mp-eq i:nth-child(2) { height: 16px; animation-delay: .15s; }
+.mp-fab-eq.mp-eq i:nth-child(3) { height: 10px; animation-delay: .3s; }
 /* 缩回时露出的圆弧边缘，带音符小把手提示可触碰 */
 .mp-fab-wrap:not(.expanded) .mp-fab { box-shadow: none; }
 
