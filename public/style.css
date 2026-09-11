@@ -110,7 +110,13 @@ html[data-theme="dark"][data-accent="dusk"] {
 /* ---------- 基础 ---------- */
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; background: var(--bg); }
+
+/* 桌面端最小宽度：窗口缩到常见桌面最低分辨率（1024px）以下时出现横向滚动，
+ * 布局不再无限压缩（避免「缩到没有宽度」）；移动端 ≤768px 仍为响应式不设限（见下方媒体查询） */
+@media (min-width: 769px) {
+  body { min-width: 1024px; }
+}
 
 /* 页脚贴底：内容不足一屏时页脚仍固定在视口底部 */
 body {
@@ -2371,6 +2377,8 @@ kbd {
 /* 桌面端隐藏的东西 */
 .mobile-only { display: none; }
 @media (max-width: 768px) {
+  /* 移动端不设最小宽度（保持响应式） */
+  body { min-width: 0; }
   /* 移动端隐藏桌面元素 */
   .main-nav { display: none; }
   .topbar-actions .lang-switch,
