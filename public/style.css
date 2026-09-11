@@ -32,11 +32,11 @@
    末位 serif 保证任何设备都兜底到系统默认宋体（不存在“没字体”的情况）。
    Android/Linux: Noto Serif CJK SC / Source Han Serif SC · macOS/iOS: Songti SC/华文宋体
    Windows: SimSun/宋体 · 已把正文 webfont 化（思源宋体 VF 走 jsDelivr，每设备一致），此栈仅作回退 */
---font-body: "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", "Source Han Serif SC VF", "思源宋体",
+--font-body: "Source Han Serif SC VF", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", "思源宋体",
              "Songti SC", "STSong", "华文宋体", "SimSun", "宋体", serif;
-  --font-heading: "源樣明體", "GenYoMin2TC", "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+  --font-heading: "GenYoMin2TC", "源樣明體", var(--font-body);
   --font-display: "QY-Display", "梦源宋体 W16", var(--font-heading);
-  --font-deco: "朱雀仿宋", "Zhuque Fangsong", "楷体", "KaiTi", var(--font-body);
+  --font-deco: "Zhuque Fangsong", "朱雀仿宋", var(--font-body);
   --tok-kw: #cf3a4f;
   --tok-str: #0a7d3f;
   --tok-com: #9aa0a6;
