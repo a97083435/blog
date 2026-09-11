@@ -2359,7 +2359,7 @@ function renderWrite() {
       var st = document.querySelector('#saveStatus'); if (st) st.textContent = t('editor.editingStatus') + (post.title || '');
       // also update page title for tests
       var hTitle = document.querySelector('#writeTitleHint'); if (hTitle) hTitle.textContent = t('editor.editingStatus') + (post.title || '');
-      updatePreview();
+      // 云端正文拉取由 loadEditContent 内部触发预览；本地内容由下方统一 updatePreview() 渲染
       loadEditContent(post, editId);
     }
   }
