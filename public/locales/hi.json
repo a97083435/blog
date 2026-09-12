@@ -299,6 +299,7 @@
   "admin.media.upload": "इमेज अपलोड करें",
   "admin.media.cloudOnly": "मीडिया लाइब्रेरी के लिए क्लाउड मोड (Cloudflare) आवश्यक है",
   "admin.media.colImage": "इमेज",
+  "admin.media.copy": "कॉपी करें",
   "admin.media.copyLink": "लिंक कॉपी करें",
   "admin.media.delete": "हटाएं",
   "admin.media.empty": "अभी कोई इमेज नहीं, ऊपर अपलोड पर क्लिक करें",

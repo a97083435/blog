@@ -299,6 +299,7 @@
   "admin.media.upload": "이미지 업로드",
   "admin.media.cloudOnly": "미디어 라이브러리는 클라우드 모드(Cloudflare)가 필요합니다",
   "admin.media.colImage": "이미지",
+  "admin.media.copy": "복사",
   "admin.media.copyLink": "링크 복사",
   "admin.media.delete": "삭제",
   "admin.media.empty": "아직 이미지가 없습니다. 위에서 업로드를 클릭하세요",

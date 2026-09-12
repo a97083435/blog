@@ -1351,7 +1351,7 @@
         return '<div class="ab-media-card">' +
           '<div class="ab-media-thumb"><img src="' + esc(m.url) + '" alt="' + esc(m.name || '') + '"></div>' +
           '<div class="ab-media-meta"><div class="ab-media-name">' + esc(m.name || t('admin.media.colImage')) + '</div><div class="ab-media-size">' + fmtSize(m.size) + '</div></div>' +
-          '<div class="ab-media-actions"><button class="ab-btn sm" data-copy="' + enc(m.url) + '">' + t('admin.media.copyLink') + '</button><button class="ab-btn sm danger" data-delmedia="' + enc(m.id) + '">' + icon('trash', 13) + ' ' + t('admin.media.delete') + '</button></div>' +
+          '<div class="ab-media-actions"><button class="ab-btn sm" data-copy="' + enc(m.url) + '">' + t('admin.media.copy') + '</button><button class="ab-btn sm danger" data-delmedia="' + enc(m.id) + '">' + t('admin.media.delete') + '</button></div>' +
         '</div>';
       }).join('') : '<div class="ab-card ab-empty"><div class="ab-empty-ico">🖼</div><p>' + t('admin.media.empty') + '</p></div>';
       grid.querySelectorAll('[data-copy]').forEach(function (b) { b.addEventListener('click', function () { copyText(dec(b.getAttribute('data-copy'))); toast(t('admin.media.copied'), 'ok'); }); });
@@ -1405,8 +1405,8 @@
       '<div class="ab-uploaddrop" id="abMusicDrop"><div class="ab-card">' +
         '<div class="ab-section-title">' + icon('upload', 16) + ' ' + t('admin.music.upload') + '</div>' +
         '<div class="ab-hint" style="margin:0 0 12px">' + t('admin.music.dropHint') + '</div>' +
-        '<div class="ab-row" style="gap:8px;flex-wrap:wrap">' +
-          '<input class="ab-input" id="abMusicFile" type="file" accept="audio/*" style="max-width:280px;flex:1 1 200px" aria-label="' + t('admin.music.chooseFile') + '">' +
+        '<div class="ab-row" style="gap:8px;flex-wrap:wrap;align-items:center">' +
+          '<label class="ab-btn" style="cursor:pointer">' + icon('file', 15) + ' ' + t('admin.music.chooseFile') + '<input id="abMusicFile" type="file" accept="audio/*" hidden></label>' +
           '<input class="ab-input" id="abMusicTitle" placeholder="' + t('admin.music.titlePh') + '" style="max-width:220px;flex:1 1 160px" autocomplete="off">' +
           '<input class="ab-input" id="abMusicArtist" placeholder="' + t('admin.music.artistPh') + '" style="max-width:180px;flex:1 1 130px" autocomplete="off">' +
           '<button type="button" class="ab-btn primary" id="abMusicUpload">' + icon('upload', 15) + ' ' + t('admin.music.upload') + '</button>' +
@@ -1483,12 +1483,14 @@
       return '<tr data-mid="' + enc(s.id) + '">' +
         '<td><div style="display:flex;align-items:center;gap:11px;min-width:0">' +
           (s.cover ? '<img src="' + esc(s.cover) + '" alt="" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex:0 0 auto">'
-            : '<span style="flex:0 0 auto;width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--ab-primary-weak);color:var(--ab-primary)">' + icon('music', 18) + '</span>') +
+            : '<span class="ab-cover-ph"></span>') +
           '<div style="min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:15px;color:var(--ab-text)">' + esc(s.title) + '</div>' +
           '<div class="ab-muted" style="font-size:12.5px;margin-top:2px">' + esc(s.artist || '—') + '</div></div></div></td>' +
         '<td class="ab-muted">' + fmtSize(s.size) + '</td>' +
         '<td class="col-actions"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">' +
-          '<audio controls preload="none" src="' + esc(s.url) + '" style="height:30px;width:170px;max-width:100%"></audio>' +
+          '<button type="button" class="ab-play" data-src="' + enc(s.url) + '" title="' + t('player.play') + '">' + icon('play', 14) + '</button>' +
+          '<span class="ab-player-bar" title="' + t('player.seek') + '"><span class="ab-player-fill"></span></span>' +
+          '<span class="ab-player-time ab-muted">0:00</span>' +
           '<button type="button" class="ab-btn sm" data-act="edit" title="' + t('admin.music.edit') + '">' + icon('pen', 13) + '</button>' +
           '<button type="button" class="ab-btn sm danger" data-act="del" title="' + t('admin.music.delete') + '">' + icon('trash', 13) + '</button>' +
         '</div></td>' +
@@ -1509,6 +1511,60 @@
         else editMusic(content, id, tr);
       });
     });
+    bindRowPlayers(body);
+  }
+  /* 行内迷你播放器：单个共享 Audio，同一时刻只播一首；进度条可点击跳转 */
+  function fmtTime(sec) {
+    sec = Math.max(0, Math.floor(Number(sec) || 0));
+    var m = Math.floor(sec / 60), s = sec % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+  function bindRowPlayers(container) {
+    var au = new Audio();
+    au.preload = 'none';
+    var playingBtn = null;
+    function resetAll() {
+      container.querySelectorAll('.ab-play').forEach(function (b) {
+        b.classList.remove('playing');
+        b.innerHTML = icon('play', 14);
+      });
+      playingBtn = null;
+    }
+    container.querySelectorAll('.ab-play').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var src = dec(btn.getAttribute('data-src'));
+        if (playingBtn === btn && !au.paused) { au.pause(); btn.classList.remove('playing'); btn.innerHTML = icon('play', 14); playingBtn = null; return; }
+        resetAll();
+        au.src = src;
+        playingBtn = btn;
+        btn.classList.add('playing');
+        btn.innerHTML = icon('pause', 14);
+        au.play().catch(function () {});
+      });
+    });
+    container.querySelectorAll('.ab-player-bar').forEach(function (bar) {
+      bar.addEventListener('click', function (e) {
+        if (!au.duration) return;
+        var r = bar.getBoundingClientRect();
+        au.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * au.duration;
+      });
+    });
+    function rowEls() {
+      if (!playingBtn) return null;
+      var tr = playingBtn.closest('tr');
+      if (!tr) return null;
+      return { fill: tr.querySelector('.ab-player-fill'), time: tr.querySelector('.ab-player-time') };
+    }
+    au.addEventListener('loadedmetadata', function () {
+      var el = rowEls(); if (el && el.time) el.time.textContent = '0:00 / ' + fmtTime(au.duration);
+    });
+    au.addEventListener('timeupdate', function () {
+      var el = rowEls();
+      if (!el) return;
+      if (au.duration && el.fill) el.fill.style.width = (au.currentTime / au.duration * 100) + '%';
+      if (el.time) el.time.textContent = fmtTime(au.currentTime) + (au.duration ? ' / ' + fmtTime(au.duration) : '');
+    });
+    au.addEventListener('ended', resetAll);
   }
   function editMusic(content, id, tr) {
     var t0 = tr.querySelector('td:first-child div:nth-child(2) div:first-child');

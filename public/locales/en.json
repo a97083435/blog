@@ -299,6 +299,7 @@
   "admin.media.upload": "Upload Image",
   "admin.media.cloudOnly": "Media library requires cloud mode (Cloudflare)",
   "admin.media.colImage": "Image",
+  "admin.media.copy": "Copy",
   "admin.media.copyLink": "Copy Link",
   "admin.media.delete": "Delete",
   "admin.media.empty": "No images yet, click upload above",

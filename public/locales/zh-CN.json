@@ -299,6 +299,7 @@
   "admin.media.upload": "上传图片",
   "admin.media.cloudOnly": "媒体库需在云端模式（Cloudflare）下使用",
   "admin.media.colImage": "图片",
+  "admin.media.copy": "复制",
   "admin.media.copyLink": "复制链接",
   "admin.media.delete": "删除",
   "admin.media.empty": "还没有图片，点击右上角上传",

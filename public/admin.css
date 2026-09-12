@@ -478,6 +478,30 @@ select.ab-select { cursor: pointer; padding-right: 30px; }
 .ab-media-size { font-size: 11px; color: var(--ab-muted); margin-top: 2px; }
 .ab-media-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 12px 12px; }
 
+/* ---------- 音乐管理：行内迷你播放器 + 空封面占位 ---------- */
+.ab-cover-ph {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 10px;
+  background: var(--ab-hover); border: 1px solid var(--ab-border);
+}
+.ab-play {
+  width: 31px; height: 31px; border-radius: 9px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--ab-primary), var(--ab-primary-2));
+  color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--ab-primary) 32%, transparent);
+  transition: filter .15s, box-shadow .15s, transform .1s;
+}
+.ab-play:hover { filter: brightness(1.07); box-shadow: 0 4px 14px color-mix(in srgb, var(--ab-primary) 42%, transparent); }
+.ab-play:active { transform: scale(.96); }
+.ab-player-bar {
+  position: relative; width: 88px; min-width: 40px; height: 6px; border-radius: 999px;
+  background: var(--ab-border); cursor: pointer; overflow: hidden;
+}
+.ab-player-fill {
+  position: absolute; inset: 0 auto 0 0; width: 0%; height: 100%; border-radius: 999px;
+  background: var(--ab-primary); opacity: .85;
+}
+.ab-player-time { font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 52px; text-align: center; }
+
 /* ---------- 编辑器 ---------- */
 .ab-editor-head { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 14px; }
 /* 编辑器头部：标题字段独占整行（主角优先），标签/封面自然换行 */

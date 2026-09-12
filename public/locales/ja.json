@@ -299,6 +299,7 @@
   "admin.media.upload": "画像をアップロード",
   "admin.media.cloudOnly": "メディアライブラリにはクラウドモード（Cloudflare）が必要です",
   "admin.media.colImage": "画像",
+  "admin.media.copy": "コピー",
   "admin.media.copyLink": "リンクをコピー",
   "admin.media.delete": "削除",
   "admin.media.empty": "まだ画像がありません。上の「アップロード」をクリックしてください",
