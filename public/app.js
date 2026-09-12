@@ -1321,10 +1321,6 @@ function app() { return document.querySelector('#app'); }
     + '<select id="accentNativeSide" class="lang-switch accent-native" aria-label="' + accentTitle() + '"></select>'
     + '</div>'
     + '</div>'
-    // 第二排：背景动画开关 —— 尺寸与语言/主题色下拉一致，但形态为点击式图标按钮（同电脑版 spark 图标）
-    + '<div class="sidebar-picks sidebar-picks-2">'
-    + '<button type="button" class="icon-btn bg-anim-icon" id="bgAnimSideToggle" aria-pressed="' + (bgAnimOn ? 'true' : 'false') + '" aria-label="' + t('bgAnim.title') + '" title="' + (bgAnimOn ? t('bgAnim.on') : t('bgAnim.off')) + '">' + svgIcon('spark', 16) + '</button>'
-    + '</div>'
     + '</div>'
     + '</aside>';
 
@@ -3687,7 +3683,7 @@ function bindAccentPicker() {
     closeAccentPop();
     closeLangPop();
   });
-  // 背景动画开关状态变化：即时刷新顶栏按钮与侧栏第二排按钮（无需整页重渲染）
+  // 背景动画开关状态变化：即时刷新顶栏按钮（无需整页重渲染）
   document.addEventListener('qingyu:bgAnim', function () {
     var on = !!(window.bgAnim && window.bgAnim.isOn());
     var b = document.getElementById('bgAnimToggle');
@@ -3695,12 +3691,6 @@ function bindAccentPicker() {
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
       b.title = on ? t('bgAnim.on') : t('bgAnim.off');
       b.setAttribute('aria-label', t('bgAnim.title'));
-    }
-    var side = document.getElementById('bgAnimSideToggle');
-    if (side) {
-      side.setAttribute('aria-pressed', on ? 'true' : 'false');
-      side.title = on ? t('bgAnim.on') : t('bgAnim.off');
-      side.setAttribute('aria-label', t('bgAnim.title'));
     }
   });
   renderAccentSwatches();
@@ -3736,9 +3726,6 @@ function bindMobileSidebar() {
   // 侧边栏内的主题切换（独立 ID，与顶栏不冲突）
   var sideTheme = document.querySelector('#themeToggleSide');
   if (sideTheme) sideTheme.addEventListener('click', function () { toggleTheme(); });
-  // 侧边栏内背景动画开关（第二排，与语言/主题色同族）
-  var bgAnimSide = document.querySelector('#bgAnimSideToggle');
-  if (bgAnimSide) bgAnimSide.addEventListener('click', function () { if (window.bgAnim) window.bgAnim.toggle(); });
   // 侧栏内语言切换
   var sideLang = sidebar.querySelector('.lang-switch');
   if (sideLang && !sideLang.dataset.bound) {

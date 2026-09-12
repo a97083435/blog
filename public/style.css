@@ -491,22 +491,6 @@ a:hover { text-decoration: underline; }
 }
 .accent-native-wrap .lang-switch { width: 100%; padding-left: 26px; }
 
-/* 手机侧栏第二排：背景动画开关 —— 尺寸与语言/主题色下拉一致（~28px 同高），
-   但形态为点击式图标按钮（同电脑版顶栏 spark 图标），点击即开关。 */
-.sidebar-picks-2 { margin-top: 8px; justify-content: center; }
-.bg-anim-icon {
-  width: 28px; height: 28px;      /* 与 lang-switch 下拉同高，视觉层级一致 */
-  border-radius: 50%;
-  flex-shrink: 0;
-  color: var(--fg);
-}
-.bg-anim-icon[aria-pressed="true"] {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: var(--accent);
-}
-.bg-anim-icon[aria-pressed="false"] { color: var(--muted); }
-
 /* 语言切换器 */
 .lang-switch {
   font-size: 13px;
@@ -2514,10 +2498,10 @@ kbd {
 /* 桌面端隐藏的东西 */
 .mobile-only { display: none; }
 @media (max-width: 768px) {
-  /* 移动端隐藏桌面元素 */
+  /* 移动端隐藏桌面元素（背景动画开关例外：与搜索按钮并排保留在顶栏） */
   .main-nav { display: none; }
   .topbar-actions .lang-switch,
-  .topbar-actions .icon-btn:not(.search-toggle) { display: none; }
+  .topbar-actions .icon-btn:not(.search-toggle):not(#bgAnimToggle) { display: none; }
   /* 汉堡按钮显示 */
   .hamburger-btn { display: flex; }
   /* 顶栏三栏：汉堡+品牌 | 搜索 */
