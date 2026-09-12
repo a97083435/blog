@@ -1605,7 +1605,7 @@
       return '<tr data-mid="' + enc(s.id) + '">' +
         '<td><div style="display:flex;align-items:center;gap:11px;min-width:0">' +
           (s.cover ? '<img src="' + esc(s.cover) + '" alt="" style="width:38px;height:38px;border-radius:10px;object-fit:cover;flex:0 0 auto">'
-            : '<span class="ab-cover-ph"></span>') +
+            : '<span class="ab-cover-ph">' + icon('music', 17) + '</span>') +
           '<div style="min-width:0"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;font-size:15px;color:var(--ab-text)">' + esc(s.title) + '</div>' +
           '<div class="ab-muted" style="font-size:12.5px;margin-top:2px">' + esc(s.artist || '—') + '</div></div></div></td>' +
         '<td class="ab-muted">' + fmtSize(s.size) + '</td>' +
