@@ -361,6 +361,13 @@
 
 /* ---------- 最近动态 ---------- */
 .ab-feed { display: flex; flex-direction: column; gap: 2px; }
+/* 最新评论自动滚动容器：超过 10 条时在卡片内匀速上滚 */
+.ab-feed-scroll {
+  display: flex; flex-direction: column; gap: 2px;
+  overflow: hidden; max-height: 300px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
 .ab-feed-item { display: flex; gap: 11px; padding: 11px 6px; border-bottom: 1px solid var(--ab-border); align-items: center; transition: background .12s; border-radius: var(--ab-radius-xs); }
 .ab-feed-item:hover { background: var(--ab-hover); }
 .ab-feed-item:last-child { border-bottom: none; }

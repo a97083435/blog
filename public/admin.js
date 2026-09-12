@@ -42,6 +42,26 @@
     if (n < 1048576) return (n / 1024).toFixed(1) + ' KB';
     return (n / 1048576).toFixed(1) + ' MB';
   }
+  /* 最新评论自动滚动：内容超出容器时匀速上滚，到底后回到顶部循环；
+   * 悬停暂停、离开恢复；遵循系统"减少动态效果"设置。 */
+  function startFeedScroll(host) {
+    if (_feedTimer) { clearInterval(_feedTimer); _feedTimer = null; }
+    var sc = host.querySelector('.ab-feed-scroll');
+    if (!sc) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (sc.scrollHeight <= sc.clientHeight + 2) return; // 内容不多，无需滚动
+    var step = 0.6, tickMs = 40;
+    function tick() {
+      if (!sc.isConnected) { clearInterval(_feedTimer); _feedTimer = null; return; }
+      if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 1) sc.scrollTop = 0;
+      else sc.scrollTop += step;
+    }
+    function stop() { if (_feedTimer) { clearInterval(_feedTimer); _feedTimer = null; } }
+    function start() { if (!_feedTimer && sc.isConnected) _feedTimer = setInterval(tick, tickMs); }
+    sc.addEventListener('pointerenter', stop);
+    sc.addEventListener('pointerleave', start);
+    start();
+  }
   function slug(s) {
     if (window.slug) return window.slug(s);
     return String(s || '').toLowerCase().replace(/[^\w\u4e00-\u9fa5-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64) || ('p' + Date.now().toString(36));
@@ -608,6 +628,7 @@
   /* ----------------------- 内容区分发 ----------------------- */
   function renderPage(root, route) {
     var content = root.querySelector('#abContent');
+    if (_feedTimer) { clearInterval(_feedTimer); _feedTimer = null; } // 离开仪表盘时停止评论自动滚动
     if (route.page === 'dashboard') return pageDashboard(content);
     if (route.page === 'posts') return pagePosts(content);
     if (route.page === 'editor') return pageEditor(content, route);
@@ -667,11 +688,12 @@
     }).join('') : '<div class="ab-empty"><div class="ab-empty-ico">📝</div><p>' + t('admin.dashboard.noPosts') + '</p><a class="ab-btn primary sm" data-link="/admin/posts/new">' + t('admin.dashboard.goWrite') + '</a></div>';
     content.querySelectorAll('#abRecentPosts [data-link]').forEach(function (a) { a.addEventListener('click', function (e) { e.preventDefault(); go(a.getAttribute('data-link')); }); });
 
-    // 最新评论
-    var recentCmt = commentsAll.slice(0, 5);
-    content.querySelector('#abRecentCmt').innerHTML = recentCmt.length ? recentCmt.map(function (c) {
+    // 最新评论（评论多时自动滚动）
+    var recentCmt = commentsAll.slice(0, 10);
+    content.querySelector('#abRecentCmt').innerHTML = recentCmt.length ? '<div class="ab-feed-scroll">' + recentCmt.map(function (c) {
       return '<div class="ab-feed-item"><div class="ab-feed-main"><b>' + esc(c.author || t('admin.dashboard.anonymous')) + '</b><span>' + esc((c.content || '').slice(0, 30)) + '</span></div></div>';
-    }).join('') : '<div class="ab-empty"><div class="ab-empty-ico">💬</div><p>' + t('admin.dashboard.noComments') + '</p></div>';
+    }).join('') + '</div>' : '<div class="ab-empty"><div class="ab-empty-ico">💬</div><p>' + t('admin.dashboard.noComments') + '</p></div>';
+    startFeedScroll(content.querySelector('#abRecentCmt'));
 
     // 趋势（统一时间轴：日期 + 访问数 + 评论数）
     if (cloudOn()) {
@@ -698,6 +720,7 @@
   }
 
   var _chartData = {}; // metric → days[]，供交互浮层读取
+  var _feedTimer = null; // 最新评论自动滚动定时器（离开页面时清理）
 
   /* 趋势折线图：SVG 折线/数据点 + HTML 时间轴刻度 + 点击/悬停浮层（时间·访问·评论） */
   function lineChart(days, metric) {
