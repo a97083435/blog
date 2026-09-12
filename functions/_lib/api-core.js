@@ -598,13 +598,11 @@ export async function handleStats(request, env, postId) {
       } else {
         console.warn('[stats] env.BLOG(KV) 未绑定，点赞频率限制已禁用');
       }
-      const cur = await dbFirst(env.DB, 'SELECT * FROM stats WHERE post_id = ?', postId) || {};
-      const s = { likes: Number(cur.likes) || 0, views: Number(cur.views) || 0 };
-      s.likes = Math.min(s.likes + 1, 9999999);
+      // 原子自增：并发点赞不会互相覆盖计数（此前“读-改-写”在并发下会丢数）
       await dbRun(env.DB,
-        'INSERT INTO stats (post_id,likes,views) VALUES (?,?,?) '
-        + 'ON CONFLICT(post_id) DO UPDATE SET likes=excluded.likes, views=excluded.views',
-        postId, s.likes, s.views);
+        'INSERT INTO stats (post_id,likes,views) VALUES (?,1,0) '
+        + 'ON CONFLICT(post_id) DO UPDATE SET likes = MIN(likes + 1, 9999999)',
+        postId);
       // 写入每日聚合（用于后台「近 N 天点赞趋势」）
       const todayLike = new Date().toISOString().slice(0, 10);
       await dbRun(env.DB,
@@ -616,23 +614,27 @@ export async function handleStats(request, env, postId) {
           await env.BLOG.put(dk, '1');   // 永久去重标记（无过期）
         } catch (e) {}
       }
+      // 写后回读最终计数（含并发期间其他请求的增量），响应数字总是真实值
+      const afterLike = await dbFirst(env.DB, 'SELECT * FROM stats WHERE post_id = ?', postId) || {};
+      const s = { likes: Number(afterLike.likes) || 0, views: Number(afterLike.views) || 0 };
       await purgeTags(env, ['stats:' + postId]);   // 清 stats 缓存，保证点赞数立即生效
       return json({ ok: true, postId, stats: s }, 200, request, env);
     }
 
-    // views：计数即可（同会话去重由前端 sessionStorage 负责；此处仅累加）
-    const cur = await dbFirst(env.DB, 'SELECT * FROM stats WHERE post_id = ?', postId) || {};
-    const s = { likes: Number(cur.likes) || 0, views: Number(cur.views) || 0 };
-    s.views = Math.min(s.views + 1, 9999999);
+    // views：计数即可（同会话去重由前端 sessionStorage 负责；此处仅累加）。
+    // 原子自增：并发访问不会互相覆盖（此前“读-改-写”在并发下会丢数）。
     await dbRun(env.DB,
-      'INSERT INTO stats (post_id,likes,views) VALUES (?,?,?) '
-      + 'ON CONFLICT(post_id) DO UPDATE SET likes=excluded.likes, views=excluded.views',
-      postId, s.likes, s.views);
+      'INSERT INTO stats (post_id,likes,views) VALUES (?,0,1) '
+      + 'ON CONFLICT(post_id) DO UPDATE SET views = MIN(views + 1, 9999999)',
+      postId);
     // 写入每日聚合（用于后台「近 N 天访问趋势」）
     const todayView = new Date().toISOString().slice(0, 10);
     await dbRun(env.DB,
       'INSERT INTO stats_daily (post_id,date,views,likes) VALUES (?,?,1,0) ON CONFLICT(post_id,date) DO UPDATE SET views = views + 1',
       postId, todayView).catch(() => {});
+    // 写后回读最终计数（含并发期间其他请求的增量），响应数字总是真实值
+    const afterView = await dbFirst(env.DB, 'SELECT * FROM stats WHERE post_id = ?', postId) || {};
+    const s = { likes: Number(afterView.likes) || 0, views: Number(afterView.views) || 0 };
     await purgeTags(env, ['stats:' + postId]);   // 清 stats 缓存，保证阅读数立即生效
     return json({ ok: true, postId, stats: s }, 200, request, env);
   }

@@ -42,6 +42,13 @@ jobs:
       - name: Setup wrangler CLI
         run: npm install -g wrangler@3.90.0
 
+      # 部署前跑本地测试（纯 Node 模拟环境，无网络/无凭据依赖；失败即中止，不部署）
+      - name: Run tests (smoke + verify)
+        run: |
+          node smoke-test.js
+          node gb-verify.js
+          node search-verify.js
+
       - name: Check required secrets
         env:
           BLOG_KV_ID: ${{ secrets.BLOG_KV_ID }}

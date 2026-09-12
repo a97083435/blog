@@ -1686,9 +1686,12 @@ function renderCommentTree(list, canDel) {
       ? '<button class="comment-del" data-cid="' + esc(c.id) + '">' + t('comment.delete') + '</button>'
       : '';
     // 在内容下方标注“回复了某人”（若该评论是回复）
+    // 安全：t() 的插值不做转义，作者名可能含 HTML（服务端只清控制字符），
+    // 必须对整个结果 esc 再进 innerHTML（同 admin.js 的 comment.replyTo 用法），
+    // 否则父评论作者名可构造存储型 XSS（他人回复时对所有访客触发）。
     var replyToLabel = '';
     if (c.parent_id && byId[c.parent_id]) {
-      replyToLabel = '<div class="comment-reply-to">' + t('comment.replyTo', { author: byId[c.parent_id].author }) + '</div>';
+      replyToLabel = '<div class="comment-reply-to">' + esc(t('comment.replyTo', { author: byId[c.parent_id].author })) + '</div>';
     }
     var childrenHtml = replies.length
       ? '<ul class="comment-children">' + replies.map(function (r) { return renderOne(r, depth + 1); }).join('') + '</ul>'
