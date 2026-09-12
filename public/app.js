@@ -1291,6 +1291,9 @@ function app() { return document.querySelector('#app'); }
     + '<div class="accent-pop-title">' + accentTitle() + '</div>'
     + '<div class="accent-pop-swatches"></div>'
     + '</div></div>';
+  // 背景素描动画开关（春夏秋冬 · 自动切换 · 可一键关闭）
+  var bgAnimOn = !!(window.bgAnim && window.bgAnim.isOn());
+  var bgAnimBtn = '<button class="icon-btn" id="bgAnimToggle" aria-pressed="' + (bgAnimOn ? 'true' : 'false') + '" aria-label="' + t('bgAnim.title') + '" title="' + (bgAnimOn ? t('bgAnim.on') : t('bgAnim.off')) + '">' + svgIcon('spark', 18) + '</button>';
   var hamburger = '<button class="hamburger-btn" id="hamburgerBtn" aria-label="' + t('nav.toggle') + '"><span></span><span></span><span></span></button>';
 
   // 侧边栏导航项（移动端用）
@@ -1332,7 +1335,7 @@ function app() { return document.querySelector('#app'); }
     + '<div class="container topbar-inner">'
     + '<div class="topbar-left">' + hamburger + '<a class="brand" href="' + esc(href('/')) + '">' + getSiteName() + '</a></div>'
     + '<nav class="main-nav">' + links + '</nav>'
-    + '<div class="topbar-actions">' + searchBtn + langSwitch + accentSwitch + themeBtn + '</div>'
+    + '<div class="topbar-actions">' + searchBtn + langSwitch + accentSwitch + bgAnimBtn + themeBtn + '</div>'
     + searchForm
     + '</div>'
     + '<div class="search-panel" id="searchPanel"></div>'
@@ -3658,6 +3661,7 @@ function bindAccentPicker() {
     if (!t || !t.closest) return;
     if (t.closest('#accentToggle')) { toggleAccentPop(); return; }
     if (t.closest('#langToggle')) { toggleLangPop(); return; }
+    if (t.closest('#bgAnimToggle')) { if (window.bgAnim) window.bgAnim.toggle(); return; }
     var sw = t.closest('.accent-pop [data-accent]');
     if (sw) { setAccent(sw.getAttribute('data-accent')); closeAccentPop(); closeLangPop(); return; }
     var lo = t.closest('.lang-pop [data-lang]');
@@ -3678,6 +3682,15 @@ function bindAccentPicker() {
     if (!e || e.key !== 'Escape') return;
     closeAccentPop();
     closeLangPop();
+  });
+  // 背景动画开关状态变化：即时刷新顶栏按钮的 title / aria-pressed（无需整页重渲染）
+  document.addEventListener('qingyu:bgAnim', function () {
+    var b = document.getElementById('bgAnimToggle');
+    if (!b) return;
+    var on = !!(window.bgAnim && window.bgAnim.isOn());
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.title = on ? t('bgAnim.on') : t('bgAnim.off');
+    b.setAttribute('aria-label', t('bgAnim.title'));
   });
   renderAccentSwatches();
   renderAccentNativeSelect();

@@ -197,6 +197,19 @@ body {
   min-height: 100vh;
 }
 
+/* 背景素描动画层：全屏固定 Canvas 垫在内容之下（z-0 < #app z-1），
+   不拦截任何交互；动画只在首页运行（bg-anim.js 控制 display）。 */
+#bgSketch {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  opacity: 1;
+}
+#app { position: relative; z-index: 1; }
+
 a { color: var(--accent); text-decoration: none; }
 a:hover { text-decoration: underline; }
 

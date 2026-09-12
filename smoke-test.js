@@ -1890,6 +1890,26 @@ tests.push(['云端探测未完成时访问文章 → 显示加载态而非「�
   assert.ok(html.includes('正文D'), '探测完成后渲染出文章正文');
 }]);
 
+tests.push(['顶栏渲染「背景动画」开关按钮（bg-anim 未加载时安全降级）', async () => {
+  const fn = async (url) => {
+    const u = String(url);
+    if (u.indexOf('/locales/') >= 0) return { ok: false, status: 404, json: async () => ({}) };
+    if (u.endsWith('/api/posts')) return { ok: true, status: 200, json: async () => ({ ok: true, posts: [] }) };
+    return { ok: true, status: 200, json: async () => ({ ok: true }) };
+  };
+  const b = await boot({ 'window.BLOG_CONFIG': { mode: 'api' }, fetch: fn });
+  let html = b.ctx.document.querySelector('#app').innerHTML;
+  // bg-anim.js 未加载（测试档不含该文件）→ window.bgAnim 不存在 → 按钮应渲染且为关闭态
+  assert.ok(html.includes('id="bgAnimToggle"'), '顶栏渲染背景动画开关按钮');
+  assert.ok(html.includes('aria-pressed="false"'), 'bg-anim 未加载时按钮关闭态（安全降级）');
+  // 模拟 bg-anim 已加载且开启：重渲染后按钮应为开启态
+  b.win.bgAnim = { isOn: function () { return true; } };
+  b.ctx.route();
+  await new Promise((r) => setTimeout(r, 20));
+  html = b.ctx.document.querySelector('#app').innerHTML;
+  assert.ok(html.includes('aria-pressed="true"'), 'bg-anim 开启时按钮为开启态');
+}]);
+
 /* ---------- 运行 ---------- */
 (async () => {
   let passed = 0, failed = 0;
