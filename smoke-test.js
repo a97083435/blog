@@ -472,6 +472,14 @@ function makeD1() {
       if (r && r.post_id === params[0]) t.comments.delete(params[1]);
       return { success: true };
     }
+    if (s === 'DELETE FROM comments WHERE post_id = ?') {
+      for (const [k, r] of [...t.comments]) if (r.post_id === params[0]) t.comments.delete(k);
+      return { success: true };
+    }
+    if (s === 'DELETE FROM stats WHERE post_id = ?') {
+      t.stats.delete(params[0]); return { success: true };
+    }
+    if (s === 'DELETE FROM stats_daily WHERE post_id = ?') return { success: true };
     /* stats */
     if (s === 'SELECT * FROM stats WHERE post_id = ?') return t.stats.get(params[0]) || null;
     if (/^INSERT INTO stats\s*\(/.test(s) && !s.includes('stats_daily')) {
@@ -529,6 +537,13 @@ function makeD1() {
         async run() { exec(sql, params); return { success: true }; }
       });
       return { bind: (...params) => chain(params), ...chain([]) };
+    },
+    /* D1 batch：逐条执行（原子性由真实 D1 保证；测试只需顺序执行） */
+    async batch(stmts) {
+      for (const st of stmts || []) {
+        if (st && typeof st.run === 'function') await st.run();
+      }
+      return [];
     }
   };
 }
@@ -613,6 +628,57 @@ tests.push(['API：PUT 更新 / PUT 未知 id 新建 / DELETE / 404 / 无 DB 500
   assert.strictEqual(r.status, 500, '未绑定 D1 返回 500');
   const err = await r.json();
   assert.ok(err.error.includes('数据库未配置'), '错误信息提示 D1 绑定');
+}]);
+
+tests.push(['删除文章级联清理：评论 / 点赞 / 浏览量一并删除', async () => {
+  const { env, token, core } = await authEnv();
+  const authJson = { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token };
+  // 造文章
+  let r = await core.handlePosts(new Request('http://t/api/posts', {
+    method: 'POST', headers: authJson,
+    body: JSON.stringify({ id: 'c1', title: '级联测试', date: '2025-03-01', content: 'x' })
+  }), env);
+  assert.strictEqual(r.status, 201);
+  // 造评论（公开发表）
+  r = await core.handleComments(new Request('http://t/api/posts/c1/comments', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ author: '读者', content: '好文' })
+  }), env, 'c1');
+  assert.strictEqual(r.status, 201);
+  // 造点赞 + 浏览量（写 stats 与 stats_daily）
+  r = await core.handleStats(new Request('http://t/api/posts/c1/stats', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'like' })
+  }), env, 'c1');
+  assert.strictEqual(r.status, 200);
+  r = await core.handleStats(new Request('http://t/api/posts/c1/stats', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'views' })
+  }), env, 'c1');
+  assert.strictEqual(r.status, 200);
+
+  // 删除前：评论 1 条、统计 likes/views ≥ 1
+  const list0 = await (await core.handleComments(new Request('http://t/api/posts/c1/comments'), env, 'c1')).json();
+  assert.strictEqual((list0.comments || []).length, 1, '删除前评论存在');
+  const st0 = await (await core.handleStats(new Request('http://t/api/posts/c1/stats'), env, 'c1')).json();
+  assert.ok(st0.stats.likes >= 1 && st0.stats.views >= 1, '删除前统计存在');
+
+  // 删除文章（级联清理）
+  r = await core.handlePostId(new Request('http://t/api/posts/c1', { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } }), env, 'c1');
+  assert.strictEqual(r.status, 200, '删除成功');
+
+  // 级联后：文章 404、评论清空、点赞/浏览量归零
+  r = await core.handlePostId(new Request('http://t/api/posts/c1'), env, 'c1');
+  assert.strictEqual(r.status, 404, '删除后文章 404');
+  const list1 = await (await core.handleComments(new Request('http://t/api/posts/c1/comments'), env, 'c1')).json();
+  assert.strictEqual((list1.comments || []).length, 0, '删除后评论清空');
+  const st1 = await (await core.handleStats(new Request('http://t/api/posts/c1/stats'), env, 'c1')).json();
+  assert.strictEqual(st1.stats.likes, 0, '删除后点赞归零');
+  assert.strictEqual(st1.stats.views, 0, '删除后浏览量归零');
+
+  // 直接用 mock 表断言数据行已物理删除（绕过 API 聚合）
+  assert.ok(!env._d1.comments.has('c1') || [...env._d1.comments.values()].every((cc) => cc.post_id !== 'c1'), 'comments 表无残留');
+  assert.ok(!env._d1.stats.has('c1'), 'stats 表无残留');
 }]);
 
 tests.push(['管理员认证：首次设置 / 密码验证 / 限流 429', async () => {

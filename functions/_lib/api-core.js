@@ -48,6 +48,11 @@ export async function dbFirst(db, sql, ...params) {
 export async function dbRun(db, sql, ...params) {
   await db.prepare(sql).bind(...params).run();
 }
+/** 原子批量执行：全部成功或全部回滚（D1 batch）。stmts: [{sql, params}] */
+export async function dbBatch(db, stmts) {
+  if (!Array.isArray(stmts) || !stmts.length) return;
+  await db.batch(stmts.map((s) => db.prepare(s.sql).bind(...(s.params || []))));
+}
 
 /* ---------- CORS：仅回显本站自身来源，杜绝任意跨站读取 ----------
  * 同源请求（无 Origin 头）不加 ACAO；跨站请求：
@@ -365,7 +370,16 @@ export async function handlePostId(request, env, id) {
 
   if (request.method === 'DELETE') {
     if (!exist) return json({ error: '未找到该内容' }, 404, request, env);
-    await dbRun(env.DB, 'DELETE FROM posts WHERE id = ?', id);
+    // 级联清理：评论 / 当前计数（点赞+浏览量）/ 文章本体 原子批次删除；
+    // 每日聚合统计（stats_daily）单独尽力清理——它是历史趋势数据且表可能缺失，
+    // 清理失败不阻断文章删除（避免把删除文章这一动作与统计历史绑定死）。
+    const stmts = [
+      { sql: 'DELETE FROM comments WHERE post_id = ?', params: [id] },
+      { sql: 'DELETE FROM stats WHERE post_id = ?', params: [id] },
+      { sql: 'DELETE FROM posts WHERE id = ?', params: [id] }
+    ];
+    await dbBatch(env.DB, stmts);
+    await dbRun(env.DB, 'DELETE FROM stats_daily WHERE post_id = ?', id).catch(() => {});
     await purgeTags(env, [TAG_POSTS, TAG_FEED, TAG_SITEMAP, 'post:' + id]);
     return json({ ok: true }, 200, request, env);
   }
