@@ -24,7 +24,12 @@
   --accent-fg: #fff;
   --code-bg: #f3f0ea;
   --shadow: 0 1px 2px rgba(35, 32, 27, 0.05), 0 4px 14px rgba(35, 32, 27, 0.06);
+  --shadow-hover: 0 2px 4px rgba(35, 32, 27, 0.06), 0 12px 28px rgba(35, 32, 27, 0.10);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent);
   --radius: 12px;
+  /* 书卷风精致化：中文标题字距微开（宋体下更显温润），正文行高保持舒展 */
+  --ls-title: 0.02em;
+  --ls-body: 0.01em;
   --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   --mono: "Cascadia Code", Consolas, "Courier New", monospace;
   /* 四级字体栈：正文 / 章节标题 / 大标题 / 装饰引用（管理后台仍用 --font 无衬线） */
@@ -56,6 +61,8 @@ html[data-theme="dark"] {
   --accent-fg: #fff;
   --code-bg: #2a2621;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.35);
+  --shadow-hover: 0 2px 5px rgba(0, 0, 0, 0.35), 0 14px 30px rgba(0, 0, 0, 0.45);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
   --tok-kw: #ff7b72;
   --tok-str: #7ee787;
   --tok-com: #8b949e;
@@ -111,6 +118,32 @@ html[data-theme="dark"][data-accent="dusk"] {
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; background: var(--bg); }
+
+/* 书卷风精致化 · 选区 / 滚动条 / 焦点环（纯增量，不影响布局） */
+::selection { background: var(--accent-soft); color: var(--fg); }
+
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--muted) 55%, transparent); background-clip: content-box; }
+
+/* 统一焦点环：交互元素聚焦时可见（键盘导航可达性 + 精致感） */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: 6px;
+}
 
 /* 最小宽度分层（任何端都不能无限压缩）：
  *  · 移动端（≤768px）：绝对下限 320px（手机端最小宽度，如 iPhone SE 320px），缩到其下出横向滚动
@@ -594,7 +627,7 @@ main { flex: 1 0 auto; width: 100%; padding: 34px 0 60px; }
   outline: none;
   transition: border-color 0.15s ease;
 }
-#globalSearchInput:focus { border-color: var(--accent); }
+#globalSearchInput:focus { border-color: var(--accent); box-shadow: var(--ring); }
 .ts-close {
   flex: 0 0 auto;
   background: var(--bg-soft);
@@ -817,13 +850,16 @@ html[data-theme="dark"] .gb-kind-badge.idea { color: #e6b04d; background: #3a2f1
   min-height: 200px;
   box-shadow: var(--shadow);
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
   display: flex;
   align-items: stretch;
   gap: 18px;
   color: inherit;
 }
-.post-card:hover { transform: translateY(-2px); border-color: var(--accent); text-decoration: none; }
+.post-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: var(--shadow-hover); text-decoration: none; }
+/* 深色主题：卡片微描边略提亮（暖色倾向），增强暗底层级而不刺眼 */
+html[data-theme="dark"] .post-card { border-color: color-mix(in srgb, var(--border) 62%, var(--accent) 8%); }
+html[data-theme="dark"] .post-card:hover { border-color: var(--accent); }
 
 /* 卡片左侧内容区（标题 / 摘要 / 元信息）：顶部对齐、高度撑满卡片，
    标签用 margin-top:auto 固定贴底，无摘要时标签也不会向上移动 */
@@ -866,11 +902,13 @@ html[data-theme="dark"] .gb-kind-badge.idea { color: #e6b04d; background: #3a2f1
 .post-thumb img.thumb-in { opacity: 1; }
 .post-thumb-ph {
   font-size: 30px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent);
-  opacity: 0.85;
+  opacity: 0.7;
   line-height: 1;
   user-select: none;
+  letter-spacing: 0.1em;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--card) 40%, transparent);
 }
 
 .post-card .meta {
@@ -886,20 +924,24 @@ html[data-theme="dark"] .gb-kind-badge.idea { color: #e6b04d; background: #3a2f1
 .post-card .mini-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: auto 0 0; padding-top: 8px; justify-content: flex-start; align-self: flex-start; }
 .post-card .mini-tags span {
   font-size: 11.5px;
-  background: var(--bg-soft);
-  color: var(--muted);
-  padding: 1px 8px;
-  border-radius: 999px;
-}
-/* 深色主题：标签用暖棕底 + 主题橙文字 + 细边框，与卡片底色（#211e1a）明显区分 */
-html[data-theme="dark"] .post-card .mini-tags span {
   background: var(--accent-soft);
   color: var(--accent);
-  border: 1px solid rgba(224, 138, 99, 0.28);
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  padding: 0 8px;
+  border-radius: 999px;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.post-card:hover .mini-tags span { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.post-card .mini-tags span:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+/* 深色主题：标签用暖棕底 + 提亮主题橙文字 + 略亮边框，保证暗底可读 */
+html[data-theme="dark"] .post-card .mini-tags span {
+  background: color-mix(in srgb, var(--accent-soft) 88%, transparent);
+  color: color-mix(in srgb, var(--accent) 72%, #fff 28%);
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
   padding: 0 7px;
 }
 
-.post-card h2 { margin: 0 0 6px; font-size: 18.5px; line-height: 1.4; }
+.post-card h2 { margin: 0 0 6px; font-size: 18.5px; line-height: 1.4; letter-spacing: var(--ls-title); }
 .post-card .excerpt {
   margin: 0;
   color: var(--muted);
@@ -929,9 +971,10 @@ html[data-theme="dark"] .post-card .mini-tags span {
   display: inline-flex; align-items: center; justify-content: center;
   padding: 8px 20px; border: 1px solid var(--border); background: var(--card);
   color: var(--fg); border-radius: 0; font-size: 13.5px; cursor: pointer;
-  text-decoration: none; transition: border-color .15s ease, color .15s ease;
+  text-decoration: none; box-shadow: var(--shadow);
+  transition: border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 }
-.pager-btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.pager-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: var(--shadow-hover); transform: translateY(-1px); text-decoration: none; }
 .pager-btn.disabled { opacity: .4; cursor: default; pointer-events: none; }
 .pager-info { color: var(--muted); font-size: 13px; letter-spacing: .5px; }
 
@@ -1013,7 +1056,7 @@ html[data-theme="dark"] .post-card .mini-tags span {
 /* 章节标题字体：源樣明體 SemiBold（卡片标题、正文 H2/H3 及写作台预览同步） */
 .post-card h2,
 .article h2, .article h3,
-.write-preview h2, .write-preview h3 { font-family: var(--font-heading); font-weight: 600; }
+.write-preview h2, .write-preview h3 { font-family: var(--font-heading); font-weight: 600; letter-spacing: var(--ls-title); }
 /* 点击目录跳转时，让标题定位在吸顶导航下方、不被遮挡 */
 .article h1[id^="toc-"], .article h2[id^="toc-"], .article h3[id^="toc-"],
 .article h4[id^="toc-"], .article h5[id^="toc-"], .article h6[id^="toc-"] {
@@ -1061,7 +1104,7 @@ html[data-theme="dark"] .post-card .mini-tags span {
   font-size: 13.5px;
   line-height: 1.6;
 }
-.article img, .write-preview img { max-width: 100%; border-radius: 10px; }
+.article img, .write-preview img { max-width: 100%; border-radius: 10px; box-shadow: var(--shadow); }
 .article table, .write-preview table {
   border-collapse: collapse;
   width: 100%;
