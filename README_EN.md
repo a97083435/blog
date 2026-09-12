@@ -379,6 +379,7 @@ Cloudflare Workers AI (default model `@cf/meta/llama-3.2-3b-instruct`) powers th
 - Config: `[ai] binding = "AI"` in `wrangler.workers.toml` (binding is created automatically on deploy); set env var `BLOG_AI_ENABLED` to `0` / `false` / `off` to disable entirely
 - **Graceful degradation**: if AI is not bound, D1 is missing, or the switch is off, the endpoints return 404 and the front-end (`aiProbe`) hides every AI entry — the rest of the blog is completely unaffected
 - Front-end memory: "available" results are cached 10 minutes, "unavailable" only 30 seconds, so the UI recovers right after AI goes live or is fixed
+- **Privacy note**: post summaries / writing assistant / comment summaries send the relevant **plaintext content** to Cloudflare Workers AI (`@cf/meta/llama-3.2-3b-instruct`) for inference. Avoid enabling these entries for sensitive content (or set `BLOG_AI_ENABLED=0` to disable entirely)
 
 ---
 
