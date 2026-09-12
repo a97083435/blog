@@ -78,6 +78,7 @@
   "post.backHome": "Back to home",
   "post.notFound": "Content not found",
   "post.loadFail": "Failed to load content",
+  "post.retry": "Retry",
   "comment.title": "Comments",
   "comment.hint": "Enter your name and comment below",
   "comment.authorPlaceholder": "Name",

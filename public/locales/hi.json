@@ -78,6 +78,7 @@
   "post.backHome": "होम पर वापस जाएं",
   "post.notFound": "सामग्री नहीं मिली",
   "post.loadFail": "सामग्री लोड करने में विफल",
+  "post.retry": "पुनः प्रयास करें",
   "comment.title": "टिप्पणियाँ",
   "comment.hint": "अपना नाम और टिप्पणी नीचे दर्ज करें",
   "comment.authorPlaceholder": "नाम",

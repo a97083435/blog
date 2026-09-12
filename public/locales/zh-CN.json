@@ -78,6 +78,7 @@
   "post.backHome": "返回首页",
   "post.notFound": "内容不存在",
   "post.loadFail": "正文加载失败",
+  "post.retry": "重试",
   "comment.title": "评论",
   "comment.hint": "在此输入昵称与内容发表评论",
   "comment.authorPlaceholder": "昵称",

@@ -1828,6 +1828,35 @@ tests.push(['云端详情：首次拉取存缓存，再次进入缓存秒开，�
   assert.ok(html.includes('正文V2'), '内容未更新保持 V2');
 }]);
 
+tests.push(['云端详情：文章删除后访问旧链接 → 移除列表并显示不存在，不再无限拉取', async () => {
+  let detailHits = 0; // 详情接口被请求的次数（应恰好 1 次，证明无循环）
+  const fetchStub = async (url) => {
+    const u = String(url);
+    if (u.endsWith('/api/posts')) return { ok: true, status: 200, json: async () => ({ ok: true, posts: [] }) };
+    if (u.endsWith('/api/posts/c9')) { detailHits++; return { ok: false, status: 404, json: async () => ({ error: '未找到该内容' }) }; }
+    return { ok: true, status: 200, json: async () => ({ ok: true }) };
+  };
+  const b = await boot({ 'window.BLOG_CONFIG': { mode: 'api' }, fetch: fetchStub });
+  // 模拟残留的兜底列表仍含已删除文章
+  b.win.BLOG_POSTS = [{ id: 'c9', title: '已被删除的文章', date: '2025-01-01', content: '', tags: [] }];
+  const loc = b.ctx.location;
+  loc.pathname = '/posts/c9/'; loc.search = ''; loc.hash = '';
+  await b.ctx.route();
+  await new Promise((r) => setTimeout(r, 40));
+  let html = b.ctx.document.querySelector('#app').innerHTML;
+  assert.ok(!html.includes('site.loading'), '不再停留在无限加载态');
+  assert.ok(html.includes('post.notFound'), '显示「内容不存在」（not-found 页面）');
+  assert.strictEqual(b.win.BLOG_POSTS.filter((p) => p && p.id === 'c9').length, 0, '已将删除的文章移出本地列表');
+  assert.strictEqual(detailHits, 1, '详情接口只请求一次（无循环拉取）');
+  // 再次访问：列表已无该文，直接显示不存在，不再发起详情请求
+  loc.pathname = '/posts/c9/'; loc.search = ''; loc.hash = '';
+  await b.ctx.route();
+  await new Promise((r) => setTimeout(r, 40));
+  html = b.ctx.document.querySelector('#app').innerHTML;
+  assert.ok(html.includes('post.notFound'), '再次访问仍显示不存在');
+  assert.strictEqual(detailHits, 1, '二次访问不再请求详情接口');
+}]);
+
 /* ---------- 运行 ---------- */
 (async () => {
   let passed = 0, failed = 0;

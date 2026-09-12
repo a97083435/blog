@@ -78,6 +78,7 @@
   "post.backHome": "ホームに戻る",
   "post.notFound": "コンテンツが見つかりません",
   "post.loadFail": "コンテンツの読み込みに失敗しました",
+  "post.retry": "再試行",
   "comment.title": "コメント",
   "comment.hint": "名前とコメントを入力してください",
   "comment.authorPlaceholder": "名前",

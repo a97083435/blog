@@ -78,6 +78,7 @@
   "post.backHome": "홈으로 돌아가기",
   "post.notFound": "글을 찾을 수 없음",
   "post.loadFail": "내용 불러오기 실패",
+  "post.retry": "재시도",
   "comment.title": "댓글",
   "comment.hint": "이름과 댓글을 입력하세요",
   "comment.authorPlaceholder": "이름",

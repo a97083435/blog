@@ -74,7 +74,8 @@ function svgIcon(name, size) {
     volume: '<svg ' + s + ' ' + c + '><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
     gauge: '<svg ' + s + ' ' + c + '><path d="M4.5 17.5A8.5 8.5 0 1 1 19.5 17.5"/><path d="M12 14.2 16.8 9.4M3 17.5h18"/></svg>',
     sliders: '<svg ' + s + ' ' + c + '><path d="M4 7h9M17 7h3M4 17h3M11 17h9M13 4.5v5M7 14.5v5"/></svg>',
-    clock: '<svg ' + s + ' ' + c + '><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.2"/></svg>'
+    clock: '<svg ' + s + ' ' + c + '><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.2"/></svg>',
+    refresh: '<svg ' + s + ' ' + c + '><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v4.5h-4.5"/></svg>'
   };
   return I[name] || '';
 }
@@ -1762,13 +1763,24 @@ async function renderPost(id) {
     }
     // 超时保护：10 秒拿不到正文就放弃加载态，避免“一直加载中”
     var settled = false;
-    function finish(data) {
+    function finish(data, err) {
       if (settled) return;
       settled = true;
       var full = (data && data.post) || null;
       if (!full) {
         post._fullLoaded = true;
-        if (!hasContent && !fromCache) route();   // 无缓存且拉取失败：结束加载态
+        if (!hasContent && !fromCache) {
+          // 文章已被删除（404/不存在）：从本地列表移除并重渲染 → 显示「内容不存在」，终止无限拉取
+          if (err && /404|410|not.?found|不存在|未找到|找不到/i.test(String((err && err.message) || err))) {
+            if (Array.isArray(window.BLOG_POSTS)) {
+              window.BLOG_POSTS = window.BLOG_POSTS.filter(function (p) { return p && p.id !== post.id; });
+            }
+            route();
+            return;
+          }
+          // 网络/超时类失败：渲染静态失败页（可手动重试），不再自动循环拉取
+          renderPostFail(post);
+        }
         return;
       }
       var changed = full.content !== undefined && full.content !== post.content;
@@ -1779,9 +1791,9 @@ async function renderPost(id) {
     }
     apiFetch('api/posts/' + encodeURIComponent(post.id))
       .then(function (data) { finish(data); })
-      .catch(function () { finish(null); });
+      .catch(function (err) { finish(null, err); });
     setTimeout(function () { finish(null); }, 10000);
-    if (!post.content) return;   // 无内容（含无缓存）：等待拉取后重渲染
+    if (!post.content) return;   // 无内容（含无缓存）：等待拉取后重渲染或显示失败页
     // 有内容（缓存或已加载）：继续渲染正文，后台拉取完成后若有更新会重渲染
   }
   var content = post.content || '';
@@ -1930,6 +1942,17 @@ async function renderPost(id) {
       submit.disabled = false;
     }
   });
+}
+
+/* 正文加载失败（网络/超时）时渲染的静态失败页：保留标题，提供手动重试，不再自动循环拉取 */
+function renderPostFail(post) {
+  var html = renderNav(currentRoute().path);
+  html += '<main class="container page-fade"><div class="post-body"><div class="post-header"><h1>' + esc(post.title || t('post.untitled')) + '</h1><div class="meta"><span class="meta-date">' + esc(post.date || '') + '</span></div></div>';
+  html += '<div class="empty" style="padding:44px 0"><div class="big">' + svgIcon('cloud', 32) + '</div><p>' + t('post.loadFail') + '</p><p style="margin-top:14px"><button class="btn btn-primary" id="retryPostBtn">' + svgIcon('refresh', 14) + ' ' + t('post.retry') + '</button> <a class="btn" href="' + esc(href('/')) + '">' + t('post.backHome') + '</a></p></div>';
+  html += '</div></main>' + renderFooter();
+  app().innerHTML = html;
+  var retry = document.querySelector('#retryPostBtn');
+  if (retry) retry.addEventListener('click', function () { route(); });
 }
 
 function renderArchive() {
@@ -3947,24 +3970,25 @@ window.__bootPromise = (async function () {
         var wasCloud = _cloudDetected;
         _cloudDetected = true;   // 云端在线：后续登录用 /api/admin/*
         _cloudReady = true;
-        if (data.posts.length) {
-          var existing = (Array.isArray(window.BLOG_POSTS) ? window.BLOG_POSTS : []);
-          var byId = {};
-          existing.forEach(function (p) { byId[p.id] = p; });
-          data.posts.forEach(function (p) {
-            var old = byId[p.id];
-            if (old) {
-              // 云端列表是摘要（不含 content/enc）：仅覆盖已返回字段，保留静态正文与摘要，
-              // 避免首页卡片摘要被清空、全文搜索失效
-              var merged = {};
-              Object.keys(p).forEach(function (k) { if (p[k] !== undefined) merged[k] = p[k]; });
-              byId[p.id] = Object.assign({}, old, merged);
-            } else {
-              byId[p.id] = p;
-            }
-          });
-          window.BLOG_POSTS = Object.keys(byId).map(function (k) { return byId[k]; });
-        }
+        // 合并云端列表与本地静态列表：云端摘要覆盖已返回字段，保留静态正文与摘要
+        // （content/enc 等）；未在云端列表中的静态文章仍保留作兜底。
+        // 已删除文章的兜底隐患由 renderPost 的 404 处理兜底：访问时即移除并显示不存在。
+        var existing = (Array.isArray(window.BLOG_POSTS) ? window.BLOG_POSTS : []);
+        var byId = {};
+        existing.forEach(function (p) { byId[p.id] = p; });
+        data.posts.forEach(function (p) {
+          var old = byId[p.id];
+          if (old) {
+            // 云端列表是摘要（不含 content/enc）：仅覆盖已返回字段，保留静态正文与摘要，
+            // 避免首页卡片摘要被清空、全文搜索失效
+            var merged = {};
+            Object.keys(p).forEach(function (k) { if (p[k] !== undefined) merged[k] = p[k]; });
+            byId[p.id] = Object.assign({}, old, merged);
+          } else {
+            byId[p.id] = p;
+          }
+        });
+        window.BLOG_POSTS = Object.keys(byId).map(function (k) { return byId[k]; });
         // 探测成功：模式或数据有变化则重渲染一次（切换云端 UI、刷新列表数据；
         // 0 篇也用 !wasCloud 重渲染 → 从加载动画变为「你还未发布文章」空态）
         if (!wasCloud || data.posts.length) route();
