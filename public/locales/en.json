@@ -15,8 +15,6 @@
   "bgAnim.title": "Background animation",
   "bgAnim.on": "Background animation on (click to turn off)",
   "bgAnim.off": "Background animation off (click to turn on)",
-  "bgAnim.stateOn": "On",
-  "bgAnim.stateOff": "Off",
   "ai.title": "AI Summary",
   "ai.generated": "AI-generated · for reference",
   "ai.regenerate": "Regenerate",

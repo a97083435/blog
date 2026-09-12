@@ -491,23 +491,21 @@ a:hover { text-decoration: underline; }
 }
 .accent-native-wrap .lang-switch { width: 100%; padding-left: 26px; }
 
-/* 手机侧栏第二排：背景动画开关（与语言/主题色同族：lang-switch 外观 + 图标 + 状态字） */
-.sidebar-picks-2 { margin-top: 8px; }
-.sidebar-picks.sidebar-picks-2 > * { width: 100%; }
-.bg-anim-switch {
-  display: flex; align-items: center; gap: 7px;
-  background-image: none;            /* 去掉下拉箭头（它不是下拉框） */
-  padding: 5px 9px;
-  text-align: left;
-  cursor: pointer;
+/* 手机侧栏第二排：背景动画开关 —— 尺寸与语言/主题色下拉一致（~28px 同高），
+   但形态为点击式图标按钮（同电脑版顶栏 spark 图标），点击即开关。 */
+.sidebar-picks-2 { margin-top: 8px; justify-content: center; }
+.bg-anim-icon {
+  width: 28px; height: 28px;      /* 与 lang-switch 下拉同高，视觉层级一致 */
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: var(--fg);
 }
-.bg-anim-switch .ba-icon {
-  display: inline-flex; flex-shrink: 0; align-items: center;
+.bg-anim-icon[aria-pressed="true"] {
   color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
 }
-.bg-anim-switch .ba-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
-.bg-anim-switch .ba-state { flex-shrink: 0; font-size: 12px; color: var(--accent); font-weight: 600; }
-.bg-anim-switch[aria-pressed="false"] .ba-state { color: var(--muted); font-weight: 500; }
+.bg-anim-icon[aria-pressed="false"] { color: var(--muted); }
 
 /* 语言切换器 */
 .lang-switch {

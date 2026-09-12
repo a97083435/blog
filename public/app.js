@@ -1321,13 +1321,9 @@ function app() { return document.querySelector('#app'); }
     + '<select id="accentNativeSide" class="lang-switch accent-native" aria-label="' + accentTitle() + '"></select>'
     + '</div>'
     + '</div>'
-    // 第二排：背景动画开关（与语言/主题色控件同族：lang-switch 外观 + 图标 + 状态字）
+    // 第二排：背景动画开关 —— 尺寸与语言/主题色下拉一致，但形态为点击式图标按钮（同电脑版 spark 图标）
     + '<div class="sidebar-picks sidebar-picks-2">'
-    + '<button type="button" class="lang-switch bg-anim-switch" id="bgAnimSideToggle" aria-pressed="' + (bgAnimOn ? 'true' : 'false') + '" aria-label="' + t('bgAnim.title') + '">'
-    + '<span class="ba-icon">' + svgIcon('spark', 13) + '</span>'
-    + '<span class="ba-label">' + t('bgAnim.title') + '</span>'
-    + '<span class="ba-state">' + (bgAnimOn ? t('bgAnim.stateOn') : t('bgAnim.stateOff')) + '</span>'
-    + '</button>'
+    + '<button type="button" class="icon-btn bg-anim-icon" id="bgAnimSideToggle" aria-pressed="' + (bgAnimOn ? 'true' : 'false') + '" aria-label="' + t('bgAnim.title') + '" title="' + (bgAnimOn ? t('bgAnim.on') : t('bgAnim.off')) + '">' + svgIcon('spark', 16) + '</button>'
     + '</div>'
     + '</div>'
     + '</aside>';
@@ -3703,8 +3699,8 @@ function bindAccentPicker() {
     var side = document.getElementById('bgAnimSideToggle');
     if (side) {
       side.setAttribute('aria-pressed', on ? 'true' : 'false');
-      var st = side.querySelector('.ba-state');
-      if (st) st.textContent = on ? t('bgAnim.stateOn') : t('bgAnim.stateOff');
+      side.title = on ? t('bgAnim.on') : t('bgAnim.off');
+      side.setAttribute('aria-label', t('bgAnim.title'));
     }
   });
   renderAccentSwatches();

@@ -1902,16 +1902,16 @@ tests.push(['顶栏渲染「背景动画」开关按钮（bg-anim 未加载时�
   // bg-anim.js 未加载（测试档不含该文件）→ window.bgAnim 不存在 → 按钮应渲染且为关闭态
   assert.ok(html.includes('id="bgAnimToggle"'), '顶栏渲染背景动画开关按钮');
   assert.ok(html.includes('aria-pressed="false"'), 'bg-anim 未加载时按钮关闭态（安全降级）');
-  // 手机侧边栏第二排：开关与语言/主题色同族
+  // 手机侧边栏第二排：尺寸与语言/主题色一致，但为点击式图标按钮（同电脑版 spark 图标）
   assert.ok(html.includes('id="bgAnimSideToggle"'), '侧边栏底部渲染背景动画开关（第二排）');
   assert.ok(html.includes('sidebar-picks-2'), '侧边栏第二排容器存在');
+  assert.ok(html.includes('class="icon-btn bg-anim-icon"'), '侧栏开关为图标按钮（同电脑版形态）');
   // 模拟 bg-anim 已加载且开启：重渲染后按钮应为开启态
   b.win.bgAnim = { isOn: function () { return true; } };
   b.ctx.route();
   await new Promise((r) => setTimeout(r, 20));
   html = b.ctx.document.querySelector('#app').innerHTML;
   assert.ok(html.includes('aria-pressed="true"'), 'bg-anim 开启时按钮为开启态');
-  assert.ok(html.includes('bgAnim.stateOn') || html.includes('开'), '侧栏开关显示开启状态字');
 }]);
 
 /* ---------- 运行 ---------- */

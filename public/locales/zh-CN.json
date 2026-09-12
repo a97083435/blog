@@ -15,8 +15,6 @@
   "bgAnim.title": "背景动画",
   "bgAnim.on": "背景动画已开启（点击关闭）",
   "bgAnim.off": "背景动画已关闭（点击开启）",
-  "bgAnim.stateOn": "开",
-  "bgAnim.stateOff": "关",
   "ai.title": "AI 摘要",
   "ai.generated": "AI 生成 · 仅供参考",
   "ai.regenerate": "重新生成",
