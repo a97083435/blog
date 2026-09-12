@@ -44,19 +44,6 @@
 
 ---
 
-## 📑 目录
-
-- [📖 项目介绍](#-项目介绍)
-- [✅ 优点](#-优点)
-- [✨ 特色功能](#-特色功能)
-- [🚀 部署方式](#-部署方式)
-- [☁️ Cloudflare 服务说明](#️-cloudflare-服务说明)
-- [⚙️ 配置文件说明](#️-配置文件说明)
-- [🛡️ 安全设计](#️-安全设计)
-- [🧪 测试](#-测试)
-- [🖼️ 项目截图](#️-项目截图)
-- [📄 许可证](#-许可证)
-
 ## 📖 项目介绍
 
 Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人博客系统，不依赖任何前端框架（React / Vue / Svelte）和构建工具（Webpack / Vite）。
@@ -65,7 +52,7 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 
 | 模式 | 说明 | 适用场景 |
 | --- | --- | --- |
-| **静态模式** | 双击 `index.html` 即可使用，数据存浏览器 localStorage | 本地写作、临时预览 |
+| **静态模式** | 双击 `public/index.html` 即可使用，数据存浏览器 localStorage | 本地写作、临时预览 |
 | **云端模式** | 部署到 Cloudflare Workers + D1，数据存云端数据库 | 正式发布、多人访问 |
 
 整个博客本体就在 `public/` 目录：前台 `index.html` + `style.css` + `app.js` + `posts.js` + `music-player.js`，后台 `admin.js` + `admin.css`，国际化 `i18n.js` + `locales/`。无需任何第三方运行时依赖。
@@ -91,137 +78,9 @@ Qingyu'Blog（轻语博客）是一个**纯原生 JavaScript** 编写的个人�
 
 ---
 
-## 📁 目录结构
+## 🚀 快速开始
 
-```
-├── public/                          # 站点本体（静态资源，部署目录）
-│   ├── index.html                   # 页面入口（双击 / 部署起点）
-│   ├── config.js                    # 全站配置（页脚 / 广告 / 模式 / 语言）
-│   ├── style.css                    # 前台样式（深色模式 + 响应式 + 四级衬线字体）
-│   ├── app.js                       # 前台逻辑（路由 / 评论 / 留言板 / 加密 / 搜索 / 多语言 / 主题色 / AI 摘要）
-│   ├── admin.js                     # 后台管理 SPA（仪表盘 / 文章 / 评论 / 标签 / 音乐 / 设置 / AI 写作助手 / 评论汇总）
-│   ├── admin.css                    # 后台样式（响应式布局）
-│   ├── music-player.js              # 前台全站音乐播放器（右下角悬浮按钮 + 弹出面板 / 播放列表 / 进度记忆）
-│   ├── i18n.js                      # 国际化模块（中/英/日/韩/印地，内置中文兜底）
-│   ├── posts.js                     # 静态模式文章数据（由「导出 posts.js」生成）
-│   ├── locales/                     # 语言包（zh-CN / en / ja / ko / hi）
-│   ├── fonts/dreamserif/            # 本地分片衬线字体（梦源宋体 QY-Display）
-│   ├── feed.xml                     # 静态 RSS（可选，云端由 API 生成）
-│   ├── sitemap.xml                  # 静态 Sitemap（可选）
-│   ├── robots.txt                   # 爬虫规则（禁止抓取后台，声明 Sitemap）
-│   └── _redirects                   # Cloudflare Pages 路由（SPA 回退 + /public 重定向）
-├── functions/                       # Cloudflare API（Pages Functions / Workers 共用）
-│   ├── api/
-│   │   ├── posts.js                 # 文章 CRUD
-│   │   ├── posts/[id]/
-│   │   │   ├── index.js             # 单篇文章（GET / PUT / DELETE）
-│   │   │   ├── comments.js          # 文章评论（GET / POST，支持嵌套回复）
-│   │   │   ├── comments/[cid].js    # 单条评论删除（管理）
-│   │   │   └── stats.js             # 阅读 / 点赞统计
-│   │   ├── comments.js              # 全局评论列表（管理后台）
-│   │   ├── comments/[id].js         # 评论审核 / 删除
-│   │   ├── ai/
-│   │   │   ├── ping.js              # AI 可用性探测（降级开关）
-│   │   │   ├── summary.js           # 文章摘要（单篇缓存 30 天 + 限流）
-│   │   │   ├── assist.js            # 写作助手（标题建议 / 润色 / 翻译）
-│   │   │   └── comments.js          # 评论汇总 / 单条垃圾检测
-│   │   ├── media.js                 # 媒体资源库
-│   │   ├── media/[id].js            # 媒体删除
-│   │   ├── settings.js              # 站点设置
-│   │   └── site-files/              # 站点产物（feed.xml / sitemap.xml / posts.js）
-│   │   │   ├── index.js             # 列出 / 保存产物
-│   │   │   └── [name].js            # 下载产物内容
-│   │   ├── admin/
-│   │   │   ├── setup.js             # 首次设置密码
-│   │   │   ├── login.js             # 密码登录
-│   │   │   ├── logout.js            # 登出
-│   │   │   └── password.js          # 修改密码
-│   │   ├── stats/trend.js           # 30 天趋势数据
-│   │   ├── feed.xml.js              # RSS 生成
-│   │   └── sitemap.xml.js           # Sitemap 生成
-│   └── _lib/
-│       ├── api-core.js              # API 核心逻辑（D1 + 鉴权 + 安全）
-│       ├── ai.js                    # Workers AI 封装（模型 / 提示词 / 限流 / 降级）
-│       └── music.js                 # 音乐 API（R2 预签名直传 / 元数据 CRUD / R2 对象同步删除）
-├── worker.js                        # Cloudflare Workers 入口（路由分发，含 /api/ai/* 接线）
-├── migrations/                      # D1 数据库迁移（CI 自动执行，幂等）
-│   ├── 0001_init.sql                # 基础表结构
-│   ├── 0002_site_files.sql          # 站点文件存储
-│   ├── 0003_cover_column.sql        # 封面图字段
-│   ├── 0004_post_meta.sql           # 分类 / 发布状态
-│   ├── 0005_comment_status.sql      # 评论审核状态
-│   ├── 0006_media.sql              # 媒体资源表
-│   ├── 0007_settings.sql            # 站点设置表
-│   ├── 0008_stats_daily.sql         # 每日统计表
-│   ├── 0009_comment_status_index.sql # 评论状态索引
-│   ├── 0010_admin_must_change.sql   # 强制改密标记
-│   ├── 0011_comment_reply.sql       # 评论回复 parent_id 字段
-│   ├── 0012_clear_orphaned_nav.sql  # 清理遗留 nav 配置
-│   └── 0013_music.sql               # 音乐播放列表表（元数据；音频本体存 R2）
-├── scripts/
-│   └── migrate-kv-to-d1.mjs         # 一次性迁移：KV 数据 → D1
-├── .github/workflows/
-│   ├── deploy.yml                   # GitHub Actions 自动部署到 Workers
-│   └── migrate-kv-to-d1.yml         # 手动触发 KV → D1 迁移
-├── seed.js                          # 导入示例文章到云端 API
-├── wrangler.toml                    # Cloudflare Pages 配置
-├── wrangler.workers.toml            # Cloudflare Workers 配置
-├── smoke-test.js                    # 冒烟测试
-├── README.md                        # 中文说明
-└── README_EN.md                     # 英文说明
-```
-
----
-
-## ✨ 特色功能
-
-### 前台
-
-| 功能 | 说明 |
-| --- | --- |
-| 真实路径路由 | 无 hash：`/`、`/archive`、`/about`、`/tags`、`/guestbook`、`/posts/<别名>/`、`/admin`、`/write`，刷新不 404 |
-| Markdown 写作台 | 实时预览、工具栏一键插入、字数统计、草稿自动保存 |
-| 文章加密 | 服务端预留 `enc` / `protected` 字段（兼容导入的加密文章），编辑器 UI 暂未开启该功能 |
-| 评论系统 | 云端 D1 全局评论 + 审核模式；静态模式 localStorage；支持**嵌套回复**；**重复发送拦截**（同分区同昵称同内容返回 409） |
-| 留言板 | 导航直达 `/guestbook`，「留言 / 优化方案」双分区，云端存储，复用评论安全管道（限流 / Origin 校验 / 控制字符清洗 / 重复拦截） |
-| 站内搜索 | 实时匹配标题 / 标签 / 摘要；结果展示**关键字所在完整句子上下文**并**高亮关键字**，悬停无下划线 |
-| 正文目录 TOC | 自动生成、锚点跳转；代码高亮 |
-| 阅读统计 | 浏览数 / 点赞（云端全局 / 静态本机） |
-| 精选文章 | 评论区下方自动推荐（点赞×3 + 浏览 + 评论×5） |
-| RSS / Sitemap | 自动生成，加密文章自动排除 |
-| 上一篇 / 下一篇 | 只有一条时自动隐藏空位 |
-| 卡片式列表 | 封面缩略图、置顶徽章、标签贴底 |
-| **深色 / 浅色主题** | 一键切换，多断点响应式适配 |
-| **主题色切换** | 6 种强调色可选，桌面为图标按钮 + 弹层、手机端为原生下拉，深 / 浅色主题通用 |
-| **多语言界面** | 中文 / English / 日本語 / 한국어 / हिन्दी，自动识别 + 手动切换（桌面 🌐 图标弹层、手机原生下拉） |
-| **AI 文章摘要** | 文章页一键生成内容摘要，单篇 30 天缓存；AI 不可用时自动隐藏入口 |
-| **全站音乐播放器** | 右下角悬浮音符按钮，平时**缩进窗口外露出一点圆弧**、悬停 / 点击即滑出；点击弹出面板：曲目信息 · 可拖动进度条 · 上一首 / 播放暂停 / 下一首 · 音量 · 播放列表（点击切换、当前高亮 + 均衡动画）。自动连播；**记忆上次曲目与进度**、音量持久化，刷新后恢复但不自动出声；无音乐时完全隐藏，后台路由自动收起 |
-| 四级衬线字体 | 正文思源宋体 · 章节标题源樣明體 · 大标题梦源宋体 · 引用朱雀仿宋 |
-
-### 管理后台
-
-| 功能 | 说明 |
-| --- | --- |
-| 仪表盘 | 6 项统计卡片 + 30 天访问 / 评论趋势图 |
-| 文章管理 | 搜索 / 状态筛选 / 分页 / 置顶切换；**删除无感刷新**（行级淡出移除，列表与前台即时生效，无需刷新网页） |
-| 编辑器 | Markdown 实时预览（输入框自动增高）、标签 / 封面 / 置顶 |
-| **AI 写作助手** | 编辑器一键生成：标题建议 / 润色 / 翻译（目标语言可选），结果可应用 / 复制；AI 不可用自动隐藏 |
-| 评论管理 | 全局评论列表，审核 / 删除，回复链追踪；**删除 / 审核无感刷新**（行级淡出 + 就地更新状态徽章，不整表重载） |
-| **AI 评论汇总** | 评论页一键汇总近期评论要点（1 小时缓存）+ 单条评论垃圾检测 |
-| 标签管理 | 标签重命名 / 删除（批量更新所有相关文章） |
-| 媒体资源库 | 图片上传（浏览器直传 R2 签名 URL，元数据存 D1）；旧 base64/外链记录兼容显示 |
-| **音乐管理** | 音频上传（浏览器直传 R2 签名 URL，显示上传进度）；**文件名自动识别「歌曲名-歌手」** 预填；列表行内试听 / 删除（**删除与 R2 对象同步**）；曲目多时列表卡片内滚动、表头吸顶 |
-| 博客设置 | 站点信息（含站点头像，同时也是左上角品牌 Logo 与 favicon）/ 个人资料（头像显示在左下角）/ 导航菜单 |
-| 一键导出 | 同时导出 posts.js / feed.xml / sitemap.xml，覆盖即发布 |
-| 顶栏 | 右上角 🌐 语言弹层（同前台风格，SVG 国旗）+ 账户菜单（个人资料 / 改密 / 退出） |
-| 品牌区 | 左上角 Logo 渐变方块（流动动画）+ 站名；侧栏可折叠，折叠后页脚仅剩头像居中 |
-| 响应式 | PC 固定侧栏 / 移动端抽屉导航 |
-
----
-
-## 🚀 部署方式
-
-### 方式一：本地静态
+### 方式一：本地静态（零安装）
 
 ```bash
 git clone https://github.com/kejiland/qingyu-blog.git
@@ -240,11 +99,9 @@ npx serve public
 
 打开 `http://localhost:8080/admin`，设置密码即可开始写作。
 
-### 方式二：Cloudflare Workers（推荐）
+### 方式二：Cloudflare Workers（推荐·正式发布）
 
 #### 1. 准备工作
-
-
 
 - 注册 [Cloudflare](https://dash.cloudflare.com/sign-up) 账号
 - 安装 [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/install-and-update/)：`npm install -g wrangler`
@@ -268,26 +125,44 @@ npx wrangler kv namespace create BLOG
 
 在仓库 Settings → Secrets and variables → Actions 中添加：
 
+**必填（部署必需）：**
+
+| Secret | 说明 |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API Token（需要 Workers + D1 + KV 权限） |
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID（在 Dashboard 右侧可见） |
+| `BLOG_D1_ID` | D1 数据库 ID（上一步创建获得，UUID 格式） |
+| `BLOG_KV_ID` | KV 命名空间 ID（上一步创建获得，32 位十六进制） |
+
+**推荐 / 可选：**
+
 | Secret | 必填 | 说明 |
 | --- | --- | --- |
-| `CLOUDFLARE_API_TOKEN` | ✅ | Cloudflare API Token（需要 Workers + D1 + KV 权限） |
-| `CLOUDFLARE_ACCOUNT_ID` | ✅ | Cloudflare 账户 ID（在 Dashboard 右侧可见） |
-| `BLOG_D1_ID` | ✅ | D1 数据库 ID（上一步创建获得，UUID 格式） |
-| `BLOG_KV_ID` | ✅ | KV 命名空间 ID（上一步创建获得，32 位十六进制） |
-| `BLOG_ADMIN_SETUP_KEY` | 可选 | 安装密钥：配置后 `/api/admin/setup` 首次初始化与重置需 `X-Setup-Key`（防抢注，推荐）；未配置时回退旧行为——首次部署登录接口自动生成随机默认密码（存在先到先得竞态，全新部署建议配置）。已初始化实例登录不受影响 |
+| `BLOG_ADMIN_SETUP_KEY` | 可选 | 安装密钥：配置后 `/api/admin/setup` 首次初始化与重置需 `X-Setup-Key`（防抢注，推荐）；未配置时回退旧行为——首次部署登录接口自动生成随机默认密码（存在先到先得竞态）。已初始化实例登录不受影响 |
 | `SITE_URL` | 推荐 | 站点对外域名，如 `https://blog.example.com`（用于收紧 CORS / RSS / Sitemap） |
 | `CF_ZONE_ID` | 可选 | 自定义域名的 Zone ID（配置后发布即清边缘缓存） |
+
+**R2（音乐 + 媒体图片直传，配置后启用，未配置自动降级 503）：**
+
+| Secret | 说明 |
+| --- | --- |
+| `R2_ACCESS_KEY_ID` / `R2_SECRET_ACCESS_KEY` / `R2_ENDPOINT` | R2 S3 兼容凭据（音乐与媒体**共用**） |
+| `R2_BUCKET` / `R2_PUBLIC_BASE` | **音乐专用桶**：桶名 + R2 自定义域名（播放器拉流地址） |
+| `R2_MEDIA_BUCKET` / `R2_MEDIA_PUBLIC_BASE` | **媒体专用桶**（图片，独立于音乐桶）：桶名 + 自定义域名 |
 
 #### 4. 部署
 
 推送到 `main` 分支，GitHub Actions 会自动：
 
-1. ✅ 校验必要 Secrets
-2. ✅ 执行 D1 迁移（`schema_migrations` 记账表按序幂等执行，老库 duplicate-column 自动兜底防重）
-3. ✅ 部署 Worker 到 Cloudflare
-4. ✅ 写入运行时 Secret（`BLOG_ADMIN_SETUP_KEY` 等）
+1. ✅ 安装依赖与 Wrangler CLI
+2. ✅ 运行测试（`smoke-test.js` / `gb-verify.js` / `search-verify.js`，失败即中止不部署）
+3. ✅ 校验必要 Secrets
+4. ✅ 执行 D1 迁移（`schema_migrations` 记账表 + 列预检三层幂等，老库 duplicate-column 自动兜底防重）
+5. ✅ 部署 Worker 到 Cloudflare
+6. ✅ 写入运行时 Secret（安装密钥 / R2 凭据 / 清缓存凭证，配置了才写）
 
 部署完成后访问 `https://<worker名>.<子域>.workers.dev/admin`：
+
 - 首次部署（配置了 `BLOG_ADMIN_SETUP_KEY`）：点击「首次部署？使用安装密钥初始化」，输入新管理密码 + 安装密钥提交；
 - 首次部署（未配置安装密钥）：直接用任意密码登录一次，后端会自动生成随机默认密码（`xxxx-xxxx`）并在页面上提示，用它登录后系统强制修改密码；
 - 之后正常登录即可。
@@ -303,6 +178,141 @@ node scripts/migrate-kv-to-d1.mjs             # 正式写入 D1
 ```
 
 或在仓库 Actions 标签页手动触发 `Migrate KV to D1` 工作流（仓库 Secrets 自动注入，支持 `dry-run` / `migrate` 两种模式）。
+
+---
+
+## ✨ 特色功能
+
+### 前台
+
+| 功能 | 说明 |
+| --- | --- |
+| 真实路径路由 | 无 hash：`/`、`/archive`、`/about`、`/tags`、`/guestbook`、`/posts/<别名>/`、`/admin`、`/write`，刷新不 404 |
+| Markdown 写作台 | 实时预览、工具栏一键插入、字数统计、草稿自动保存 |
+| 文章加密 | 服务端预留 `enc` / `protected` 字段（兼容导入的加密文章），编辑器 UI 暂未开启该功能 |
+| 评论系统 | 云端 D1 全局评论 + 审核模式；静态模式 localStorage；支持**嵌套回复**；**删除文章级联清理**评论 / 点赞 / 浏览量；**重复发送拦截**（同分区同昵称同内容返回 409） |
+| 留言板 | 导航直达 `/guestbook`，「留言 / 优化方案」双分区，云端存储，复用评论安全管道（限流 / Origin 校验 / 控制字符清洗 / 重复拦截） |
+| 站内搜索 | 实时匹配标题 / 标签 / 摘要；结果展示**关键字所在完整句子上下文**并**高亮关键字**，悬停无下划线 |
+| 正文目录 TOC | 自动生成、锚点跳转；代码高亮 |
+| 阅读统计 | 浏览数 / 点赞（云端全局 / 静态本机，点赞 IP 去重 + 频控） |
+| 精选文章 | 评论区下方自动推荐（点赞×3 + 浏览 + 评论×5） |
+| RSS / Sitemap | 自动生成，加密文章自动排除 |
+| 上一篇 / 下一篇 | 只有一条时自动隐藏空位 |
+| 卡片式列表 | 封面缩略图、置顶徽章、标签贴底 |
+| **深色 / 浅色主题** | 一键切换，多断点响应式适配 |
+| **主题色切换** | 6 种强调色可选，桌面为图标按钮 + 弹层、手机端为原生下拉，深 / 浅色主题通用 |
+| **多语言界面** | 中文 / English / 日本語 / 한국어 / हिन्दी，自动识别 + 手动切换（桌面 🌐 图标弹层、手机原生下拉） |
+| **AI 文章摘要** | 文章页一键生成内容摘要，单篇 30 天缓存；AI 不可用时自动隐藏入口 |
+| **全站音乐播放器** | 右下角悬浮音符按钮，平时**缩进窗口外露出一点圆弧**、悬停 / 点击即滑出；点击弹出面板：曲目信息 · 可拖动进度条 · 上一首 / 播放暂停 / 下一首 · 音量 · 播放列表（点击切换、当前高亮 + 均衡动画）。自动连播；**记忆上次曲目与进度**、音量持久化，刷新后恢复但不自动出声；无音乐时完全隐藏，后台路由自动收起 |
+| 四级衬线字体 | 正文思源宋体 · 章节标题源樣明體 · 大标题梦源宋体 · 引用朱雀仿宋 |
+
+### 管理后台
+
+| 功能 | 说明 |
+| --- | --- |
+| 仪表盘 | 6 项统计卡片 + 30 天访问 / 评论趋势图 |
+| 文章管理 | 搜索 / 状态筛选 / 分页 / 置顶切换；**删除无感刷新**（行级淡出移除 + **级联清理**评论/统计，列表与前台即时生效） |
+| 编辑器 | Markdown 实时预览（输入框自动增高）、标签 / 封面 / 置顶 |
+| **AI 写作助手** | 编辑器一键生成：标题建议 / 润色 / 翻译（目标语言可选），结果可应用 / 复制；AI 不可用自动隐藏 |
+| 评论管理 | 全局评论列表，审核 / 删除，回复链追踪；**删除 / 审核无感刷新**（行级淡出 + 就地更新状态徽章，不整表重载） |
+| **AI 评论汇总** | 评论页一键汇总近期评论要点（1 小时缓存）+ 单条评论垃圾检测 |
+| 标签管理 | 标签重命名 / 删除（批量更新所有相关文章） |
+| 媒体资源库 | 图片上传（浏览器**直传 R2** 预签名 URL + 进度，元数据存 D1）；删除与 R2 对象同步；历史 base64 记录已由迁移 0014 清除 |
+| **音乐管理** | 音频上传（浏览器直传 R2 签名 URL，显示上传进度）；**文件名自动识别「歌曲名-歌手」** 预填；列表行内试听 / 删除（**删除与 R2 对象同步**）；曲目多时列表卡片内滚动、表头吸顶 |
+| 博客设置 | 站点信息（含站点头像，同时也是左上角品牌 Logo 与 favicon）/ 个人资料（头像显示在左下角）/ 导航菜单 |
+| 一键导出 | 同时导出 posts.js / feed.xml / sitemap.xml，覆盖即发布 |
+| 顶栏 | 右上角 🌐 语言弹层（同前台风格，SVG 国旗）+ 账户菜单（个人资料 / 改密 / 退出） |
+| 品牌区 | 左上角 Logo 渐变方块（流动动画）+ 站名；侧栏可折叠，折叠后页脚仅剩头像居中 |
+| 响应式 | PC 固定侧栏 / 移动端抽屉导航 |
+
+---
+
+## 📁 目录结构
+
+```
+├── public/                          # 站点本体（静态资源，部署目录）
+│   ├── index.html                   # 页面入口（双击 / 部署起点）
+│   ├── config.js                    # 全站配置（页脚 / 广告 / 模式 / 语言）
+│   ├── style.css                    # 前台样式（深色模式 + 响应式 + 四级衬线字体）
+│   ├── app.js                       # 前台逻辑（路由 / 评论 / 留言板 / 加密 / 搜索 / 多语言 / 主题色 / AI 摘要）
+│   ├── admin.js                     # 后台管理 SPA（仪表盘 / 文章 / 评论 / 标签 / 音乐 / 设置 / AI 写作助手 / 评论汇总）
+│   ├── admin.css                    # 后台样式（玻璃拟态 v4，响应式）
+│   ├── music-player.js              # 前台全站音乐播放器（右下角悬浮按钮 + 弹出面板 / 播放列表 / 进度记忆）
+│   ├── i18n.js                      # 国际化模块（中/英/日/韩/印地，内置中文兜底）
+│   ├── posts.js                     # 静态模式文章数据（由「导出 posts.js」生成）
+│   ├── locales/                     # 语言包（zh-CN / en / ja / ko / hi）
+│   ├── flags/                       # 语言切换用的 SVG 国旗图标
+│   ├── fonts/                       # 衬线字体（local 分片 + CDN 分片）
+│   ├── feed.xml                     # 静态 RSS（可选，云端由 API 生成）
+│   ├── sitemap.xml                  # 静态 Sitemap（可选）
+│   ├── robots.txt                   # 爬虫规则（禁止抓取后台，声明 Sitemap）
+│   ├── ads.txt                      # 广告声明（可选，配合 config.js ads）
+│   └── _redirects                   # Cloudflare Pages 路由（SPA 回退 + /public 重定向）
+├── functions/                       # Cloudflare API（Pages Functions / Workers 共用）
+│   ├── api/
+│   │   ├── posts.js                 # 文章列表 / 创建
+│   │   ├── posts/[id].js            # 单篇文章（GET / PUT / DELETE，删除级联清理）
+│   │   ├── posts/[id]/comments.js   # 文章评论（GET / POST，支持嵌套回复）
+│   │   ├── posts/[id]/comments/[cid].js  # 单条评论删除（管理）
+│   │   ├── posts/[id]/stats.js      # 阅读 / 点赞统计
+│   │   ├── comments.js              # 全局评论列表（管理后台）
+│   │   ├── comments/[id].js         # 评论审核 / 删除
+│   │   ├── ai/
+│   │   │   ├── ping.js              # AI 可用性探测（降级开关）
+│   │   │   ├── summary.js           # 文章摘要（单篇缓存 30 天 + 限流）
+│   │   │   ├── assist.js            # 写作助手（标题建议 / 润色 / 翻译）
+│   │   │   └── comments.js          # 评论汇总 / 单条垃圾检测
+│   │   ├── media.js                 # 媒体列表 / 登记元数据（仅 http/https）
+│   │   ├── media/upload-url.js      # 签发 R2 预签名上传 URL（图片直传）
+│   │   ├── media/[id].js            # 媒体删除（先删 R2 对象再删 D1 行）
+│   │   ├── settings.js              # 站点设置
+│   │   ├── stats/trend.js           # 30 天趋势数据
+│   │   ├── site-files/              # 站点产物（feed.xml / sitemap.xml / posts.js）
+│   │   │   ├── index.js             # 列出 / 保存产物
+│   │   │   └── [name].js            # 下载产物内容
+│   │   ├── admin/
+│   │   │   ├── setup.js             # 首次设置密码
+│   │   │   ├── login.js             # 密码登录
+│   │   │   ├── logout.js            # 登出
+│   │   │   └── password.js          # 修改密码
+│   │   ├── feed.xml.js              # RSS 生成
+│   │   └── sitemap.xml.js           # Sitemap 生成
+│   └── _lib/
+│       ├── api-core.js              # API 核心逻辑（D1 + 鉴权 + 安全）
+│       ├── ai.js                    # Workers AI 封装（模型 / 提示词 / 限流 / 降级）
+│       ├── media.js                 # 媒体 R2 直传（签名 / 删除 / 元数据）
+│       └── music.js                 # 音乐 API（R2 预签名直传 / 元数据 CRUD / R2 对象同步删除）
+├── worker.js                        # Cloudflare Workers 入口（路由分发，含 /api/ai/* 接线）
+├── migrations/                      # D1 数据库迁移（CI 自动执行，记账表幂等）
+│   ├── 0001_init.sql                # 基础表结构
+│   ├── 0002_site_files.sql          # 站点文件存储
+│   ├── 0003_cover_column.sql        # 封面图字段（老库补列）
+│   ├── 0004_post_meta.sql           # 分类 / 发布状态（老库补列）
+│   ├── 0005_comment_status.sql      # 评论审核状态（老库补列）
+│   ├── 0006_media.sql               # 媒体资源表
+│   ├── 0007_settings.sql            # 站点设置表
+│   ├── 0008_stats_daily.sql         # 每日统计表
+│   ├── 0009_comment_status_index.sql # 评论状态索引
+│   ├── 0010_admin_must_change.sql   # 强制改密标记（老库补列）
+│   ├── 0011_comment_reply.sql       # 评论回复 parent_id 字段（老库补列）
+│   ├── 0012_clear_orphaned_nav.sql  # 清理遗留 nav 配置（数据清理）
+│   ├── 0013_music.sql               # 音乐播放列表表（元数据；音频本体存 R2）
+│   └── 0014_purge_base64_media.sql  # 清理历史 base64 媒体记录（数据清理）
+├── scripts/
+│   └── migrate-kv-to-d1.mjs         # 一次性迁移：KV 数据 → D1
+├── .github/workflows/
+│   ├── deploy.yml                   # GitHub Actions 自动部署到 Workers
+│   └── migrate-kv-to-d1.yml         # 手动触发 KV → D1 迁移
+├── seed.js                          # 导入示例文章到云端 API
+├── index.html                       # 根跳转页（自动跳 public/index.html）
+├── wrangler.toml                    # Cloudflare Pages 配置
+├── wrangler.workers.toml            # Cloudflare Workers 配置
+├── smoke-test.js                    # 冒烟测试（API + 前端逻辑，71 例）
+├── gb-verify.js                     # 留言板专项验证（18 例）
+├── search-verify.js                 # 搜索专项验证（13 例）
+├── README.md                        # 中文说明
+└── README_EN.md                     # 英文说明
+```
 
 ---
 
@@ -365,22 +375,24 @@ D1 是 Cloudflare 的边缘 SQLite 数据库，本项目的**主存储**：
 | `admin_auth` | 管理员密码 | k, salt, hash, iter, must_change |
 | `admin_sessions` | 登录会话 | token, exp |
 | `admin_fails` | 登录限流 | ip, n, until |
-| `media` | 媒体资源 | id, name, url, type, size |
+| `media` | 媒体资源 | id, name, url, type, size（url 为 R2 公开地址或外链） |
 | `site_settings` | 站点设置 | k, v（键值对） |
 | `site_files` | 站点产物 | name, content, updated_at（feed/sitemap/posts.js） |
 | `stats_daily` | 每日统计 | post_id, date, views, likes |
 | `music` | 音乐播放列表 | id, title, artist, url（R2 公开地址）, cover, size, duration, sort |
 
-### R2（对象存储）
+### R2（对象存储：音乐 + 媒体图片）
 
-R2 用于存放**音乐音频本体**（元数据在 D1，`url` 指向 R2 公开地址）：
+R2 用于存放**音乐音频**与**媒体图片本体**（元数据在 D1，`url` 指向 R2 公开地址）。音乐与图片使用**独立的桶**：
 
 | 能力 | 说明 |
 | --- | --- |
 | 浏览器直传 | 后端签发 SigV4 预签名 PUT URL（含 `UNSIGNED-PAYLOAD` / `x-amz-date`），文件**不经过 Worker** 直传 R2，上传进度前端可见 |
-| 公开读取 | 绑定 R2 自定义域名（如 `music.2024921.xyz` → `public.r2.dev`），前台播放器直接拉流 |
-| 同步删除 | 删除曲目时 Worker 侧签名发起 R2 DELETE（`host;x-amz-content-sha256;x-amz-date` 签名头），再删 D1 行，两者一致 |
-| 格式白名单 | mp3 / m4a / ogg / wav / aac / opus / flac，单文件 ≤ 30MB |
+| 公开读取 | 绑定 R2 自定义域名（如 `music.2024921.xyz` / `media.2024921.xyz` → `public.r2.dev`），前台直接拉流 / 显示图片 |
+| 同步删除 | 删除时 Worker 侧签名发起 R2 DELETE（`host;x-amz-content-sha256;x-amz-date` 签名头），再删 D1 行，两者一致 |
+| 音乐白名单 | mp3 / m4a / ogg / wav / aac / opus / flac，单文件 ≤ 30MB |
+| 图片白名单 | png / jpg / jpeg / webp / gif / svg / avif / bmp / ico，单文件 ≤ 10MB |
+| 降级 | 未配置 R2 凭据时，上传接口自动返回 503，读取/其余功能不受影响 |
 
 > **💡 缩略图/封面/音频首次加载偏慢？建议在 Cloudflare 控制台给媒体、音乐子域配缓存规则。**
 > 浏览器直传的 R2 对象默认不带长缓存头，首次加载需回源；代码侧无法安全地给
@@ -441,11 +453,12 @@ window.BLOG_CONFIG = {
 
   // ====== 广告位 ======
   ads: {
-    enabled: false,
-    belowSearch: '',       // 首页列表上方
-    between: '',           // 列表间隔插入
-    betweenEvery: 3,       // 每 N 篇插入
-    content: ''            // 文章详情底部
+    enabled: false,          // 总开关（启用后需填真实广告代码）
+    client: '',              // AdSense 发布商 ID（ca-pub-xxxx），启用时自动加载 adsbygoogle.js
+    belowSearch: '',         // 首页列表上方
+    between: '',             // 列表间隔插入
+    betweenEvery: 3,         // 每 N 篇插入
+    content: ''              // 文章详情底部
   }
 };
 ```
@@ -475,6 +488,7 @@ window.BLOG_CONFIG = {
 | 限流 | 同一 IP 连续失败 5 次锁定 15 分钟 |
 | 文章加密 | 接口预留 `enc` / `protected` 字段（可导入外部加密文章），编辑器暂未开启端到端加密 UI |
 | 评论安全 | XSS 转义 + SQL 注入参数化 + 每 IP 频率限制 + Origin 校验 + **重复发送拦截**（同分区同昵称同内容 409） |
+| 媒体 URL | 仅接受 `http(s)`（R2 公开地址或外链），拒绝 `javascript:` / `data:` 等，杜绝脚本类内容登记 |
 | 接口边界 | 未知 /api/* 返回 JSON 404，绝不回退到 index.html |
 | CORS | 配置 `SITE_URL` 后仅允许本站来源，未配置回退为回显来源 |
 
@@ -483,10 +497,12 @@ window.BLOG_CONFIG = {
 ## 🧪 测试
 
 ```bash
-node smoke-test.js
+node smoke-test.js      # 冒烟测试 71 例（Markdown / TOC / 高亮 / 导入导出 / 管理门禁 / 评论安全 / 统计 / 搜索 / RSS / Sitemap / 云端 API / 缓存）
+node gb-verify.js       # 留言板专项验证 18 例
+node search-verify.js   # 搜索专项验证 13 例
 ```
 
-覆盖 Markdown 渲染、TOC、代码高亮、导入导出、管理门禁、置顶、归档、标签、评论安全、哈希 / 托管加密字段、统计、搜索、RSS、Sitemap、云端 API、缓存等。
+三套测试在每次 CI 部署前自动运行，失败即中止不部署。
 
 导入示例文章到已部署的云端实例：
 
