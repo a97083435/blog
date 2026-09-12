@@ -71,7 +71,10 @@ function svgIcon(name, size) {
     pause: '<svg ' + s + ' ' + c + '><path d="M7 4.5h3.4v15H7zM13.6 4.5H17v15h-3.4z"/></svg>',
     prev: '<svg ' + s + ' ' + c + '><path d="M6 5v14M19 5l-9 7 9 7z"/></svg>',
     next: '<svg ' + s + ' ' + c + '><path d="M18 5v14M5 5l9 7-9 7z"/></svg>',
-    volume: '<svg ' + s + ' ' + c + '><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>'
+    volume: '<svg ' + s + ' ' + c + '><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
+    gauge: '<svg ' + s + ' ' + c + '><path d="M4.5 17.5A8.5 8.5 0 1 1 19.5 17.5"/><path d="M12 14.2 16.8 9.4M3 17.5h18"/></svg>',
+    sliders: '<svg ' + s + ' ' + c + '><path d="M4 7h9M17 7h3M4 17h3M11 17h9M13 4.5v5M7 14.5v5"/></svg>',
+    clock: '<svg ' + s + ' ' + c + '><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2.2"/></svg>'
   };
   return I[name] || '';
 }

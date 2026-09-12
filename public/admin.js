@@ -314,7 +314,7 @@
   /* NAV 改为函数，每次调用时重新执行 t()，语言切换后自动更新 */
   function getNav() {
     return [
-      { group: t('admin.sidebar.overview'), items: [{ key: 'dashboard', label: t('admin.sidebar.dashboard'), icon: 'sitemap', href: '/admin' }] },
+      { group: t('admin.sidebar.overview'), items: [{ key: 'dashboard', label: t('admin.sidebar.dashboard'), icon: 'gauge', href: '/admin' }] },
       { group: t('admin.sidebar.postManage'), items: [
         { key: 'posts', label: t('admin.sidebar.allPosts'), icon: 'list', href: '/admin/posts' },
         { key: 'write', label: t('admin.sidebar.writeNew'), icon: 'pen', href: '/admin/posts/new' },
@@ -322,12 +322,12 @@
       ] },
       { group: t('admin.sidebar.commentManage'), items: [
         { key: 'comments', label: t('admin.sidebar.allComments'), icon: 'quote', href: '/admin/comments' },
-        { key: 'comments-pending', label: t('admin.sidebar.pendingComments'), icon: 'lock', href: '/admin/comments/pending', badge: 'pending' }
+        { key: 'comments-pending', label: t('admin.sidebar.pendingComments'), icon: 'clock', href: '/admin/comments/pending', badge: 'pending' }
       ] },
       { group: t('admin.sidebar.contentSettings'), items: [
         { key: 'media', label: t('admin.sidebar.media'), icon: 'image', href: '/admin/media' },
         { key: 'music', label: t('admin.sidebar.musicManage'), icon: 'music', href: '/admin/music' },
-        { key: 'settings', label: t('admin.sidebar.settings'), icon: 'sitemap', href: '/admin/settings' }
+        { key: 'settings', label: t('admin.sidebar.settings'), icon: 'sliders', href: '/admin/settings' }
       ] }
     ];
   }
@@ -338,7 +338,7 @@
       var items = g.items.map(function (it) {
         var badge = (it.badge === 'pending') ? '<span class="ab-nav-count" style="display:none"></span>' : '';
         return '<a class="ab-nav-item ' + (it.key === activeKey ? 'active' : '') + '" data-link="' + esc(it.href) + '">' +
-          icon(it.icon, 17) + '<span class="ab-nav-text">' + esc(it.label) + '</span>' + badge + '</a>';
+          '<span class="ab-nav-icon">' + icon(it.icon, 17) + '</span><span class="ab-nav-text">' + esc(it.label) + '</span>' + badge + '</a>';
       }).join('');
       return '<div class="ab-nav-group"><div class="ab-nav-group-title">' + esc(g.group) + '</div>' + items + '</div>';
     }).join('');
