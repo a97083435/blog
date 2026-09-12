@@ -203,6 +203,8 @@
   "admin.dashboard.noComments": "아직 댓글이 없습니다",
   "admin.dashboard.dailyViews": "일일 방문 (30일)",
   "admin.dashboard.dailyComments": "일일 댓글 (30일)",
+  "admin.dashboard.visitCount": "방문",
+  "admin.dashboard.commentCount": "댓글",
   "admin.dashboard.noViewData": "방문 데이터 없음",
   "admin.dashboard.noCommentData": "댓글 데이터 없음",
   "admin.dashboard.cloudOnly": "방문 추세는 클라우드 모드(Cloudflare)가 필요합니다",

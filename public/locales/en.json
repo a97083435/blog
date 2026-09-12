@@ -203,6 +203,8 @@
   "admin.dashboard.noComments": "No comments yet",
   "admin.dashboard.dailyViews": "Daily visits (30 days)",
   "admin.dashboard.dailyComments": "Daily comments (30 days)",
+  "admin.dashboard.visitCount": "Visits",
+  "admin.dashboard.commentCount": "Comments",
   "admin.dashboard.noViewData": "No visit data",
   "admin.dashboard.noCommentData": "No comment data",
   "admin.dashboard.cloudOnly": "Visit trends require cloud mode (Cloudflare)",

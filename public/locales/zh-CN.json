@@ -203,6 +203,8 @@
   "admin.dashboard.noComments": "暂无评论",
   "admin.dashboard.dailyViews": "近30天每日访问量",
   "admin.dashboard.dailyComments": "近30天每日评论数",
+  "admin.dashboard.visitCount": "访问",
+  "admin.dashboard.commentCount": "评论",
   "admin.dashboard.noViewData": "暂无访问数据",
   "admin.dashboard.noCommentData": "暂无评论数据",
   "admin.dashboard.cloudOnly": "访问趋势需在云端模式（Cloudflare）下查看",

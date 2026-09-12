@@ -203,6 +203,8 @@
   "admin.dashboard.noComments": "अभी कोई टिप्पणी नहीं",
   "admin.dashboard.dailyViews": "दैनिक विज़िट (30 दिन)",
   "admin.dashboard.dailyComments": "दैनिक टिप्पणियाँ (30 दिन)",
+  "admin.dashboard.visitCount": "विज़िट",
+  "admin.dashboard.commentCount": "टिप्पणियाँ",
   "admin.dashboard.noViewData": "कोई विज़िट डेटा नहीं",
   "admin.dashboard.noCommentData": "कोई टिप्पणी डेटा नहीं",
   "admin.dashboard.cloudOnly": "विज़िट ट्रेंड के लिए क्लाउड मोड (Cloudflare) आवश्यक है",

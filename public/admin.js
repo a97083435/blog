@@ -673,45 +673,144 @@
       return '<div class="ab-feed-item"><div class="ab-feed-main"><b>' + esc(c.author || t('admin.dashboard.anonymous')) + '</b><span>' + esc((c.content || '').slice(0, 30)) + '</span></div></div>';
     }).join('') : '<div class="ab-empty"><div class="ab-empty-ico">💬</div><p>' + t('admin.dashboard.noComments') + '</p></div>';
 
-    // 趋势
+    // 趋势（统一时间轴：日期 + 访问数 + 评论数）
     if (cloudOn()) {
+      var days = [];
       try {
         var td = await api('api/stats/trend?days=30');
         var trend = (td && td.trend) || [];
-        content.querySelector('#abTrendViews').innerHTML = lineChart(trend.map(function (t) { return t.views; }), t('admin.dashboard.dailyViews'));
-      } catch (e) { content.querySelector('#abTrendViews').innerHTML = '<div class="ab-empty"><p>' + t('admin.dashboard.noViewData') + '</p></div>'; }
-      try {
         var byDate = {};
-        commentsAll.forEach(function (c) { var d = fmtDate(c.date); byDate[d] = (byDate[d] || 0) + 1; });
-        var last30 = [];
-        for (var i = 29; i >= 0; i--) { var d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10); last30.push(byDate[d] || 0); }
-        content.querySelector('#abTrendCmt').innerHTML = lineChart(last30, t('admin.dashboard.dailyComments'));
-      } catch (e) { content.querySelector('#abTrendCmt').innerHTML = '<div class="ab-empty"><p>' + t('admin.dashboard.noCommentData') + '</p></div>'; }
+        commentsAll.forEach(function (c) { var k = fmtDate(c.date); byDate[k] = (byDate[k] || 0) + 1; });
+        days = trend.map(function (t) { return { date: t.date, views: Number(t.views) || 0, comments: byDate[t.date] || 0 }; });
+      } catch (e) { /* 保持空 → 显示无数据 */ }
+      if (days.length) {
+        content.querySelector('#abTrendViews').innerHTML = lineChart(days, 'views') + '<div class="ab-text-sm ab-muted" style="margin-top:6px">' + icon('eye', 13) + ' ' + t('admin.dashboard.dailyViews') + '</div>';
+        content.querySelector('#abTrendCmt').innerHTML = lineChart(days, 'comments') + '<div class="ab-text-sm ab-muted" style="margin-top:6px">' + icon('quote', 13) + ' ' + t('admin.dashboard.dailyComments') + '</div>';
+        bindTrendCharts(content);
+      } else {
+        content.querySelector('#abTrendViews').innerHTML = '<div class="ab-empty"><p>' + t('admin.dashboard.noViewData') + '</p></div>';
+        content.querySelector('#abTrendCmt').innerHTML = '<div class="ab-empty"><p>' + t('admin.dashboard.noCommentData') + '</p></div>';
+      }
     } else {
       content.querySelector('#abTrendViews').innerHTML = '<div class="ab-empty"><p>' + t('admin.dashboard.cloudOnly') + '</p></div>';
       content.querySelector('#abTrendCmt').innerHTML = '<div class="ab-empty"><p>' + t('admin.dashboard.cloudOnly') + '</p></div>';
     }
   }
 
-  function lineChart(values, label) {
+  var _chartData = {}; // metric → days[]，供交互浮层读取
+
+  /* 趋势折线图：SVG 折线/数据点 + HTML 时间轴刻度 + 点击/悬停浮层（时间·访问·评论） */
+  function lineChart(days, metric) {
     var w = 520, h = 200, pad = 28;
+    var n = days.length;
+    if (!n) return '<div class="ab-empty"><p>' + t('admin.dashboard.noData') + '</p></div>';
+    _chartData[metric] = days;
+    var values = days.map(function (d) { return Number(d[metric]) || 0; });
     var max = Math.max(1, Math.max.apply(null, values));
-    var n = values.length;
-    if (n === 0) return '<div class="ab-empty"><p>' + t('admin.dashboard.noData') + '</p></div>';
     var step = (w - pad * 2) / Math.max(1, n - 1);
     var pts = values.map(function (v, i) {
-      var x = pad + i * step;
-      var y = h - pad - (v / max) * (h - pad * 2);
-      return [x, y];
+      return [pad + i * step, h - pad - (v / max) * (h - pad * 2)];
     });
     var path = pts.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
-    var dots = pts.map(function (p) { return '<circle class="dot" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="2.5"/>'; }).join('');
+    var dots = pts.map(function (p) { return '<circle class="dot" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="2.6"/>'; }).join('');
     var base = '<line class="axis" x1="' + pad + '" y1="' + (h - pad) + '" x2="' + (w - pad) + '" y2="' + (h - pad) + '"/>';
-    var last = pts[pts.length - 1];
-    return '<svg class="ab-chart" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' + base +
-      '<path class="line" d="' + path + '"/>' + dots +
-      '<text class="lbl" x="' + (w - pad) + '" y="' + (last[1] - 6) + '" text-anchor="end">' + (values[values.length - 1]) + '</text>' +
-      '</svg><div class="ab-text-sm ab-muted" style="margin-top:6px">' + esc(label) + t('admin.dashboard.peak') + ' ' + max + '）</div>';
+    var guide = '<line class="guide" x1="0" y1="' + pad + '" x2="0" y2="' + (h - pad) + '"/>';
+    // 时间轴刻度：约 6 个（首尾必含），格式 M/D
+    var tickEvery = Math.max(1, Math.ceil(n / 6));
+    var ticks = [];
+    for (var k = 0; k < n; k += tickEvery) ticks.push(k);
+    if (ticks[ticks.length - 1] !== n - 1) ticks.push(n - 1);
+    var axisHtml = ticks.map(function (i) {
+      return '<span class="tick" style="left:' + (pts[i][0] / w * 100).toFixed(2) + '%">' + esc(days[i].date.slice(5).replace('-', '/')) + '</span>';
+    }).join('');
+    return '<div class="ab-chart-box" data-metric="' + metric + '">' +
+      '<svg class="ab-chart" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' + base + guide +
+      '<path class="line" d="' + path + '"/>' + dots + '</svg>' +
+      '<div class="ab-axis">' + axisHtml + '</div>' +
+      '<div class="ab-chart-tip"></div>' +
+    '</div>';
+  }
+
+  /* 趋势图交互：悬停实时预览 + 点击固定浮层（时间 · 访问 · 评论） */
+  function bindTrendCharts(content) {
+    var W = 520, H = 200, PAD = 28;
+    var pinned = -1; // 当前固定的数据点下标；-1 = 未固定
+    function hideTips(content, except) {
+      content.querySelectorAll('.ab-chart-tip.show').forEach(function (tip) { if (tip !== except) tip.classList.remove('show'); });
+    }
+    content.querySelectorAll('.ab-chart-box').forEach(function (box) {
+      var svg = box.querySelector('svg');
+      var guide = box.querySelector('.guide');
+      var dots = box.querySelectorAll('.dot');
+      var tip = box.querySelector('.ab-chart-tip');
+      var days = _chartData[box.getAttribute('data-metric')] || [];
+      var n = dots.length;
+      if (!n || !days.length) return;
+      var step = (W - PAD * 2) / (n - 1);
+      var metric = box.getAttribute('data-metric');
+      var maxV = Math.max(1, Math.max.apply(null, days.map(function (d) { return Number(d[metric]) || 0; })));
+      function nearest(e) {
+        var r = svg.getBoundingClientRect();
+        var vx = (e.clientX - r.left) / r.width * W;
+        var i = Math.round((vx - PAD) / step);
+        return Math.max(0, Math.min(n - 1, i));
+      }
+      function paint(i, isPin) {
+        var px = PAD + i * step;
+        var v = Number(days[i][metric]) || 0;
+        var py = H - PAD - (v / maxV) * (H - PAD * 2);
+        dots.forEach(function (dd, k) {
+          var on = k === i;
+          dd.classList.toggle('on', on);
+          dd.setAttribute('r', on ? '4.4' : '2.6');
+        });
+        guide.setAttribute('x1', px.toFixed(1)); guide.setAttribute('x2', px.toFixed(1));
+        guide.setAttribute('y1', PAD); guide.setAttribute('y2', H - PAD);
+        guide.style.opacity = '.5';
+        tip.innerHTML = '<b>' + esc(days[i].date.slice(5).replace('-', '/')) + '</b>' +
+          '<span class="tip-v">' + t('admin.dashboard.visitCount') + ' ' + esc(String(days[i].views)) + '</span>' +
+          '<span class="tip-c">' + t('admin.dashboard.commentCount') + ' ' + esc(String(days[i].comments)) + '</span>';
+        var lft = Math.max(9, Math.min(91, px / W * 100));
+        tip.style.left = lft.toFixed(2) + '%';
+        if (py < H * 0.32) { tip.style.transform = 'translate(-50%, 6px)'; tip.style.top = (py / H * 100).toFixed(2) + '%'; }
+        else { tip.style.transform = 'translate(-50%, -100%)'; tip.style.top = (py / H * 100).toFixed(2) + '%'; }
+        tip.classList.add('show');
+        if (isPin) pinned = i; else pinned = -1;
+      }
+      box.addEventListener('pointermove', function (e) {
+        if (pinned !== -1) return; // 已固定时悬停不挪动浮层
+        hideTips(content, tip);
+        paint(nearest(e), false);
+      });
+      box.addEventListener('pointerleave', function () {
+        if (pinned === -1) {
+          tip.classList.remove('show');
+          dots.forEach(function (dd) { dd.classList.remove('on'); dd.setAttribute('r', '2.6'); });
+          guide.style.opacity = '0';
+        }
+      });
+      box.addEventListener('click', function (e) {
+        var i = nearest(e);
+        if (pinned === i) { // 再点同一处 → 取消固定
+          pinned = -1;
+          tip.classList.remove('show');
+          dots.forEach(function (dd) { dd.classList.remove('on'); dd.setAttribute('r', '2.6'); });
+          guide.style.opacity = '0';
+        } else {
+          hideTips(content, tip);
+          paint(i, true);
+        }
+      });
+    });
+    document.addEventListener('click', function (e) {
+      var inside = e.target && e.target.closest && e.target.closest('.ab-chart-box');
+      if (!inside && pinned !== -1) {
+        pinned = -1;
+        content.querySelectorAll('.ab-chart-tip').forEach(function (tp) { tp.classList.remove('show'); });
+        content.querySelectorAll('.ab-chart-box .dot.on').forEach(function (dd) { dd.classList.remove('on'); dd.setAttribute('r', '2.6'); });
+        content.querySelectorAll('.ab-chart-box .guide').forEach(function (g) { g.style.opacity = '0'; });
+      }
+    });
   }
 
   /* ====================== 文章列表 ====================== */

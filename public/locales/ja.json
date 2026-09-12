@@ -203,6 +203,8 @@
   "admin.dashboard.noComments": "まだコメントがありません",
   "admin.dashboard.dailyViews": "1日あたりのアクセス（30日）",
   "admin.dashboard.dailyComments": "1日あたりのコメント（30日）",
+  "admin.dashboard.visitCount": "アクセス",
+  "admin.dashboard.commentCount": "コメント",
   "admin.dashboard.noViewData": "アクセスデータがありません",
   "admin.dashboard.noCommentData": "コメントデータがありません",
   "admin.dashboard.cloudOnly": "アクセス推移はクラウドモード（Cloudflare）が必要です",

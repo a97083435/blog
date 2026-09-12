@@ -329,13 +329,33 @@
 .ab-section-title { font-size: 15px; font-weight: 700; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
 
 /* ---------- 图表 ---------- */
-.ab-chart { width: 100%; height: 210px; }
+.ab-chart-box { position: relative; }
+.ab-chart { width: 100%; height: 210px; display: block; }
 .ab-chart .bar { fill: var(--ab-primary); transition: opacity .15s; }
 .ab-chart .bar:hover { opacity: .8; }
 .ab-chart .line { fill: none; stroke: var(--ab-primary); stroke-width: 2.2; }
-.ab-chart .dot { fill: var(--ab-card-solid); stroke: var(--ab-primary); stroke-width: 2; }
+.ab-chart .dot { fill: var(--ab-card-solid); stroke: var(--ab-primary); stroke-width: 2; cursor: pointer; }
+.ab-chart .dot.on { fill: var(--ab-primary); stroke: #fff; stroke-width: 2.8; }
 .ab-chart .axis { stroke: var(--ab-border); stroke-width: 1; }
 .ab-chart .lbl { fill: var(--ab-muted); font-size: 10px; }
+.ab-chart .guide { stroke: var(--ab-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; transition: opacity .12s; pointer-events: none; }
+/* 时间轴刻度（HTML 层，避免 SVG 拉伸变形） */
+.ab-axis { position: relative; height: 15px; margin: 4px 0 2px; }
+.ab-axis .tick {
+  position: absolute; transform: translateX(-50%); font-size: 10.5px; color: var(--ab-muted);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+/* 点击/悬停浮层：时间 · 访问 · 评论 */
+.ab-chart-tip {
+  position: absolute; z-index: 6; display: none; padding: 6px 10px; border-radius: 9px;
+  background: var(--ab-card-solid); border: 1px solid var(--ab-border-strong);
+  box-shadow: var(--ab-shadow-lg); font-size: 12px; line-height: 1.5;
+  white-space: nowrap; pointer-events: none; color: var(--ab-text);
+}
+.ab-chart-tip.show { display: block; }
+.ab-chart-tip b { display: block; font-size: 11.5px; color: var(--ab-muted); margin-bottom: 2px; }
+.ab-chart-tip .tip-v { color: var(--ab-text); font-weight: 700; margin-right: 8px; }
+.ab-chart-tip .tip-c { color: var(--ab-muted); }
 .ab-legend { display: flex; gap: 16px; font-size: 12px; color: var(--ab-muted); margin-top: 10px; }
 .ab-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
 
