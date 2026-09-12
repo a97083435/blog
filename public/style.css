@@ -1862,6 +1862,20 @@ kbd {
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .gate-form .btn { width: 100%; justify-content: center; padding: 11px; font-size: 14.5px; }
+/* 门禁页的次级链接按钮（如「首次部署？使用安装密钥初始化」「返回登录」） */
+.gate-link {
+  margin-top: 14px;
+  display: inline-block;
+  border: none;
+  background: none;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.gate-link:hover { color: var(--accent); }
 .alert-strip {
   margin-top: 12px;
   padding: 8px 12px;

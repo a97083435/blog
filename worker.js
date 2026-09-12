@@ -6,7 +6,7 @@
  *   · 其余请求 → 静态资源（由 wrangler.workers.toml [assets] 绑定提供）
  * 部署：npx wrangler deploy
  * ============================================================ */
-import { handlePosts, handlePostId, handleFeed, handleComments, handleCommentId, handleSitemap, handleSiteFiles, handleStats, handleAdminSetup, handleAdminLogin, handleAdminLogout, getCorsHeaders, handleCommentsList, handleCommentUpdate, handleCommentDeleteGlobal, handleMedia, handleMediaId, handleSettings, handleAdminPassword, handleStatsTrend, dbFirst } from './functions/_lib/api-core.js';
+import { handlePosts, handlePostId, handleFeed, handleComments, handleCommentId, handleSitemap, handleSiteFiles, handleStats, handleAdminSetup, handleAdminLogin, handleAdminLogout, getCorsHeaders, securityHeaders, handleCommentsList, handleCommentUpdate, handleCommentDeleteGlobal, handleMedia, handleMediaId, handleSettings, handleAdminPassword, handleStatsTrend, dbFirst } from './functions/_lib/api-core.js';
 import { onRequest as aiPing } from './functions/api/ai/ping.js';
 import { onRequest as aiSummary } from './functions/api/ai/summary.js';
 import { onRequest as aiAssist } from './functions/api/ai/assist.js';
@@ -30,7 +30,8 @@ export default {
         status: 500,
         headers: Object.assign(
           { 'Content-Type': 'application/json; charset=utf-8' },
-          getCorsHeaders(request, env)
+          getCorsHeaders(request, env),
+          securityHeaders()
         )
       });
     }
@@ -143,26 +144,26 @@ export default {
     if (url.pathname === '/api' || url.pathname.indexOf('/api/') === 0) {
       return new Response(JSON.stringify({ ok: false, error: 'Not Found' }), {
         status: 404,
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+        headers: Object.assign({ 'Content-Type': 'application/json; charset=utf-8' }, securityHeaders())
       });
     }
 
     // 静态资源（index.html / style.css / app.js / …）
     if (env.ASSETS) {
-      const res = await env.ASSETS.fetch(request);
+      let res = await env.ASSETS.fetch(request);
       // SPA 回退：干净路径 / 首页 / 归档 / 关于 / 标签 / /posts/<别名>/ /admin / /write，
       // 以及 /api 以外的任何无扩展名路径，都返回 index.html（由前端 app.js 依据 pathname 渲染）。
       // 仅对 GET/HEAD 回退：POST 等非幂等方法拿到 HTML 会误导调用方。
       if (res.status === 404 && (request.method === 'GET' || request.method === 'HEAD') && !/\.[a-zA-Z0-9]+$/.test(url.pathname)) {
-        const idx = await env.ASSETS.fetch(new Request(url.origin + '/', request));
-        if (idx.status === 200) return idx;
-        return res;
+        res = await env.ASSETS.fetch(new Request(url.origin + '/', request));
       }
       // 性能：给静态资源加缓存头，避免每次刷新全量重下大文件（app.js 184KB / style.css 94KB）。
       //  · 带扩展名的静态文件：1 小时强缓存 + 1 天 SWR（部署后 CF_ZONE_ID purge 立即生效，无陈旧感）
       //  · 无扩展名（HTML SPA 入口）：no-cache（每次重新验证，ETag 命中即 304，体积极小）
+      // 安全：所有静态响应统一附带安全响应头（nosniff / CSP / frame 防护等）。
       try {
         const headers = new Headers(res.headers);
+        Object.keys(securityHeaders()).forEach(function (k) { headers.set(k, securityHeaders()[k]); });
         const hasExt = /\.[a-zA-Z0-9]+$/.test(url.pathname);
         if (hasExt && request.method === 'GET') {
           headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');

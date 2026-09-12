@@ -6,7 +6,7 @@
  * ============================================================================ */
 'use strict';
 
-var BLOG_VERSION = '2.4.2';
+var BLOG_VERSION = '2.5.0';
 
 /* ---------- 全局缓存 ---------- */
 var _searchOpen = false;   // 顶部导航搜索是否展开
@@ -1029,6 +1029,22 @@ async function cloudLogout() {
     try { await apiFetch('api/admin/logout', { method: 'POST', body: '{}' }); } catch (e) {}
   }
 }
+/** 云端初始化：使用安装密钥设置管理员密码（POST /api/admin/setup，携带 X-Setup-Key），
+ * 成功后自动登录拿 token。后端 BLOG_ADMIN_SETUP_KEY 未配置时返回 409 并透传提示。 */
+async function cloudSetupAdmin(pwd, setupKey) {
+  try {
+    var data = await apiFetch('api/admin/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Setup-Key': String(setupKey || '') },
+      body: JSON.stringify({ password: String(pwd || '') })
+    });
+    if (!data || !data.ok) return { ok: false, message: (data && data.error) || t('admin.loginFail') };
+    // 设置成功 → 自动登录
+    return await cloudLogin(pwd);
+  } catch (e) {
+    return { ok: false, message: t('admin.loginFail') + '（HTTP ' + (e && e.message ? e.message.replace('HTTP ', '') : '') + '）' };
+  }
+}
 function adminLogout() {
   if (_cloudOn()) { cloudLogout(); }
   else { _setAdminSession(false); }
@@ -1106,11 +1122,11 @@ function ensureAdminBundle() {
       function done() { resolve(!!(window.QingyuAdmin && window.QingyuAdmin.mount)); }
       if (!document.querySelector('link[data-admin-css]')) {
         var l = document.createElement('link');
-        l.rel = 'stylesheet'; l.href = 'admin.css'; l.setAttribute('data-admin-css', '1');
+        l.rel = 'stylesheet'; l.href = 'admin.css?v=' + BLOG_VERSION; l.setAttribute('data-admin-css', '1');
         document.head.appendChild(l);
       }
       var s = document.createElement('script');
-      s.src = 'admin.js';
+      s.src = 'admin.js?v=' + BLOG_VERSION;
       s.onload = done;
       s.onerror = done;
       document.head.appendChild(s);
@@ -2350,13 +2366,21 @@ function renderWrite() {
   html += '<main class="container page-fade write-page">';
   if (!adminOk()) {
     if (_cloudOn()) {
-      // 云端模式：密码校验于 Cloudflare D1 后端，此页只做登录（token 已存则直接进入编辑）
+      // 云端模式：密码校验于 Cloudflare D1 后端，此页只做登录（token 已存则直接进入编辑）。
+      // 首次部署：登录框下方提供「安装密钥初始化」入口（后端 BLOG_ADMIN_SETUP_KEY 必填）。
       html += '<div class="card gate-card">'
         + '<div class="gate-badge">' + svgIcon('lock', 26) + '</div>'
         + '<h3 class="gate-title">' + t('admin.login') + '</h3>'
         + '<p class="gate-sub">' + t('admin.loginHint') + '</p>'
         + '<div class="gate-form"><input type="password" id="gatePwd" placeholder="' + t('admin.pwdLabel') + '" autocomplete="current-password"><button class="btn btn-primary" id="btnGate">' + svgIcon('logout', 15) + ' ' + t('admin.loginBtn') + '</button></div>'
         + '<div class="gate-msg alert-strip" id="gateMsg"></div>'
+        + '<button type="button" class="gate-link" id="btnCloudSetup">' + t('admin.gotoCloudSetup') + '</button>'
+        + '<div class="gate-form" id="gateSetupForm" style="display:none">'
+        + '<input type="password" id="setupKey" placeholder="' + t('admin.setupKeyLabel') + '" autocomplete="off">'
+        + '<input type="password" id="setupPwd2" placeholder="' + t('admin.pwdLabel') + '" autocomplete="new-password">'
+        + '<button class="btn btn-primary" id="btnCloudSetupGo">' + t('admin.setupBtn') + '</button>'
+        + '<button type="button" class="gate-link" id="btnCloudSetupBack">' + t('admin.backToLogin') + '</button>'
+        + '</div>'
         + '<div class="gate-foot"><a href="' + esc(href('/')) + '">' + t('admin.backHome') + '</a></div>'
         + '</div>';
     } else if (needAdminSetup()) {
@@ -2418,7 +2442,7 @@ function renderWrite() {
       else if (msg) msg.textContent = t('admin.wrongPwd');
     });
     // 回车即提交 + 自动聚焦密码框
-    [['#setupPwd', '#btnSetup'], ['#gatePwd', '#btnGate']].forEach(function (pair) {
+    [['#setupPwd', '#btnSetup'], ['#gatePwd', '#btnGate'], ['#setupPwd2', '#btnCloudSetupGo'], ['#setupKey', '#btnCloudSetupGo']].forEach(function (pair) {
       var inp = document.querySelector(pair[0]);
       var btn = document.querySelector(pair[1]);
       if (inp && btn) {
@@ -2427,6 +2451,45 @@ function renderWrite() {
         });
         try { inp.focus(); } catch (e) {}
       }
+    });
+    // 云端首次部署：登录 ↔ 安装密钥初始化 切换
+    var cloudSetupBtn = document.querySelector('#btnCloudSetup');
+    var cloudSetupForm = document.querySelector('#gateSetupForm');
+    var cloudSetupBack = document.querySelector('#btnCloudSetupBack');
+    var gateMsg = document.querySelector('#gateMsg');
+    function cloudToggleSetup(show) {
+      if (!cloudSetupForm) return;
+      cloudSetupForm.style.display = show ? 'block' : 'none';
+      var loginForm = cloudSetupForm.parentNode && cloudSetupForm.parentNode.querySelector('#gatePwd');
+      if (show) {
+        if (cloudSetupBtn) cloudSetupBtn.style.display = 'none';
+        var k = document.querySelector('#setupKey');
+        if (k) { try { k.focus(); } catch (e) {} }
+      } else {
+        if (cloudSetupBtn) cloudSetupBtn.style.display = '';
+        if (loginForm) { try { loginForm.focus(); } catch (e) {} }
+      }
+      if (gateMsg) gateMsg.textContent = '';
+    }
+    if (cloudSetupBtn) cloudSetupBtn.addEventListener('click', function () { cloudToggleSetup(true); });
+    if (cloudSetupBack) cloudSetupBack.addEventListener('click', function () { cloudToggleSetup(false); });
+    var cloudSetupGo = document.querySelector('#btnCloudSetupGo');
+    if (cloudSetupGo) cloudSetupGo.addEventListener('click', async function () {
+      var k = document.querySelector('#setupKey');
+      var p = document.querySelector('#setupPwd2');
+      var m = document.querySelector('#gateMsg');
+      var pwd = p ? p.value : '';
+      var key = k ? k.value : '';
+      if (!pwd) { if (m) m.textContent = t('admin.pwdRequired'); return; }
+      if (!key) { if (m) m.textContent = t('admin.pwdRequired'); return; }  // 复用：提示必填
+      var orig = cloudSetupGo.innerHTML;
+      cloudSetupGo.disabled = true;
+      cloudSetupGo.innerHTML = svgIcon('spinner', 14) + ' ' + t('admin.logging');
+      var r = await cloudSetupAdmin(pwd, key);
+      cloudSetupGo.disabled = false;
+      cloudSetupGo.innerHTML = orig;
+      if (r && r.ok) { route(); }
+      else if (m) m.textContent = (r && r.message) || t('admin.wrongPwd');
     });
     return;
   }

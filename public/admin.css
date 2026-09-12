@@ -512,6 +512,21 @@ select.ab-select { cursor: pointer; padding-right: 30px; }
   box-shadow: 0 6px 18px color-mix(in srgb, var(--ab-primary) 40%, transparent);
 }
 .ab-gate .ab-btn:hover { filter: brightness(1.05); }
+/* 门禁页次级链接按钮（登录 ↔ 安装密钥初始化 切换） */
+.ab-gate-link {
+  margin-top: 14px;
+  display: inline-block;
+  border: none; background: none;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--ab-muted);
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.ab-gate-link:hover { color: var(--ab-primary); }
+#abSetupForm .ab-input { margin-bottom: 8px; }
+#abSetupForm .ab-hint { margin-bottom: 14px; text-align: left; }
 
 /* ---------- Toast ---------- */
 .ab-toast-wrap { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; }

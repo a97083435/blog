@@ -75,11 +75,42 @@ export function getCorsHeaders(request, env) {
   return h;
 }
 
+/* ---------- 安全响应头 ----------
+ * 同源承载管理后台，任何一处 XSS 都会放大影响；统一加最小安全头。
+ * CSP 说明：站点为「零构建 + 大量内联脚本/样式 + 广告动态注入」，无法做强 script-src，
+ * 故聚焦可落地且不破坏功能的防护：禁 object/plugin、禁点击劫持(frame-ancestors)、
+ * 禁 base 标签注入、限制 form 提交目标。HTML 侧如要更强可后续引入 nonce 体系。
+ * 注意：仅 Workers 部署（worker.js 走本函数）与 API 响应生效；
+ * Pages 模式的纯静态资源由 Pages 托管直接返回，不经过本函数。 */
+export function securityHeaders() {
+  return {
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'X-Frame-Options': 'SAMEORIGIN',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Content-Security-Policy': [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://pagead2.googlesyndication.com",
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+      "img-src 'self' data: blob: https:",
+      "media-src 'self' blob: https:",
+      "font-src 'self' data: https://cdn.jsdelivr.net",
+      "connect-src 'self' https:",
+      "frame-src 'self' https:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+      "form-action 'self'"
+    ].join('; ')
+  };
+}
+
 export function json(data, status = 200, request, env, extra) {
   const headers = Object.assign(
     { 'Content-Type': 'application/json; charset=utf-8' },
     getCorsHeaders(request, env),
     { 'Cache-Control': NO_CACHE },
+    securityHeaders(),
     extra || {}
   );
   return new Response(JSON.stringify(data), { status, headers });
@@ -222,7 +253,7 @@ export async function handleFeed(request, env) {
   const xml = buildFeedXml(await readPosts(env), siteUrl);
   return new Response(xml, {
     status: 200,
-    headers: { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': FEED_CACHE, 'Cache-Tag': TAG_FEED, ...getCorsHeaders(request, env) }
+    headers: { 'Content-Type': 'application/rss+xml; charset=utf-8', 'Cache-Control': FEED_CACHE, 'Cache-Tag': TAG_FEED, ...getCorsHeaders(request, env), ...securityHeaders() }
   });
 }
 
@@ -232,11 +263,18 @@ async function readPosts(env) {
   let rows = [];
   try { rows = await dbAll(env.DB, 'SELECT * FROM posts'); } catch (e) { rows = []; }
   if (rows.length) return rows.map(postFromRow);
-  // D1 空表（未迁移 / 尚未发布文章）时，回退到静态 public/posts.js 的默认文章，
-  // 保证 RSS / Sitemap 始终有内容、首页等列表不至于完全空白。
+  // D1 空表时回退到静态 public/posts.js 的默认文章，保证 RSS / Sitemap 不至于空白。
+  // 但仅限「尚未接管」的新部署：一旦配置过管理员（写过 admin_auth），即视为作者已接管，
+  // 返回空而非示例文章——否则作者删光全部文章后示例内容会「复活」进 RSS/Sitemap/首页。
+  let hasAdmin = false;
+  try {
+    const a = await dbFirst(env.DB, 'SELECT 1 FROM admin_auth WHERE k = ?', ADMIN_AUTH_KEY);
+    hasAdmin = !!a;
+  } catch (e) { /* 读失败按未接管处理 */ }
+  if (hasAdmin) return [];
   const staticPosts = await readStaticPosts(env);
   if (staticPosts.length) return staticPosts;
-  return rows.map(postFromRow);
+  return [];
 }
 
 /** 从静态资源目录读取 posts.js 并解析出文章数组（D1 空表时的兜底数据源） */
@@ -447,8 +485,7 @@ export async function handleComments(request, env, postId) {
     if (env.BLOG) {
       try { await env.BLOG.put(rk, String(cnt + 1), { expirationTtl: 120 }); } catch (e) {}
     }
-    // 清评论列表缓存，保证新评论立即可见（与 DELETE 评论行为一致）
-    await purgeTags(env, ['comments:' + postId]);
+    // 注：评论列表 GET 为 no-store（永不缓存），无需调用边缘 purge；直接返回
     return json({ ok: true, comment }, 201, request, env);
   }
 
@@ -465,7 +502,6 @@ export async function handleCommentId(request, env, postId, cid) {
   const exist = await dbFirst(env.DB, 'SELECT 1 FROM comments WHERE post_id = ? AND id = ?', postId, cid);
   if (!exist) return json({ error: '评论不存在' }, 404, request, env);
   await dbRun(env.DB, 'DELETE FROM comments WHERE post_id = ? AND id = ?', postId, cid);
-  await purgeTags(env, ['comments:' + postId]);
   return json({ ok: true }, 200, request, env);
 }
 
@@ -504,7 +540,7 @@ export async function handleSitemap(request, env) {
   const xml = buildSitemapXml(posts, siteUrl);
   return new Response(xml, {
     status: 200,
-    headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': FEED_CACHE, 'Cache-Tag': TAG_SITEMAP, ...getCorsHeaders(request, env) }
+    headers: { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': FEED_CACHE, 'Cache-Tag': TAG_SITEMAP, ...getCorsHeaders(request, env), ...securityHeaders() }
   });
 }
 
@@ -524,7 +560,7 @@ export async function handleSiteFiles(request, env, name) {
       const isXml = /\.xml$/i.test(name);
       return new Response(row.content, {
         status: 200,
-        headers: { 'Content-Type': (isXml ? 'application/xml' : 'text/plain') + '; charset=utf-8', 'Cache-Control': READ_CACHE, ...getCorsHeaders(request, env) }
+        headers: { 'Content-Type': (isXml ? 'application/xml' : 'text/plain') + '; charset=utf-8', 'Cache-Control': READ_CACHE, ...getCorsHeaders(request, env), ...securityHeaders() }
       });
     }
     const rows = await dbAll(env.DB, 'SELECT name, updated_at FROM site_files').catch(() => []);
@@ -635,7 +671,8 @@ export async function handleStats(request, env, postId) {
     // 写后回读最终计数（含并发期间其他请求的增量），响应数字总是真实值
     const afterView = await dbFirst(env.DB, 'SELECT * FROM stats WHERE post_id = ?', postId) || {};
     const s = { likes: Number(afterView.likes) || 0, views: Number(afterView.views) || 0 };
-    await purgeTags(env, ['stats:' + postId]);   // 清 stats 缓存，保证阅读数立即生效
+    // 注：浏览计数 POST 不再触发边缘 purge——stats GET 仅缓存 60s 且浏览是高频请求，
+    // 每次阅读都外发 purge API 调用既浪费配额又有被限流风险；依赖 s-maxage 自然过期即可
     return json({ ok: true, postId, stats: s }, 200, request, env);
   }
 
@@ -677,15 +714,6 @@ function randomToken(bytes = 32) {
   crypto.getRandomValues(buf);
   return bytesToHex(buf);
 }
-/** 生成可读的默认密码（格式：xxxx-xxxx，8 位字母数字） */
-function generateDefaultPassword() {
-  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // 去掉容易混淆的 i/l/o/0/1
-  const buf = new Uint8Array(8);
-  crypto.getRandomValues(buf);
-  const p1 = Array.from(buf.slice(0, 4), b => chars[b % chars.length]).join('');
-  const p2 = Array.from(buf.slice(4, 8), b => chars[b % chars.length]).join('');
-  return p1 + '-' + p2;
-}
 /** PBKDF2-SHA256 派生密钥（返回 hex）；salt 为 hex 字符串 */
 async function deriveKey(password, saltHex, iter) {
   const enc = new TextEncoder();
@@ -696,20 +724,23 @@ async function deriveKey(password, saltHex, iter) {
   );
   return bytesToHex(new Uint8Array(bits));
 }
-/** 恒定时间字符串比较（防时序侧信道） */
-function safeEqual(a, b) {
-  const ba = new Uint8Array(String(a || '').split('').map((c) => c.charCodeAt(0)));
-  const bb = new Uint8Array(String(b || '').split('').map((c) => c.charCodeAt(0)));
-  if (ba.length !== bb.length) {
-    for (let i = 0; i < bb.length; i++) { if (bb[i] !== 0) return false; }
-    return false;
-  }
+/** 恒定时间字符串比较（防时序侧信道）
+ * 实现：先对两个输入做同长 SHA-256 摘要再异或比较——长度信息不泄露，
+ * 且无论输入长短、是否相等，耗时恒定（仅依赖摘要计算与 32 字节异或）。
+ * 旧实现长度不等时走不同代码路径，仍有长度泄露。 */
+async function safeEqual(a, b) {
+  const enc = new TextEncoder();
+  const da = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(String(a || ''))));
+  const db = new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(String(b || ''))));
   let diff = 0;
-  for (let i = 0; i < ba.length; i++) diff |= ba[i] ^ bb[i];
+  for (let i = 0; i < da.length; i++) diff |= da[i] ^ db[i];
   return diff === 0;
 }
 function clientIp(request) {
-  return request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
+  // 仅信任 CDN 注入的 CF-Connecting-IP：不可伪造。
+  // 不读 X-Forwarded-For——该头是客户端可控的，直接构造可绕过
+  // 点赞去重 / 评论频控 / 登录失败锁定等所有按 IP 的限流。
+  return String(request.headers.get('CF-Connecting-IP') || '').replace(/[^A-Za-z0-9:._-]/g, '') || 'unknown';
 }
 function nowMs() { return Date.now(); }
 
@@ -763,27 +794,31 @@ export async function isWriteAuthed(request, env) {
   if (token && await validSession(env, token)) return true;
   // 兼容旧配置：BLOG_WRITE_TOKEN 环境变量
   const legacy = env.BLOG_WRITE_TOKEN;
-  if (legacy && safeEqual(auth, 'Bearer ' + legacy)) return true;
+  if (legacy && await safeEqual(auth, 'Bearer ' + legacy)) return true;
   return false;
 }
 
 /* ---------- 接口实现 ---------- */
 
-/** POST /api/admin/setup — 设置管理员密码（首次无需密钥；已有密码时需 X-Setup-Key） */
+/** POST /api/admin/setup — 设置管理员密码（首次与重置均需 X-Setup-Key）
+ * 安全默认：必须配置 BLOG_ADMIN_SETUP_KEY 环境变量，且请求头携带匹配的 X-Setup-Key，
+ * 否则拒绝初始化/重置。杜绝「第一个请求到的人即拿管理员」的抢注竞态。 */
 export async function handleAdminSetup(request, env) {
   if (!env || !env.DB) return json({ error: DB_ERR }, 500, request, env);
   if (request.method === 'OPTIONS') return corsPreflight(request, env);
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, request, env);
 
+  // fail-closed：未配置安装密钥一律拒绝（防止无密钥环境下被任意初始化）
+  const setupKey = env.BLOG_ADMIN_SETUP_KEY;
+  if (!setupKey) {
+    return json({ error: '未配置 BLOG_ADMIN_SETUP_KEY，无法初始化管理员。请在 Cloudflare 环境变量中添加安装密钥后重试' }, 409, request, env);
+  }
+  const given = String(request.headers.get('X-Setup-Key') || '').trim();
+  if (!await safeEqual(given, setupKey)) return json({ error: '设置密钥无效' }, 403, request, env);
+
   const existingAuth = await getAdminAuth(env);
-  // 已有密码时需验证 setup key（防未授权重置）
+  // 密码已存在时即使密钥正确也不再允许重复设置（防误覆盖），重置请参考文档
   if (existingAuth && existingAuth.hash) {
-    const setupKey = env.BLOG_ADMIN_SETUP_KEY;
-    if (setupKey) {
-      const given = String(request.headers.get('X-Setup-Key') || '').trim();
-      if (!safeEqual(given, setupKey)) return json({ error: '设置密钥无效' }, 403, request, env);
-    }
-    // 无 setup key 环境变量时也拒绝重置（安全默认）
     return json({ error: '管理员密码已设置；如需重置，请先删除 D1 表 admin_auth 的 auth 行' }, 409, request, env);
   }
 
@@ -792,7 +827,7 @@ export async function handleAdminSetup(request, env) {
     return json({ error: '请求体不是有效 JSON（检查是否含 BOM/引号被转义）' }, 400, request, env);
   }
   const password = String((body && body.password) || '');
-  if (password.length < 6) return json({ error: '密码至少 6 位' }, 400, request, env);
+  if (password.length < 8) return json({ error: '密码至少 8 位' }, 400, request, env);
 
   const salt = randomToken(16);
   const iter = PBKDF2_ITER;
@@ -834,25 +869,16 @@ export async function handleAdminLogin(request, env) {
   const password = String((body && body.password) || '');
   const auth = await getAdminAuth(env);
 
-  // —— 首次部署：自动初始化默认密码（无需手动 setup） ——
+  // —— 未初始化：拒绝登录，需显式 /api/admin/setup + X-Setup-Key ——
+  // 原「首次自动生成随机默认密码」已移除：它存在 first-come 竞态，
+  // 任何先到的人都能拿到管理员（抢注）。现在必须用安装密钥显式初始化。
   if (!auth || !auth.hash || !auth.salt) {
-    const defaultPwd = generateDefaultPassword();
-    const salt = randomToken(16);
-    const iter = PBKDF2_ITER;
-    let hash;
-    try { hash = await deriveKey(defaultPwd, salt, iter); }
-    catch (e) { return json({ error: '服务端初始化失败' }, 500, request, env); }
-    try { await setAdminAuth(env, { salt, hash, iter, mustChange: true }); }
-    catch (e) { return json({ error: '数据库写入失败' }, 500, request, env); }
-    // 签发会话 token
-    const token = randomToken(32);
-    await dbRun(env.DB, 'INSERT INTO admin_sessions (token,exp) VALUES (?,?)', token, nowMs() + ADMIN_SESSION_TTL * 1000);
-    return json({ ok: true, token, expiresIn: ADMIN_SESSION_TTL, mustChange: true, defaultPassword: defaultPwd }, 200, request, env);
+    return json({ error: '管理员尚未初始化：请先调用 POST /api/admin/setup 并使用安装密钥（环境变量 BLOG_ADMIN_SETUP_KEY）设置密码' }, 403, request, env);
   }
 
   // —— 正常登录 ——
   const hash = await deriveKey(password, auth.salt, auth.iter || PBKDF2_ITER);
-  if (!safeEqual(hash, auth.hash)) {
+  if (!await safeEqual(hash, auth.hash)) {
     let n = 1;
     try {
       const fail = await dbFirst(env.DB, "SELECT * FROM admin_fails WHERE ip = ?", ip);
@@ -864,8 +890,9 @@ export async function handleAdminLogin(request, env) {
     return json({ error: '密码错误' }, 401, request, env);
   }
 
-  // 成功：清除失败计数，签发会话 token
+  // 成功：清除失败计数，顺带清理全部已过期会话（避免 admin_sessions 无限增长），再签发 token
   try { await dbRun(env.DB, 'DELETE FROM admin_fails WHERE ip = ?', ip); } catch (e) { /* ignore */ }
+  try { await dbRun(env.DB, 'DELETE FROM admin_sessions WHERE exp <= ?', nowMs()); } catch (e) { /* ignore */ }
   const token = randomToken(32);
   await dbRun(env.DB, 'INSERT INTO admin_sessions (token,exp) VALUES (?,?)', token, nowMs() + ADMIN_SESSION_TTL * 1000);
   return json({ ok: true, token, expiresIn: ADMIN_SESSION_TTL, mustChange: !!auth.mustChange }, 200, request, env);
@@ -918,7 +945,6 @@ export async function handleCommentUpdate(request, env, cid) {
   const exist = await dbFirst(env.DB, 'SELECT post_id FROM comments WHERE id = ?', cid);
   if (!exist) return json({ error: '评论不存在' }, 404, request, env);
   await dbRun(env.DB, 'UPDATE comments SET status = ? WHERE id = ?', status, cid);
-  await purgeTags(env, ['comments:' + exist.post_id]);
   return json({ ok: true }, 200, request, env);
 }
 
@@ -931,7 +957,6 @@ export async function handleCommentDeleteGlobal(request, env, cid) {
   const exist = await dbFirst(env.DB, 'SELECT post_id FROM comments WHERE id = ?', cid);
   if (!exist) return json({ error: '评论不存在' }, 404, request, env);
   await dbRun(env.DB, 'DELETE FROM comments WHERE id = ?', cid);
-  await purgeTags(env, ['comments:' + exist.post_id]);
   return json({ ok: true }, 200, request, env);
 }
 
@@ -955,6 +980,11 @@ export async function handleMedia(request, env) {
     const body = await request.json().catch(() => null);
     const url = String((body && body.url) || '').trim();
     if (!url) return json({ error: '缺少 url' }, 400, request, env);
+    // 协议白名单：仅允许 http(s) 外链 / data:image 内嵌图片。
+    // 拒绝 javascript: / vbscript: / 其他 data: 类型，杜绝把脚本类内容登记为媒体。
+    if (!/^(https?:\/\/|data:image\/)/i.test(url)) {
+      return json({ error: '仅支持 http/https 链接或 data:image 图片' }, 400, request, env);
+    }
     const id = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const name = String((body && body.name) || id).slice(0, 200);
     const type = String((body && body.type) || '').slice(0, 64);
@@ -1018,11 +1048,11 @@ export async function handleAdminPassword(request, env) {
   const body = await request.json().catch(() => null);
   const cur = String((body && body.current) || '');
   const pwd = String((body && body.password) || '');
-  if (pwd.length < 6) return json({ error: '新密码至少 6 位' }, 400, request, env);
+  if (pwd.length < 8) return json({ error: '新密码至少 8 位' }, 400, request, env);
   const auth = await getAdminAuth(env);
   if (!auth || !auth.hash || !auth.salt) return json({ error: '尚未设置管理员密码' }, 400, request, env);
   const curHash = await deriveKey(cur, auth.salt, auth.iter || PBKDF2_ITER);
-  if (!safeEqual(curHash, auth.hash)) return json({ error: '当前密码不正确' }, 401, request, env);
+  if (!await safeEqual(curHash, auth.hash)) return json({ error: '当前密码不正确' }, 401, request, env);
   const salt = randomToken(16);
   const iter = PBKDF2_ITER;
   const hash = await deriveKey(pwd, salt, iter);

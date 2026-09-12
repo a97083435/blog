@@ -86,7 +86,7 @@ The entire site lives in `public/`: frontend `index.html` + `style.css` + `app.j
 | **Responsive** | Frontend + admin panel, fully adapted for phone / tablet / desktop |
 | **Multilingual** | Built-in Chinese / English / 日本語 / 한국어 / हिन्दी UI, auto-detects browser language |
 | **Serif aesthetics** | Four-tier serif font stack (Source Han Serif / GenYo Mincho / Dream Han Serif / Zhuque Fangsong) |
-| **Secure** | PBKDF2 + AES-GCM encryption, hashed passwords, session token auth, Origin / CORS validation |
+| **Secure** | PBKDF2-SHA256 salted password hashing (100k iterations), session token auth, login rate-limit lockout, security response headers (CSP / nosniff / frame protection) |
 | **AI enhanced** | Workers AI powers post summaries / writing assistant / comment summaries; degrades gracefully with zero impact when unconfigured |
 
 ---
@@ -179,7 +179,7 @@ The entire site lives in `public/`: frontend `index.html` + `style.css` + `app.j
 | --- | --- |
 | Real-path routing | No hash: `/`, `/archive`, `/about`, `/tags`, `/guestbook`, `/posts/<alias>/`, `/admin`, `/write` — no 404 on refresh |
 | Markdown Editor | Live preview, one-click toolbar, word count, autosaved drafts |
-| Article Encryption | PBKDF2 + AES-GCM end-to-end, only ciphertext stored |
+| Article Encryption | API reserves `enc` / `protected` fields (import-compatible); editor UI does not expose encryption yet |
 | Comments | Cloud D1 global comments + moderation; static mode localStorage; **nested replies**; **duplicate-post blocking** (same section + same author + same content → 409) |
 | Guestbook | One click away at `/guestbook`, dual sections (messages / feature ideas), cloud-stored, reuses the comment security pipeline (rate limiting / Origin check / control-char sanitizing / duplicate blocking) |
 | Site Search | Real-time matching of title / tags / excerpt; results show the **full sentence around each keyword** with **keyword highlighting**, no underline on hover |
@@ -270,7 +270,7 @@ Add in repo Settings → Secrets and variables → Actions:
 | `CLOUDFLARE_ACCOUNT_ID` | ✅ | Cloudflare Account ID (visible on Dashboard sidebar) |
 | `BLOG_D1_ID` | ✅ | D1 Database ID (from step 2, UUID format) |
 | `BLOG_KV_ID` | ✅ | KV Namespace ID (from step 2, 32 hex chars) |
-| `BLOG_ADMIN_SETUP_KEY` | Recommended | One-time key for first admin password setup (anti-squatting) |
+| `BLOG_ADMIN_SETUP_KEY` | ✅ | Setup key: required to initialize the admin password (backend fail-closed — refuses initialization if unset, anti-squatting) |
 | `SITE_URL` | Recommended | Public domain, e.g. `https://blog.example.com` (tightens CORS / RSS / Sitemap) |
 | `CF_ZONE_ID` | Optional | Custom domain Zone ID (enables cache purge on publish) |
 
@@ -279,13 +279,13 @@ Add in repo Settings → Secrets and variables → Actions:
 Push to `main` branch, GitHub Actions will automatically:
 
 1. ✅ Validate required Secrets
-2. ✅ Run D1 migrations (create tables + add columns, ordered & idempotent)
+2. ✅ Run D1 migrations (`schema_migrations` ledger, ordered & idempotent; legacy duplicate-column auto-skip)
 3. ✅ Deploy Worker to Cloudflare
 4. ✅ Write runtime Secrets (`BLOG_ADMIN_SETUP_KEY`, etc.)
 
 After deployment, visit `https://<worker-name>.<subdomain>.workers.dev/admin`:
-- If `BLOG_ADMIN_SETUP_KEY` is set, use it to set the admin password the first time;
-- Otherwise a random default password is auto-generated and you must change it on first login.
+- First deploy: click "First deploy? Initialize with setup key", enter a new admin password + `BLOG_ADMIN_SETUP_KEY`;
+- Then log in normally. `/api/admin/setup` and `/api/admin/login` both refuse to run before initialization (secure default).
 
 #### 5. Migrate from KV to D1 (legacy data)
 
@@ -440,11 +440,11 @@ window.BLOG_CONFIG = {
 | Layer | Mechanism |
 | --- | --- |
 | Password storage | PBKDF2-SHA256 salted hash (100,000 iterations), never plaintext |
-| First deploy | Auto-generated random default password (or `BLOG_ADMIN_SETUP_KEY`), forced change on first login |
+| First deploy | `BLOG_ADMIN_SETUP_KEY` is mandatory; initialize via `/api/admin/setup` + `X-Setup-Key`; login before initialization returns 403; password min 8 chars |
 | Static mode | Passwords stored as SHA-256 hashes (backward-compatible, auto-upgraded) |
 | Session management | Random Token (32-byte hex), 7-day expiry, destroyed on logout |
 | Rate limiting | 5 consecutive failures from same IP = 15-minute lockout |
-| Article encryption | PBKDF2 + AES-GCM end-to-end, ciphertext only on server |
+| Article encryption | API reserves `enc` / `protected` fields (can import externally encrypted posts); editor end-to-end encryption UI not yet enabled |
 | Comment security | XSS escaping + parameterized queries + per-IP rate limit + Origin validation + **duplicate-post blocking** (same section + same author + same content → 409) |
 | API boundary | Unknown /api/* returns JSON 404, never falls back to index.html |
 | CORS | With `SITE_URL` set, only same-origin allowed; else echoes request origin |

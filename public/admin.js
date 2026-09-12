@@ -214,8 +214,16 @@
       head = '<h2>' + t('admin.login') + '</h2><p>' + t('admin.loginHint') + '</p>';
       form =
         '<input class="ab-input" type="password" id="abGatePwd" placeholder="' + t('admin.pwdLabel') + '" autocomplete="current-password">' +
-        '<button class="ab-btn primary" id="abGateBtn">' + t('admin.loginBtn') + '</button>';
-      hint = '<p class="ab-hint" style="margin-top:14px">' + t('admin.defaultPwdHint') + '</p>';
+        '<button class="ab-btn primary" id="abGateBtn">' + t('admin.loginBtn') + '</button>' +
+        '<button type="button" class="ab-gate-link" id="abBtnCloudSetup">' + t('admin.gotoCloudSetup') + '</button>' +
+        '<div id="abSetupForm" style="display:none">' +
+        '<p class="ab-hint">' + t('admin.cloudSetupHint') + '</p>' +
+        '<input class="ab-input" type="password" id="abSetupKey" placeholder="' + t('admin.setupKeyLabel') + '" autocomplete="off">' +
+        '<input class="ab-input" type="password" id="abSetupPwd" placeholder="' + t('admin.pwdLabel') + '" autocomplete="new-password">' +
+        '<button class="ab-btn primary" id="abBtnCloudSetupGo">' + t('admin.setupBtn') + '</button>' +
+        '<button type="button" class="ab-gate-link" id="abBtnCloudSetupBack">' + t('admin.backToLogin') + '</button>' +
+        '</div>';
+      hint = '<p class="ab-hint" style="margin-top:14px">' + t('admin.cloudSetupHint') + '</p>';
     } else if (window.needAdminSetup && window.needAdminSetup()) {
       head = '<h2>' + t('admin.setupPwd') + '</h2><p>' + t('admin.loginHint') + '</p>';
       form =
@@ -265,6 +273,41 @@
     btn.addEventListener('click', submit);
     inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
     inp.focus();
+
+    // 云端首次部署：登录 ↔ 安装密钥初始化 切换（后端 BLOG_ADMIN_SETUP_KEY 必填）
+    var setupToggle = root.querySelector('#abBtnCloudSetup');
+    var setupForm = root.querySelector('#abSetupForm');
+    var setupBack = root.querySelector('#abBtnCloudSetupBack');
+    function toggleSetup(show) {
+      if (!setupForm) return;
+      setupForm.style.display = show ? 'block' : 'none';
+      if (setupToggle) setupToggle.style.display = show ? 'none' : '';
+      if (show) {
+        var k = root.querySelector('#abSetupKey');
+        if (k) { try { k.focus(); } catch (e) {} }
+      } else {
+        try { inp.focus(); } catch (e) {}
+      }
+    }
+    if (setupToggle) setupToggle.addEventListener('click', function () { toggleSetup(true); });
+    if (setupBack) setupBack.addEventListener('click', function () { toggleSetup(false); });
+    var setupGo = root.querySelector('#abBtnCloudSetupGo');
+    var setupPwd = root.querySelector('#abSetupPwd');
+    var setupKey = root.querySelector('#abSetupKey');
+    async function submitSetup() {
+      var pwd = setupPwd ? setupPwd.value : '';
+      var key = setupKey ? setupKey.value : '';
+      if (!pwd || !key) { toast(t('admin.pwdRequired'), 'err'); return; }
+      setupGo.disabled = true;
+      try {
+        var r = await window.cloudSetupAdmin(pwd, key);
+        if (r && r.ok) { toast(t('admin.logging'), 'ok'); go('/admin'); }
+        else { toast((r && r.message) || t('admin.wrongPwd'), 'err'); setupGo.disabled = false; }
+      } catch (e) { toast(t('admin.wrongPwd') + (e && e.message || e), 'err'); setupGo.disabled = false; }
+    }
+    if (setupGo) setupGo.addEventListener('click', submitSetup);
+    if (setupPwd) setupPwd.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitSetup(); });
+    if (setupKey) setupKey.addEventListener('keydown', function (e) { if (e.key === 'Enter') submitSetup(); });
   }
 
   /* ----------------------- 侧边栏菜单 ----------------------- */

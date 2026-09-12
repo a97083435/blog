@@ -425,7 +425,7 @@ tests.push(['stripMd 生成纯文本摘要', async () => {
 function makeD1() {
   let seq = 0;   // 模拟 SQLite rowid（单调递增，保证插入顺序稳定）
   const t = {
-    posts: new Map(), comments: new Map(), stats: new Map(),
+    posts: new Map(), comments: new Map(), stats: new Map(), media: new Map(),
     admin_auth: new Map(), admin_sessions: new Map(), admin_fails: new Map()
   };
   const POST_COLS = ['id', 'title', 'date', 'excerpt', 'content', 'cover', 'pinned', 'protected', 'enc', 'tags'];
@@ -510,6 +510,12 @@ function makeD1() {
       t.admin_fails.set(ip, { ip, n, until }); return { success: true };
     }
     if (s === 'DELETE FROM admin_fails WHERE ip = ?') { t.admin_fails.delete(params[0]); return { success: true }; }
+    /* media */
+    if (/^INSERT INTO media/.test(s)) {
+      const [id, name, url, type, size, created_at] = params;
+      const row = { id, name, url, type, size, created_at, __rowid: ++seq };
+      t.media.set(id, row); return { success: true };
+    }
 
     throw new Error('mock D1：未支持的 SQL —— ' + s);
   }
@@ -612,21 +618,50 @@ tests.push(['API：PUT 更新 / PUT 未知 id 新建 / DELETE / 404 / 无 DB 500
 tests.push(['管理员认证：首次设置 / 密码验证 / 限流 429', async () => {
   const core = await import('./functions/_lib/api-core.js');
 
-  // —— 首次设置：不需要 X-Setup-Key（无已有密码）——
+  // —— 首次设置：必须配置 BLOG_ADMIN_SETUP_KEY 且携带 X-Setup-Key（安全默认，防抢注）——
   const fresh = mockEnv();
+  // 未配置 env key → 409（fail-closed）
   let r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: 'strong-pass-123' })
   }), fresh);
-  assert.strictEqual(r.status, 201, '首次设置成功 201');
-
-  // 短密码拒绝
-  const fresh2 = mockEnv();
+  assert.strictEqual(r.status, 409, '未配置 BLOG_ADMIN_SETUP_KEY 拒绝初始化 409');
+  // 有 env key 但无 X-Setup-Key → 403
+  fresh.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
   r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'strong-pass-123' })
+  }), fresh);
+  assert.strictEqual(r.status, 403, '缺少 X-Setup-Key 拒绝 403');
+  // key 错误 → 403
+  r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'wrong-key' },
+    body: JSON.stringify({ password: 'strong-pass-123' })
+  }), fresh);
+  assert.strictEqual(r.status, 403, 'X-Setup-Key 错误拒绝 403');
+  // key 正确 → 201
+  r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'setup-key-123' },
+    body: JSON.stringify({ password: 'strong-pass-123' })
+  }), fresh);
+  assert.strictEqual(r.status, 201, '首次设置成功 201');
+
+  // 短密码拒绝（< 8 位）
+  const fresh2 = mockEnv();
+  fresh2.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
+  r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'setup-key-123' },
     body: JSON.stringify({ password: 'short' })
   }), fresh2);
   assert.strictEqual(r.status, 400, '短密码 400');
+
+  // —— 未初始化时登录 → 403（不再自动生成默认密码）——
+  const uninit = mockEnv();
+  r = await core.handleAdminLogin(new Request('http://t/api/admin/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'anything' })
+  }), uninit);
+  assert.strictEqual(r.status, 403, '未初始化登录 403');
 
   // —— 重置需 X-Setup-Key：已有密码时无 key → 403 ——
   const env = mockEnv();
@@ -701,8 +736,9 @@ tests.push(['管理员认证：首次设置 / 密码验证 / 限流 429', async 
 
   // 限流：连续 5 次错误密码后锁定（429）
   const locked = mockEnv();
+  locked.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
   r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'setup-key-123' },
     body: JSON.stringify({ password: 'strong-pass-123' })
   }), locked);
   assert.strictEqual(r.status, 201, 'locked env setup 201');
@@ -728,6 +764,53 @@ tests.push(['管理员认证：首次设置 / 密码验证 / 限流 429', async 
     body: JSON.stringify({ id: 't3', title: 'y' })
   }), env);
   assert.strictEqual(r.status, 401, '登出后 token 失效');
+}]);
+
+tests.push(['安全加固：媒体 URL 白名单 / clientIp 忽略伪造 XFF / 响应携带安全头', async () => {
+  const core = await import('./functions/_lib/api-core.js');
+  const { env, token } = await authEnv();
+
+  // —— 媒体 URL 协议白名单 ——
+  const mediaReq = (url) => core.handleMedia(new Request('http://t/api/media', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ url, name: 'x', type: 'image/png' })
+  }), env);
+  let r = await mediaReq('javascript:alert(1)');
+  assert.strictEqual(r.status, 400, 'javascript: 协议拒绝');
+  r = await mediaReq('data:text/html,<script>alert(1)</script>');
+  assert.strictEqual(r.status, 400, '非图片 data: 协议拒绝');
+  r = await mediaReq('data:image/png;base64,AAAA');
+  assert.strictEqual(r.status, 201, 'data:image 允许');
+  r = await mediaReq('https://example.com/a.png');
+  assert.strictEqual(r.status, 201, 'http(s) 外链允许');
+  r = await mediaReq('vbscript:msgbox(1)');
+  assert.strictEqual(r.status, 400, 'vbscript: 协议拒绝');
+
+  // —— clientIp：不读 X-Forwarded-For（客户端可伪造）——
+  // 用登录失败计数验证：伪造 XFF 的请求应打到「unknown」这个 IP 上，
+  // 而不是攻击者声明的 XFF 值（否则可绕开限流）。
+  const ev = mockEnv();
+  ev.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
+  await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'setup-key-123' },
+    body: JSON.stringify({ password: 'strong-pass-123' })
+  }), ev);
+  const fakeReq = () => core.handleAdminLogin(new Request('http://t/api/admin/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '6.6.6.6' },
+    body: JSON.stringify({ password: 'bad' })
+  }), ev);
+  for (let i = 0; i < 5; i++) await fakeReq();
+  // 第 6 次：即使换新 XFF 值也仍被锁（限流键是 CF-Connecting-IP/unknown，不是 XFF）
+  const r6 = await fakeReq();
+  assert.strictEqual(r6.status, 429, '伪造 XFF 不改变限流键：5 次失败后第 6 次仍被锁定（不能靠换 XFF 绕过）');
+
+  // —— 响应安全头（json() 自动携带）——
+  const resp = await core.handlePosts(new Request('http://t/api/posts'), env);
+  assert.ok(resp.headers.get('X-Content-Type-Options') === 'nosniff', 'nosniff 头');
+  assert.ok(String(resp.headers.get('Content-Security-Policy') || '').includes('frame-ancestors'), 'CSP 头');
+  assert.ok(String(resp.headers.get('Content-Security-Policy') || '').includes("object-src 'none'"), 'CSP 禁 object');
+  assert.ok(resp.headers.get('X-Frame-Options') === 'SAMEORIGIN', 'X-Frame-Options');
+  assert.ok(String(resp.headers.get('Referrer-Policy') || '') === 'strict-origin-when-cross-origin', 'Referrer-Policy');
 }]);
 
 tests.push(['写作页：字数统计 / 保存状态 / 快捷键提示齐全', async () => {
@@ -964,9 +1047,10 @@ tests.push(['评论（静态模式）：保存在本浏览器并渲染', async (
 tests.push(['加密：服务端 PBKDF2 哈希往返验证', async () => {
   const core = await import('./functions/_lib/api-core.js');
   const env = mockEnv();
+  env.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
   // 通过 admin setup 间接测试 deriveKey（PBKDF2-SHA256）
   const r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'setup-key-123' },
     body: JSON.stringify({ password: 'strong-pass-123' })
   }), env);
   assert.strictEqual(r.status, 201, '密码哈希成功');

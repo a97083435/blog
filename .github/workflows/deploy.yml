@@ -7,7 +7,8 @@
 #   · PAGES_PROJECT_NAME  （可选）自定义 worker 名；不设置 = 用 wrangler.workers.toml 的 name
 #   · BLOG_KV_ID          → 部署前替换进 wrangler.workers.toml 的 [[kv_namespaces]] id
 #                          （wrangler 对 kv id 不支持 {env.} 内插，用 python3 显式替换）
-#   · BLOG_ADMIN_SETUP_KEY→ 首次设置管理员密码的一次性密钥（部署后写入 secret）
+#   · BLOG_ADMIN_SETUP_KEY→ 必填！首次设置管理员密码的安装密钥（后端 fail-closed：
+#                          未配置时 /api/admin/setup 与 login 均拒绝初始化，杜绝抢注竞态）
 #   · BLOG_WRITE_TOKEN    →（可选）旧式写入令牌
 #   · CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID → wrangler 部署凭证
 #   · SITE_URL  （可选，强烈建议）站点对外域名 https://你的域名，用于收紧 CORS 为仅允许本站
@@ -55,14 +56,18 @@ jobs:
           BLOG_D1_ID: ${{ secrets.BLOG_D1_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BLOG_ADMIN_SETUP_KEY: ${{ secrets.BLOG_ADMIN_SETUP_KEY }}
         run: |
           MISSING=""
-          for v in BLOG_KV_ID BLOG_D1_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+          # BLOG_ADMIN_SETUP_KEY 必填：后端 /api/admin/setup 为 fail-closed，
+          # 未配置该密钥时无法初始化管理员（安全默认，杜绝抢注竞态）
+          for v in BLOG_KV_ID BLOG_D1_ID CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID BLOG_ADMIN_SETUP_KEY; do
             if [ -z "${!v}" ]; then MISSING="$MISSING $v"; fi
           done
           if [ -n "$MISSING" ]; then
             echo "::error::缺少必要的 GitHub Secrets:$MISSING"
             echo "请到 仓库 Settings → Secrets and variables → Actions 添加后重试。"
+            echo "（BLOG_ADMIN_SETUP_KEY：首次设置管理员密码的安装密钥，后端未配置时将拒绝初始化）"
             exit 1
           fi
           echo "✅ 必要 Secrets 齐全（值不会打印）"
@@ -108,51 +113,49 @@ jobs:
           print('✅ 部署配置已生成（含真实 KV id 与 D1 id，不会打印）')
           PY
 
-      # 部署前应用 D1 表结构（幂等：CREATE TABLE IF NOT EXISTS，按序执行 migrations/*.sql）。
-      # 需先在 Cloudflare 创建名为 blog 的 D1 数据库，并把其 database_id 填入 Secret BLOG_D1_ID。
-      - name: Apply D1 schema (migrations/*.sql)
+      # 部署前应用 D1 表结构（migrations/*.sql，按文件名升序执行）。
+      # 记账表 schema_migrations：记录「已成功执行的迁移」，之前跑过的直接跳过，
+      # 避免旧的 check_col 字符串匹配无法覆盖表结构语义变化（如 0012 删数据、recreate）。
+      # 老库兼容：若某个 ALTER 迁移报 duplicate column，说明列早已存在，按「已应用」记账跳过。
+      - name: Apply D1 schema (migrations/*.sql with schema_migrations ledger)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           BLOG_D1_ID: ${{ secrets.BLOG_D1_ID }}
         run: |
-          # 查询某表是否存在指定列（用于 ALTER 类迁移的幂等跳过）
-          check_col() {
-            local tbl="$1" col="$2"
-            wrangler d1 execute blog --remote --config wrangler.workers.ci.toml \
-              --command "SELECT COUNT(*) AS n FROM pragma_table_info('$tbl') WHERE name='$col'" --json 2>/dev/null \
-              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d[0]['results'][0]['n'] if d and d[0].get('results') else 0)" 2>/dev/null || echo 0
-          }
+          # 建记账表（幂等），并列出已应用的迁移名
+          wrangler d1 execute blog --remote --config wrangler.workers.ci.toml \
+            --command "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT DEFAULT (datetime('now')))" >/dev/null 2>&1
+          applied=$(wrangler d1 execute blog --remote --config wrangler.workers.ci.toml \
+            --command "SELECT name FROM schema_migrations" --json 2>/dev/null \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print('\n'.join(r['name'] for r in (d[0]['results'] if d and d[0].get('results') else [])))" 2>/dev/null || true)
           for f in migrations/*.sql; do
-            echo "Applying $f"
             base=$(basename "$f")
-            skip=0
-            # ALTER 加列类迁移幂等：先查列是否存在，存在则跳过，
-            # 避免重复执行 ALTER TABLE ADD COLUMN 报 duplicate column（SQLite 无 IF NOT EXISTS）
-            case "$base" in
-              0003_cover_column.sql)    [ "$(check_col posts cover)" -gt 0 ] 2>/dev/null && skip=1 ;;
-              0004_post_meta.sql)       [ "$(check_col posts category)" -gt 0 ] 2>/dev/null && skip=1 ;;
-              0005_comment_status.sql)  [ "$(check_col comments status)" -gt 0 ] 2>/dev/null && skip=1 ;;
-              0010_admin_must_change.sql) [ "$(check_col admin_auth must_change)" -gt 0 ] 2>/dev/null && skip=1 ;;
-              0011_comment_reply.sql)    [ "$(check_col comments parent_id)" -gt 0 ] 2>/dev/null && skip=1 ;;
-              # 0009 使用 CREATE INDEX IF NOT EXISTS，天然幂等，不跳过
-            esac
-            if [ "$skip" -eq 1 ]; then
-              echo "→ 列已存在，跳过（幂等）"
+            echo "Applying $f"
+            # 已在记账表 → 跳过
+            if printf '%s\n' "$applied" | grep -qx "$base"; then
+              echo "→ 已在 schema_migrations，跳过"
               continue
             fi
             out=$(wrangler d1 execute blog --remote --config wrangler.workers.ci.toml --file="$f" 2>&1)
             code=$?
             if [ $code -ne 0 ]; then
-              # 兜底：万一上面的列查询不可用（如 D1 不支持 pragma_table_info），
-              # 仍按错误文本识别 duplicate column 并跳过
+              # 老库兜底：ALTER TABLE ADD COLUMN 在列已存在时报 duplicate column，
+              # 说明该迁移在老部署中已实际执行过，按「已应用」记账后跳过；
+              # 其余错误一律中断，避免半套 schema 上线
               if echo "$out" | grep -qi "duplicate column"; then
-                echo "→ 列已存在，跳过（幂等）"
+                echo "→ 列已存在（duplicate column），按已应用记账并跳过"
               else
-                echo "$out"; exit 1
+                echo "$out"
+                exit 1
               fi
             fi
+            # 记账：成功或 duplicate-column 兜底都写入 schema_migrations
+            wrangler d1 execute blog --remote --config wrangler.workers.ci.toml \
+              --command "INSERT OR IGNORE INTO schema_migrations (name) VALUES ('$base')" >/dev/null 2>&1
           done
+          # 以记账表为准拉取一次完整清单（下一轮 CI 生效；本轮不改代码路径）
+          echo "✅ D1 schema 应用完成（已记账迁移：$(printf '%s\n' "$applied" | wc -l)）"
 
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
