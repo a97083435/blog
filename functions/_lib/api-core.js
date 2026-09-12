@@ -1008,8 +1008,10 @@ export async function handleCommentDeleteGlobal(request, env, cid) {
 /* ============================================================
  * 媒体资源库（后台）
  *   GET    /api/media    → 列表
- *   POST   /api/media    → 新增（url 为 data URL 或外链；图片以 base64 / 外链存储）
- *   DELETE /api/media/:id→ 删除
+ *   POST   /api/media    → 登记元数据（url 为 R2 公开地址或 http(s) 外链）
+ *   DELETE /api/media/:id→ 删除（先删 R2 对象，见 worker.js / media.js）
+ * 图片本体一律存 R2（预签名直传），D1 只存元数据；
+ * 不再接受 data:image base64 内嵌（历史遗留记录已由迁移 0014 清除）。
  * 均为写操作，需会话 token 鉴权。
  * ============================================================ */
 
@@ -1025,10 +1027,11 @@ export async function handleMedia(request, env) {
     const body = await request.json().catch(() => null);
     const url = String((body && body.url) || '').trim();
     if (!url) return json({ error: '缺少 url' }, 400, request, env);
-    // 协议白名单：仅允许 http(s) 外链 / data:image 内嵌图片。
-    // 拒绝 javascript: / vbscript: / 其他 data: 类型，杜绝把脚本类内容登记为媒体。
-    if (!/^(https?:\/\/|data:image\/)/i.test(url)) {
-      return json({ error: '仅支持 http/https 链接或 data:image 图片' }, 400, request, env);
+    // 协议白名单：仅允许 http(s)——R2 公开地址或外部图床链接。
+    // 拒绝 javascript: / vbscript: / data: 等，杜绝把脚本类内容登记为媒体。
+    // 图片本体一律走 R2 预签名直传，不再接受 data:image base64 内嵌。
+    if (!/^https?:\/\//i.test(url)) {
+      return json({ error: '仅支持 http/https 链接（图片请走 R2 直传上传）' }, 400, request, env);
     }
     const id = 'm-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const name = String((body && body.name) || id).slice(0, 200);

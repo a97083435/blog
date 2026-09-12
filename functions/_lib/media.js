@@ -1,18 +1,16 @@
 /* ============================================================
  * 媒体模块（Cloudflare R2 直传 + D1 元数据）
  * ------------------------------------------------------------
- * 背景：图片上传原为 base64 存 D1（超大图会拖垮页面/数据库），
- * 迁移为 R2 直传（与音乐模块同款 S3 预签名模式）：
+ * 图片本体一律存 R2（与音乐模块同款 S3 预签名模式）：
  *   · 浏览器 XHR PUT 直传 R2（不占 Worker 带宽）
  *   · R2 egress 免费 → 图片读取流量不额外计费
  *   · D1 media 表只存元数据（url 为 R2 公开地址）
+ * 不再支持 data:image base64 内嵌（历史遗留记录已由迁移 0014 清除）。
  * 依赖环境变量（R2 凭据与音乐共用；**媒体桶独立**，不与音乐同桶）：
  *   R2_ACCESS_KEY_ID / R2_SECRET_ACCESS_KEY / R2_ENDPOINT   （通用凭据）
  *   R2_MEDIA_BUCKET        媒体专用桶名（如 qingyu-media）
  *   R2_MEDIA_PUBLIC_BASE   媒体桶绑定的自定义域名（如 https://media.2024921.xyz）
- * 降级：未配置 R2 媒体桶时，api/media/upload-url 返回 503；
- *       读取列表 / 旧 base64 记录兼容显示（不迁移）。
- * 旧数据：已存在的 base64 记录保留可读；仅新上传走 R2。
+ * 降级：未配置 R2 媒体桶时，api/media/upload-url 返回 503；只读列表仍可用。
  * ============================================================ */
 import { getCorsHeaders, json, corsPreflight, isWriteAuthed, unauthorized, dbAll, dbRun } from './api-core.js';
 import { presignPut, r2DeleteObject } from './music.js';
@@ -26,7 +24,7 @@ export function r2Configured(env) {
 function randomId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
-/** 从公开 URL 提取媒体对象 key（仅本站 media/ 前缀；外链/base64 返回空串不删） */
+/** 从公开 URL 提取媒体对象 key（仅本站 media/ 前缀；非本站 URL 返回空串不删 R2） */
 export function extractMediaR2Key(publicUrl) {
   try {
     const p = new URL(String(publicUrl || '')).pathname;

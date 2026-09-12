@@ -857,12 +857,12 @@ tests.push(['安全加固：媒体 URL 白名单 / clientIp 忽略伪造 XFF / �
   }), env);
   let r = await mediaReq('javascript:alert(1)');
   assert.strictEqual(r.status, 400, 'javascript: 协议拒绝');
-  r = await mediaReq('data:text/html,<script>alert(1)</script>');
-  assert.strictEqual(r.status, 400, '非图片 data: 协议拒绝');
   r = await mediaReq('data:image/' + 'png;base64,' + 'AAAA');
-  assert.strictEqual(r.status, 201, 'data:image 允许');
+  assert.strictEqual(r.status, 400, 'data:image base64 拒绝（图片一律存 R2）');
   r = await mediaReq('https://example.com/a.png');
   assert.strictEqual(r.status, 201, 'http(s) 外链允许');
+  r = await mediaReq('data:text/html,<script>alert(1)</script>');
+  assert.strictEqual(r.status, 400, '非图片 data: 协议拒绝');
   r = await mediaReq('vbscript:msgbox(1)');
   assert.strictEqual(r.status, 400, 'vbscript: 协议拒绝');
 
