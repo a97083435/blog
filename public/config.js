@@ -13,8 +13,9 @@
  *
  * 管理员安全（云端模式）：
  *   · 密码只存 Cloudflare D1（PBKDF2-SHA256 加盐哈希，绝不存明文/不出前端源码）。
- *   · 首次部署：POST /api/admin/setup（必须携带安装密钥 BLOG_ADMIN_SETUP_KEY
- *     对应的 X-Setup-Key 头；未配置该环境变量时后端拒绝初始化，防抢注）。
+ *   · 首次部署：配置了 BLOG_ADMIN_SETUP_KEY 时，POST /api/admin/setup 需携带匹配的
+ *     X-Setup-Key 头（防抢注，推荐）；未配置时回退旧行为——首次登录自动生成
+ *     随机默认密码（xxxx-xxxx，登录后强制修改）。
  *   · 日常登录：POST /api/admin/login → 服务端校验 → 返回 7 天会话 token
  *     （存浏览器 localStorage，写操作携带；服务端内置 5 次/15 分钟失败锁定）。
  *   · 下方 adminPwd 仅用于「静态模式」的本地门禁（file:// 或纯静态托管），
@@ -48,8 +49,9 @@ window.BLOG_CONFIG = {
    * 例：pageSize: 8 → 首页每页 8 篇，底部出现「上一页 / 下一页」。 */
   pageSize: 5,
   /* 管理员门禁（静态模式本地密码；云端模式请留空）。
-   * 云端部署（推荐）：密码只存 Cloudflare KV，见文件头说明——
-   *   首次 /api/admin/setup 设置，之后 /api/admin/login 登录拿会话 token。
+   * 云端部署（推荐）：密码只存 Cloudflare D1，见文件头说明——
+   *   首次 /api/admin/setup 设置（配置安装密钥时需 X-Setup-Key），
+   *   未配置密钥时首次登录自动生成随机默认密码；之后 /api/admin/login 登录拿会话 token。
    * 静态模式（file:// 或纯静态托管，无后端）：可在此填固定密码（如 'my-secret'），
    *   或留空让浏览器本地设置（≥4 位，仅防君子，真安全请走云端模式）。
    * 云端密码长度：服务端强制至少 8 位。

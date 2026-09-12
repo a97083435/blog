@@ -618,33 +618,36 @@ tests.push(['API：PUT 更新 / PUT 未知 id 新建 / DELETE / 404 / 无 DB 500
 tests.push(['管理员认证：首次设置 / 密码验证 / 限流 429', async () => {
   const core = await import('./functions/_lib/api-core.js');
 
-  // —— 首次设置：必须配置 BLOG_ADMIN_SETUP_KEY 且携带 X-Setup-Key（安全默认，防抢注）——
+  // —— 首次设置：BLOG_ADMIN_SETUP_KEY 可选——
   const fresh = mockEnv();
-  // 未配置 env key → 409（fail-closed）
+  // 未配置 env key → 允许免密钥首次初始化（兼容旧行为；min 8 位密码仍强制）
   let r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: 'strong-pass-123' })
   }), fresh);
-  assert.strictEqual(r.status, 409, '未配置 BLOG_ADMIN_SETUP_KEY 拒绝初始化 409');
+  assert.strictEqual(r.status, 201, '未配置 BLOG_ADMIN_SETUP_KEY 允许首次初始化 201');
+
+  // —— 配置了 env key：首次初始化必须携带匹配的 X-Setup-Key（防抢注）——
+  const freshKey = mockEnv();
+  freshKey.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
   // 有 env key 但无 X-Setup-Key → 403
-  fresh.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
   r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: 'strong-pass-123' })
-  }), fresh);
+  }), freshKey);
   assert.strictEqual(r.status, 403, '缺少 X-Setup-Key 拒绝 403');
   // key 错误 → 403
   r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'wrong-key' },
     body: JSON.stringify({ password: 'strong-pass-123' })
-  }), fresh);
+  }), freshKey);
   assert.strictEqual(r.status, 403, 'X-Setup-Key 错误拒绝 403');
   // key 正确 → 201
   r = await core.handleAdminSetup(new Request('http://t/api/admin/setup', {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Setup-Key': 'setup-key-123' },
     body: JSON.stringify({ password: 'strong-pass-123' })
-  }), fresh);
-  assert.strictEqual(r.status, 201, '首次设置成功 201');
+  }), freshKey);
+  assert.strictEqual(r.status, 201, '有 key 首次设置成功 201');
 
   // 短密码拒绝（< 8 位）
   const fresh2 = mockEnv();
@@ -655,13 +658,24 @@ tests.push(['管理员认证：首次设置 / 密码验证 / 限流 429', async 
   }), fresh2);
   assert.strictEqual(r.status, 400, '短密码 400');
 
-  // —— 未初始化时登录 → 403（不再自动生成默认密码）——
-  const uninit = mockEnv();
+  // —— 未初始化时登录：无 key → 自动初始化随机默认密码（兼容旧行为）；有 key → 403（防抢注）——
+  const uninitNoKey = mockEnv();
   r = await core.handleAdminLogin(new Request('http://t/api/admin/login', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: 'anything' })
-  }), uninit);
-  assert.strictEqual(r.status, 403, '未初始化登录 403');
+  }), uninitNoKey);
+  assert.strictEqual(r.status, 200, '无 key 未初始化登录自动初始化 200');
+  const autoInit = await r.json();
+  assert.strictEqual(autoInit.mustChange, true, '自动初始化 mustChange=true');
+  assert.ok(/^[a-z0-9]{4}-[a-z0-9]{4}$/.test(autoInit.defaultPassword || ''), '返回随机器默认密码 xxxx-xxxx');
+
+  const uninitKey = mockEnv();
+  uninitKey.BLOG_ADMIN_SETUP_KEY = 'setup-key-123';
+  r = await core.handleAdminLogin(new Request('http://t/api/admin/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: 'anything' })
+  }), uninitKey);
+  assert.strictEqual(r.status, 403, '有 key 未初始化登录 403');
 
   // —— 重置需 X-Setup-Key：已有密码时无 key → 403 ——
   const env = mockEnv();

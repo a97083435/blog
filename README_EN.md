@@ -270,7 +270,7 @@ Add in repo Settings → Secrets and variables → Actions:
 | `CLOUDFLARE_ACCOUNT_ID` | ✅ | Cloudflare Account ID (visible on Dashboard sidebar) |
 | `BLOG_D1_ID` | ✅ | D1 Database ID (from step 2, UUID format) |
 | `BLOG_KV_ID` | ✅ | KV Namespace ID (from step 2, 32 hex chars) |
-| `BLOG_ADMIN_SETUP_KEY` | ✅ | Setup key: required to initialize the admin password (backend fail-closed — refuses initialization if unset, anti-squatting) |
+| `BLOG_ADMIN_SETUP_KEY` | Optional | Setup key: when set, `/api/admin/setup` requires `X-Setup-Key` for first init & reset (anti-squatting, recommended); when unset, falls back to legacy behavior — first deploy auto-generates a random default password on login (first-come race exists; configure it for fresh deployments). Logged-in instances are unaffected |
 | `SITE_URL` | Recommended | Public domain, e.g. `https://blog.example.com` (tightens CORS / RSS / Sitemap) |
 | `CF_ZONE_ID` | Optional | Custom domain Zone ID (enables cache purge on publish) |
 
@@ -284,8 +284,9 @@ Push to `main` branch, GitHub Actions will automatically:
 4. ✅ Write runtime Secrets (`BLOG_ADMIN_SETUP_KEY`, etc.)
 
 After deployment, visit `https://<worker-name>.<subdomain>.workers.dev/admin`:
-- First deploy: click "First deploy? Initialize with setup key", enter a new admin password + `BLOG_ADMIN_SETUP_KEY`;
-- Then log in normally. `/api/admin/setup` and `/api/admin/login` both refuse to run before initialization (secure default).
+- First deploy (with `BLOG_ADMIN_SETUP_KEY` set): click "First deploy? Initialize with setup key", enter a new admin password + setup key;
+- First deploy (without setup key): log in once with any password — the backend auto-generates a random default password (`xxxx-xxxx`) and shows it; use it to log in, then change it (forced);
+- Then log in normally.
 
 #### 5. Migrate from KV to D1 (legacy data)
 
@@ -441,7 +442,7 @@ window.BLOG_CONFIG = {
 | Layer | Mechanism |
 | --- | --- |
 | Password storage | PBKDF2-SHA256 salted hash (100,000 iterations), never plaintext |
-| First deploy | `BLOG_ADMIN_SETUP_KEY` is mandatory; initialize via `/api/admin/setup` + `X-Setup-Key`; login before initialization returns 403; password min 8 chars |
+| First deploy | With `BLOG_ADMIN_SETUP_KEY` set: explicit init via `/api/admin/setup` + `X-Setup-Key`, login before init returns 403 (anti-squatting); unset: login auto-generates a random default password (`xxxx-xxxx`, `mustChange=true`, forced to change after login; first-come race exists). Password min 8 chars |
 | Static mode | Passwords stored as SHA-256 hashes (backward-compatible, auto-upgraded) |
 | Session management | Random Token (32-byte hex), 7-day expiry, destroyed on logout |
 | Rate limiting | 5 consecutive failures from same IP = 15-minute lockout |

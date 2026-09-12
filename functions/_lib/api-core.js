@@ -800,26 +800,43 @@ export async function isWriteAuthed(request, env) {
 
 /* ---------- 接口实现 ---------- */
 
-/** POST /api/admin/setup — 设置管理员密码（首次与重置均需 X-Setup-Key）
- * 安全默认：必须配置 BLOG_ADMIN_SETUP_KEY 环境变量，且请求头携带匹配的 X-Setup-Key，
- * 否则拒绝初始化/重置。杜绝「第一个请求到的人即拿管理员」的抢注竞态。 */
+/** 生成可读的随机默认密码（格式：xxxx-xxxx，8 位字母数字，去掉易混淆字符） */
+function generateDefaultPassword() {
+  const chars = 'abcdefghjkmnpqrstuvwxyz23456789'; // 去掉容易混淆的 i/l/o/0/1
+  const buf = new Uint8Array(8);
+  crypto.getRandomValues(buf);
+  const p1 = Array.from(buf.slice(0, 4), b => chars[b % chars.length]).join('');
+  const p2 = Array.from(buf.slice(4, 8), b => chars[b % chars.length]).join('');
+  return p1 + '-' + p2;
+}
+
+/** POST /api/admin/setup — 设置管理员密码
+ * BLOG_ADMIN_SETUP_KEY 为可选项，两种模式：
+ *   · 已配置（推荐/生产）：首次初始化与重置均需请求头 X-Setup-Key 匹配环境变量，
+ *     杜绝「第一个请求到的人即拿管理员」的抢注竞态；
+ *   · 未配置（兼容旧行为）：首次初始化免密钥直接设置密码（存在先到先得竞态，
+ *     全新部署建议配置安装密钥）；已有密码时仍拒绝重置（防未授权覆盖）。 */
 export async function handleAdminSetup(request, env) {
   if (!env || !env.DB) return json({ error: DB_ERR }, 500, request, env);
   if (request.method === 'OPTIONS') return corsPreflight(request, env);
   if (request.method !== 'POST') return json({ error: 'Method not allowed' }, 405, request, env);
 
-  // fail-closed：未配置安装密钥一律拒绝（防止无密钥环境下被任意初始化）
   const setupKey = env.BLOG_ADMIN_SETUP_KEY;
-  if (!setupKey) {
-    return json({ error: '未配置 BLOG_ADMIN_SETUP_KEY，无法初始化管理员。请在 Cloudflare 环境变量中添加安装密钥后重试' }, 409, request, env);
-  }
-  const given = String(request.headers.get('X-Setup-Key') || '').trim();
-  if (!await safeEqual(given, setupKey)) return json({ error: '设置密钥无效' }, 403, request, env);
 
+  // 已有密码：重置一律需要安装密钥（配置了 key → 校验匹配；未配置 → 拒绝，防未授权覆盖）
   const existingAuth = await getAdminAuth(env);
-  // 密码已存在时即使密钥正确也不再允许重复设置（防误覆盖），重置请参考文档
   if (existingAuth && existingAuth.hash) {
+    if (setupKey) {
+      const given = String(request.headers.get('X-Setup-Key') || '').trim();
+      if (!await safeEqual(given, setupKey)) return json({ error: '设置密钥无效' }, 403, request, env);
+    }
     return json({ error: '管理员密码已设置；如需重置，请先删除 D1 表 admin_auth 的 auth 行' }, 409, request, env);
+  }
+
+  // 首次初始化：配置了安装密钥 → fail-closed 必须携带匹配的 X-Setup-Key；未配置 → 兼容旧行为免密钥
+  if (setupKey) {
+    const given = String(request.headers.get('X-Setup-Key') || '').trim();
+    if (!await safeEqual(given, setupKey)) return json({ error: '设置密钥无效' }, 403, request, env);
   }
 
   let body = null;
@@ -869,11 +886,25 @@ export async function handleAdminLogin(request, env) {
   const password = String((body && body.password) || '');
   const auth = await getAdminAuth(env);
 
-  // —— 未初始化：拒绝登录，需显式 /api/admin/setup + X-Setup-Key ——
-  // 原「首次自动生成随机默认密码」已移除：它存在 first-come 竞态，
-  // 任何先到的人都能拿到管理员（抢注）。现在必须用安装密钥显式初始化。
+  // —— 未初始化 ——
+  // 配置了 BLOG_ADMIN_SETUP_KEY → fail-closed：拒绝登录，必须走 /api/admin/setup + X-Setup-Key
+  //（杜绝抢注：任何先到的人都能拿到管理员）。未配置 → 兼容旧行为：首次部署自动生成
+  // 随机默认密码并返回（前端 showFirstLoginPwd 显示，登录后强制修改密码）。
   if (!auth || !auth.hash || !auth.salt) {
-    return json({ error: '管理员尚未初始化：请先调用 POST /api/admin/setup 并使用安装密钥（环境变量 BLOG_ADMIN_SETUP_KEY）设置密码' }, 403, request, env);
+    if (env.BLOG_ADMIN_SETUP_KEY) {
+      return json({ error: '管理员尚未初始化：请先调用 POST /api/admin/setup 并使用安装密钥（环境变量 BLOG_ADMIN_SETUP_KEY）设置密码' }, 403, request, env);
+    }
+    const defaultPwd = generateDefaultPassword();
+    const salt = randomToken(16);
+    const iter = PBKDF2_ITER;
+    let hash;
+    try { hash = await deriveKey(defaultPwd, salt, iter); }
+    catch (e) { return json({ error: '服务端初始化失败' }, 500, request, env); }
+    try { await setAdminAuth(env, { salt, hash, iter, mustChange: true }); }
+    catch (e) { return json({ error: '数据库写入失败' }, 500, request, env); }
+    const token = randomToken(32);
+    await dbRun(env.DB, 'INSERT INTO admin_sessions (token,exp) VALUES (?,?)', token, nowMs() + ADMIN_SESSION_TTL * 1000);
+    return json({ ok: true, token, expiresIn: ADMIN_SESSION_TTL, mustChange: true, defaultPassword: defaultPwd }, 200, request, env);
   }
 
   // —— 正常登录 ——

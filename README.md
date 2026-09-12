@@ -274,7 +274,7 @@ npx wrangler kv namespace create BLOG
 | `CLOUDFLARE_ACCOUNT_ID` | ✅ | Cloudflare 账户 ID（在 Dashboard 右侧可见） |
 | `BLOG_D1_ID` | ✅ | D1 数据库 ID（上一步创建获得，UUID 格式） |
 | `BLOG_KV_ID` | ✅ | KV 命名空间 ID（上一步创建获得，32 位十六进制） |
-| `BLOG_ADMIN_SETUP_KEY` | ✅ | 安装密钥：首次设置管理员密码必需（后端 fail-closed，未配置时拒绝初始化，防抢注） |
+| `BLOG_ADMIN_SETUP_KEY` | 可选 | 安装密钥：配置后 `/api/admin/setup` 首次初始化与重置需 `X-Setup-Key`（防抢注，推荐）；未配置时回退旧行为——首次部署登录接口自动生成随机默认密码（存在先到先得竞态，全新部署建议配置）。已初始化实例登录不受影响 |
 | `SITE_URL` | 推荐 | 站点对外域名，如 `https://blog.example.com`（用于收紧 CORS / RSS / Sitemap） |
 | `CF_ZONE_ID` | 可选 | 自定义域名的 Zone ID（配置后发布即清边缘缓存） |
 
@@ -288,8 +288,9 @@ npx wrangler kv namespace create BLOG
 4. ✅ 写入运行时 Secret（`BLOG_ADMIN_SETUP_KEY` 等）
 
 部署完成后访问 `https://<worker名>.<子域>.workers.dev/admin`：
-- 首次部署：点击「首次部署？使用安装密钥初始化」，输入新管理密码 + `BLOG_ADMIN_SETUP_KEY` 提交；
-- 之后正常登录即可。`/api/admin/setup` 与 `/api/admin/login` 在未初始化时一律拒绝（安全默认）。
+- 首次部署（配置了 `BLOG_ADMIN_SETUP_KEY`）：点击「首次部署？使用安装密钥初始化」，输入新管理密码 + 安装密钥提交；
+- 首次部署（未配置安装密钥）：直接用任意密码登录一次，后端会自动生成随机默认密码（`xxxx-xxxx`）并在页面上提示，用它登录后系统强制修改密码；
+- 之后正常登录即可。
 
 #### 5. 从 KV 迁移到 D1（旧数据）
 
@@ -468,7 +469,7 @@ window.BLOG_CONFIG = {
 | 层 | 机制 |
 | --- | --- |
 | 密码存储 | PBKDF2-SHA256 加盐哈希（100,000 次迭代），永不存明文 |
-| 首次部署 | 必须配置 `BLOG_ADMIN_SETUP_KEY` 并用它显式初始化（`/api/admin/setup` + X-Setup-Key），未初始化登录一律 403；密码最少 8 位 |
+| 首次部署 | 配置了 `BLOG_ADMIN_SETUP_KEY`：须用它显式初始化（`/api/admin/setup` + X-Setup-Key），未初始化登录一律 403（防抢注）；未配置：登录接口自动生成随机默认密码（`xxxx-xxxx`，`mustChange=true`，登录后强制改密，存在先到先得竞态）。密码最少 8 位 |
 | 静态模式 | 密码 SHA-256 哈希存储（兼容旧明文，登录后自动升级） |
 | 会话管理 | 随机 Token（32 字节 hex），7 天有效，登出即销毁 |
 | 限流 | 同一 IP 连续失败 5 次锁定 15 分钟 |
