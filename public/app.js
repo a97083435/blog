@@ -3313,6 +3313,7 @@ function _setJsonLd(obj) {
  * ============================================================ */
 var _aiOk = null;
 var _aiProbing = false;
+var _aiExcerptBusy = null;   // 卡片摘要批量拉取在途标记：避免一次加载多次 route() 重复请求
 function aiProbe() {
   if (_aiOk !== null) return Promise.resolve(_aiOk === true);
   if (_aiProbing) {
@@ -3396,19 +3397,71 @@ function aiFillSlots() {
     if (ok) aiFillCardExcerpts();
   });
 }
-/** 卡片摘要 AI 化：遍历带 data-ai-excerpt 的摘要元素，异步拉取该文 AI 摘要并替换；
- *  没有缓存摘要 / AI 未启用 / 拉取失败 → 保持默认摘要兜底不动。 */
+/** 卡片摘要 AI 化：批量拉取已有 AI 摘要并替换默认摘要
+ *  · 一次 GET /api/ai/summaries?slugs=... 覆盖全部卡片（原先每卡一个 GET → N 次请求）；
+ *  · localStorage 缓存（qy.ai.sum.{lang}）：已生成 24h、未生成 1h（负缓存），
+ *    重复访问零网络请求；拉取失败 / 无缓存摘要 → 保留默认摘要兜底不动。
+ *  · 加载途中 route() 多次重渲染：批量在途时新调用只补填新 DOM，不重复发请求。 */
 function aiFillCardExcerpts() {
   var els = document.querySelectorAll('.post-card .excerpt[data-ai-excerpt]');
   if (!els.length) return;
+  var lang = aiLang();
+  var cache = aiLoadSummaries(lang);
+  var now = Date.now();
+  var toFetch = [], seen = {};
   Array.prototype.forEach.call(els, function (el) {
     var slug = el.getAttribute('data-ai-excerpt');
-    if (!slug) return;
-    apiFetch('api/ai/summary?slug=' + encodeURIComponent(slug) + '&lang=' + encodeURIComponent(aiLang()), { method: 'GET' })
-      .then(function (d) {
-        if (d && d.summary && el.isConnected) el.textContent = d.summary;
-      })
-      .catch(function () { /* 拉取失败：保留默认摘要 */ });
+    if (!slug || seen[slug]) return;
+    seen[slug] = true;
+    var hit = cache[slug];
+    if (hit && hit.s && (now - hit.ts) < 86400000) return;  // 已生成，24h 内新鲜
+    if (hit && hit.miss && (now - hit.ts) < 3600000) return; // 已知未生成，1h 负缓存
+    toFetch.push(slug);
+  });
+  aiApplySummaries(cache, lang);   // 本地命中先直接替换
+  if (!toFetch.length) return;     // 全部本地命中 → 零网络请求
+  if (_aiExcerptBusy) {            // 批量已在途：完成后补填本次新 DOM，不重复请求
+    _aiExcerptBusy.then(function () { aiApplySummaries(aiLoadSummaries(lang), lang); }).catch(function () {});
+    return;
+  }
+  _aiExcerptBusy = aiFetchSummaries(toFetch, lang)
+    .then(function (merged) { _aiExcerptBusy = null; aiApplySummaries(merged, lang); })
+    .catch(function () { _aiExcerptBusy = null; /* 拉取失败：保留默认摘要兜底 */ });
+}
+/* 读本地摘要缓存（qy.ai.sum.{lang}） */
+function aiLoadSummaries(lang) {
+  var cache = {};
+  try { cache = JSON.parse(localStorage.getItem('qy.ai.sum.' + lang)) || {}; } catch (e) {}
+  return cache;
+}
+/* 批量拉取缺失/过期摘要（按 30 条分片，URL 长度兜底），合并后写回本地缓存 */
+function aiFetchSummaries(toFetch, lang) {
+  var CHUNK = 30, jobs = [];
+  for (var i = 0; i < toFetch.length; i += CHUNK) {
+    var batch = toFetch.slice(i, i + CHUNK);
+    jobs.push(apiFetch('api/ai/summaries?slugs=' + batch.map(encodeURIComponent).join(',') + '&lang=' + encodeURIComponent(lang), { method: 'GET' })
+      .then(function (d) { return (d && d.summaries) ? d.summaries : {}; }, function () { return {}; }));
+  }
+  return Promise.all(jobs).then(function (parts) {
+    var cache = aiLoadSummaries(lang);
+    var now = Date.now();
+    parts.forEach(function (summaries) {
+      Object.keys(summaries).forEach(function (slug) {
+        var s = summaries[slug];
+        cache[slug] = s ? { s: s, ts: now } : { miss: true, ts: now };
+      });
+    });
+    try { localStorage.setItem('qy.ai.sum.' + lang, JSON.stringify(cache)); } catch (e) {}
+    return cache;
+  });
+}
+/* 把本地缓存里已有的 AI 摘要替换到当前可见卡片（幂等，可反复调用） */
+function aiApplySummaries(cache, lang) {
+  var els = document.querySelectorAll('.post-card .excerpt[data-ai-excerpt]');
+  Array.prototype.forEach.call(els, function (el) {
+    var slug = el.getAttribute('data-ai-excerpt');
+    var hit = slug && cache[slug];
+    if (hit && hit.s && el.isConnected) el.textContent = hit.s;
   });
 }
 function aiSummaryBtnHTML(slug) {

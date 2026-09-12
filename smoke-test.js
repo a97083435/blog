@@ -1910,6 +1910,48 @@ tests.push(['顶栏渲染「背景动画」开关按钮（bg-anim 未加载时�
   assert.ok(html.includes('aria-pressed="true"'), 'bg-anim 开启时按钮为开启态');
 }]);
 
+tests.push(['首页卡片摘要批量拉取：多卡片只发 1 次 /api/ai/summaries，不每卡一个 GET', async () => {
+  let batch = 0, single = 0;
+  const fn = async (url) => {
+    const u = String(url);
+    if (u.indexOf('/locales/') >= 0) return { ok: false, status: 404, json: async () => ({}) };
+    if (u.includes('/api/ai/summaries?')) { batch++; return { ok: true, status: 200, json: async () => ({ ok: true, summaries: { a: '摘要A', b: '摘要B' } }) }; }
+    if (u.includes('/api/ai/summary?')) { single++; return { ok: true, status: 200, json: async () => ({ ok: true, summary: '', cached: false }) }; }
+    if (u.includes('/api/ai/ping')) return { ok: true, status: 200, json: async () => ({ ok: true }) };
+    if (u.endsWith('/api/posts')) return { ok: true, status: 200, json: async () => ({ ok: true, posts: [
+      { id: 'a', title: 'A', content: 'x', excerpt: 'xa', date: '2025-01-01', tags: [] },
+      { id: 'b', title: 'B', content: 'y', excerpt: 'xb', date: '2025-01-02', tags: [] }
+    ] }) };
+    if (u.endsWith('/api/settings')) return { ok: true, status: 200, json: async () => ({ ok: true, settings: {} }) };
+    return { ok: true, status: 200, json: async () => ({ ok: true }) };
+  };
+  // 自定义 document：querySelectorAll 对 data-ai-excerpt 选择器返回两张"卡片摘要"假元素
+  const mk = makeCtx({ 'window.BLOG_CONFIG': { mode: 'api' }, fetch: fn });
+  const fakeA = { getAttribute: () => 'a', isConnected: true, textContent: '' };
+  const fakeB = { getAttribute: () => 'b', isConnected: true, textContent: '' };
+  mk.ctx.document = Object.assign({}, mk.ctx.document, {
+    querySelectorAll: (sel) => String(sel).indexOf('data-ai-excerpt') >= 0 ? [fakeA, fakeB] : [],
+  });
+  const ctx = mk.ctx;
+  setRoute(ctx, '/');
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'i18n.js'), 'utf8'), ctx, { filename: 'i18n.js' });
+  ctx.t = (k, v) => mk.win.__i18n.t(k, v);
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'posts.js'), 'utf8'), ctx, { filename: 'posts.js' });
+  mk.win.BLOG_POSTS = [];
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'app.js'), 'utf8'), ctx, { filename: 'app.js' });
+  await mk.win.__bootPromise;
+  await new Promise((r) => setTimeout(r, 50));
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(batch === 1, '多卡片只发 1 次批量摘要请求（实际 ' + batch + '）');
+  assert.ok(single === 0, '不再每卡发单个 GET /api/ai/summary（实际 ' + single + '）');
+  assert.ok(fakeA.textContent === '摘要A' && fakeB.textContent === '摘要B', '批量结果已替换卡片摘要');
+  // 二次进入：本地缓存命中 → 零摘要网络请求
+  batch = 0; single = 0;
+  ctx.route();
+  await new Promise((r) => setTimeout(r, 50));
+  assert.ok(batch === 0 && single === 0, '二次路由本地缓存命中，零摘要网络请求');
+}]);
+
 tests.push(['背景动画开关位于顶栏 actions（与搜索同排），侧边栏第二排已移除', async () => {
   const fn = async (url) => {
     const u = String(url);
