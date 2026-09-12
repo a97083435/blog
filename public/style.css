@@ -48,6 +48,19 @@
   --tok-num: #b3751c;
 }
 
+/* ---------- iOS 优化：用系统原生宋体/仿宋，不加载 webfont ----------
+ * iOS 自带 Songti SC（宋体-简）与 STFangsong（华文仿宋），品质高、零流量、
+ * 无加载等待，正好对应正文/标题（宋体）与引用装饰（仿宋）两个角色。
+ * 由 index.html 首屏脚本检测（含 iPadOS）后在 <html> 打 .ios 类，
+ * 仅实测 iOS 设备命中，macOS/Android/桌面不受影响、仍走 CDN webfont。
+ * 大标题在 Songti SC 上用 Black(900) 拉出层级，配合正文宋体形成对比。 */
+html.ios {
+  --font-body: "Songti SC", "STSong", serif;
+  --font-heading: "Songti SC", serif;
+  --font-display: "Songti SC", serif;
+  --font-deco: "STFangsong", "Songti SC", serif;
+}
+
 html[data-theme="dark"] {
   --bg: #171512;
   --bg-soft: #201d18;

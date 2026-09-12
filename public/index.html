@@ -47,6 +47,13 @@
         var b = document.querySelector('base');
         if (b) b.setAttribute('href', './');
       }
+      // iOS 检测（含 iPadOS 13+ 的 MacIntel 伪装）：命中后打 .ios 类，
+      // style.css 据此用系统原生宋体/仿宋、跳过 CDN webfont（省流量）。
+      var _plat = navigator.platform || '';
+      var _ua = navigator.userAgent || '';
+      if (/iP(hone|ad|od)/.test(_plat) || (/MacIntel/.test(_plat) && navigator.maxTouchPoints > 1) || /iPad|iPhone|iPod/.test(_ua)) {
+        document.documentElement.classList.add('ios');
+      }
       try {
         var t = localStorage.getItem('qingyu.theme');
         if (t !== 'light' && t !== 'dark') {
@@ -93,14 +100,30 @@
   </style>
   <link rel="stylesheet" href="style.css?v=2.5.0">
   <!-- 后台样式按需加载：仅访问后台路由时由 app.js 动态注入 -->
-  <!-- 预连接字体 CDN，降低首字节延迟 -->
+  <!-- 预连接字体 CDN，降低首字节延迟（仅桌面/安卓真正加载 CDN 字体时才有意义；iOS 走系统字体） -->
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <!-- 字体：四级衬线栈的外部 CDN 样式表改为非阻塞加载（media=print + onload 切换），
-       避免拖慢首屏渲染；本地分片字体（result.css + dreamserif）同域、体积小，保持常规加载。
-       注：思源宋体 VF 为按字形分片的 webfont（浏览器按需加载，仅拉取页面实际用到的分片） -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@free-fonts/genyo-mincho@1.0.1/genyo-mincho.css" media="print" onload="this.media='all'">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@free-fonts/zhuque-fangsong@1.0.0/zhuque-fangsong.css" media="print" onload="this.media='all'">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cn-fontsource-source-han-serif-sc-vf@1.0.9/font.css" media="print" onload="this.media='all'">
+  <script>
+    // 字体按需加载：iOS 用系统原生宋体/仿宋（.ios 类，见 style.css），跳过 CDN webfont
+    // 下载（省 ~300-600KB 流量）；桌面/安卓才注入三款 CDN 子集样式表。
+    // 非阻塞加载（media=print + onload 切回 all），避免拖慢首屏渲染；
+    // 思源宋体 VF 为按字形分片的 webfont，浏览器按需拉取页面实际用到的分片。
+    (function () {
+      if (document.documentElement.classList.contains('ios')) return;
+      var fonts = [
+        '@free-fonts/genyo-mincho@1.0.1/genyo-mincho.css',
+        '@free-fonts/zhuque-fangsong@1.0.0/zhuque-fangsong.css',
+        'cn-fontsource-source-han-serif-sc-vf@1.0.9/font.css'
+      ];
+      for (var i = 0; i < fonts.length; i++) {
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://cdn.jsdelivr.net/npm/' + fonts[i];
+        link.media = 'print';
+        link.onload = function () { this.media = 'all'; };
+        document.head.appendChild(link);
+      }
+    })();
+  </script>
   <noscript>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@free-fonts/genyo-mincho@1.0.1/genyo-mincho.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@free-fonts/zhuque-fangsong@1.0.0/zhuque-fangsong.css">
