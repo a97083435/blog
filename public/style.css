@@ -1457,6 +1457,7 @@ kbd {
   margin: 28px 0 8px;
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
+  letter-spacing: var(--ls-title);
 }
 .archive-month h3 {
   font-size: 15px;
@@ -1615,7 +1616,9 @@ kbd {
   color: var(--fg);
   min-width: 200px;
   font-size: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.lock-form input:focus { border-color: var(--accent); box-shadow: var(--ring); outline: none; }
 .lock-msg { margin-top: 10px; color: var(--accent); font-size: 13px; }
 
 /* ---------- 评论区 ---------- */
@@ -1634,7 +1637,9 @@ kbd {
   font-size: 14px;
   font-family: inherit;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: var(--ring); outline: none; }
 .comment-submit-row { display: flex; align-items: center; gap: 10px; }
 .c-status { font-size: 13px; color: var(--muted); }
 .comment-list { list-style: none; margin: 16px 0 0; padding: 0; }
@@ -1777,8 +1782,10 @@ kbd {
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 .toc-list a:hover { color: var(--accent); background: var(--accent-soft); }
+.toc-list a:focus-visible { outline: none; box-shadow: var(--ring); }
 .toc-list .toc-num {
   display: inline-block;
   min-width: 18px;
@@ -1849,8 +1856,10 @@ kbd {
   text-decoration: none;
   background: var(--card);
   min-width: 0;
+  box-shadow: var(--shadow);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
-.pn-item:hover { border-color: var(--accent); text-decoration: none; }
+.pn-item:hover { border-color: var(--accent); box-shadow: var(--shadow-hover); transform: translateY(-1px); text-decoration: none; }
 .pn-item:hover .pn-title { color: var(--accent); }
 .pn-item:hover .pn-dir { color: var(--accent); opacity: 0.9; }
 .pn-item.pn-single { grid-column: 1 / -1; }
