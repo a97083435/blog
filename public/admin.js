@@ -622,11 +622,11 @@
   function pageDashboard(content) {
     content.innerHTML = '<div class="ab-page-head"><div><h1 class="ab-page-title">' + t('admin.dashboard.title') + '</h1><p class="ab-page-sub">' + t('admin.dashboard.desc') + '</p></div></div>' +
       '<div class="ab-grid cols-5" id="abStats"></div>' +
-      '<div class="ab-grid cols-2" style="margin-top:16px">' +
+      '<div class="ab-grid cols-2">' +
         '<div class="ab-card"><div class="ab-section-title">' + icon('eye', 16) + ' ' + t('admin.dashboard.visitTrend') + '</div><div id="abTrendViews"></div></div>' +
         '<div class="ab-card"><div class="ab-section-title">' + icon('quote', 16) + ' ' + t('admin.dashboard.commentTrend') + '</div><div id="abTrendCmt"></div></div>' +
       '</div>' +
-      '<div class="ab-grid cols-2" style="margin-top:16px">' +
+      '<div class="ab-grid cols-2">' +
         '<div class="ab-card"><div class="ab-section-title">' + icon('doc', 16) + ' ' + t('admin.dashboard.latestPosts') + '</div><div class="ab-feed" id="abRecentPosts"></div></div>' +
         '<div class="ab-card"><div class="ab-section-title">' + icon('quote', 16) + ' ' + t('admin.dashboard.latestComments') + '</div><div class="ab-feed" id="abRecentCmt"></div></div>' +
       '</div>';
@@ -1039,9 +1039,9 @@
     content.innerHTML =
       '<div class="ab-page-head"><div><h1 class="ab-page-title">' + (route.isNew ? t('admin.editor.newPost') : t('admin.editor.editPost')) + '</h1><p class="ab-page-sub">' + t('editor.markdownHint') + '</p></div></div>' +
       '<div class="ab-editor-head">' +
-        '<div class="ab-editor-meta" style="align-items:end">' +
-          '<input class="ab-input" id="abTitle" placeholder="' + t('admin.editor.titlePlaceholder') + '" style="font-size:16px;font-weight:600">' +
-          '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.tagsPlaceholder') + '</label><input class="ab-input" id="abTags" placeholder="' + t('admin.editor.tagsExample') + '"></div>' +
+        '<div class="ab-editor-meta">' +
+          '<div class="ab-field ab-title-field" style="margin:0"><label class="ab-label" for="abTitle">' + t('admin.editor.titleLabel') + '</label><input class="ab-input" id="abTitle" placeholder="' + t('admin.editor.titlePlaceholder') + '" autocomplete="off"><label class="ab-hint">' + t('admin.editor.titleHint') + '</label></div>' +
+          '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.tagsPlaceholder') + '</label><input class="ab-input" id="abTags" placeholder="' + t('admin.editor.tagsExample') + '" autocomplete="off"></div>' +
         '</div>' +
         '<div class="ab-field" style="margin:0"><label class="ab-label">' + t('admin.editor.coverPlaceholder') + '</label><div class="ab-row"><input class="ab-input" id="abCover" placeholder="https://…"><button class="ab-btn sm" id="abPickCover">' + t('admin.editor.selectMedia') + '</button></div></div>' +
         '<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:0">' +
@@ -1052,20 +1052,20 @@
       '<div class="ab-editor-split">' +
         '<div class="ab-editor-pane">' +
           '<div class="ab-editor-toolbar" id="abToolbar">' +
-            '<button class="ab-tool" data-md="bold" title="' + t('admin.editor.bold') + '">B</button>' +
+            '<button class="ab-tool" data-md="bold" title="' + t('admin.editor.bold') + '"><b>B</b></button>' +
             '<button class="ab-tool" data-md="italic" title="' + t('admin.editor.italic') + '"><i>I</i></button>' +
             '<button class="ab-tool" data-md="h" title="' + t('admin.editor.heading') + '">H</button>' +
             '<button class="ab-tool" data-md="quote" title="' + t('admin.editor.quote') + '">❝</button>' +
             '<button class="ab-tool" data-md="code" title="' + t('admin.editor.code') + '">&lt;/&gt;</button>' +
             '<button class="ab-tool" data-md="ul" title="' + t('admin.editor.list') + '">≡</button>' +
-            '<button class="ab-tool" data-md="link" title="' + t('admin.editor.link') + '">🔗</button>' +
-            '<button class="ab-tool" data-md="img" title="' + t('admin.editor.image') + '">🖼</button>' +
+            '<button class="ab-tool" data-md="link" title="' + t('admin.editor.link') + '">' + icon('link', 15) + '</button>' +
+            '<button class="ab-tool" data-md="img" title="' + t('admin.editor.image') + '">' + icon('image', 15) + '</button>' +
           '</div>' +
           '<textarea class="ab-editor-area" id="abBody" placeholder="' + t('admin.editor.writeHint') + '"></textarea>' +
         '</div>' +
         '<div class="ab-editor-pane"><div class="ab-editor-preview" id="abPreviewPane"></div></div>' +
       '</div>' +
-      '<div class="ab-row" style="margin-top:16px;justify-content:flex-end;gap:10px">' +
+      '<div class="ab-row ab-editor-actions">' +
         (cloudOn() ? '' : '<button class="ab-btn" id="abExport">' + t('editor.exportAll') + '</button>') +
         '<button class="ab-btn" id="abSaveDraft">' + t('admin.editor.saveDraft') + '</button>' +
         '<button class="ab-btn primary" id="abPublish">' + icon('check', 15) + ' ' + t('admin.editor.publish') + '</button>' +
@@ -1404,14 +1404,14 @@
     content.insertAdjacentHTML('beforeend',
       '<div class="ab-uploaddrop" id="abMusicDrop"><div class="ab-card">' +
         '<div class="ab-section-title">' + icon('upload', 16) + ' ' + t('admin.music.upload') + '</div>' +
-        '<div class="ab-muted" style="font-size:12.5px;margin-bottom:10px">' + t('admin.music.dropHint') + '</div>' +
+        '<div class="ab-hint" style="margin:0 0 12px">' + t('admin.music.dropHint') + '</div>' +
         '<div class="ab-row" style="gap:8px;flex-wrap:wrap">' +
           '<input class="ab-input" id="abMusicFile" type="file" accept="audio/*" style="max-width:280px;flex:1 1 200px" aria-label="' + t('admin.music.chooseFile') + '">' +
           '<input class="ab-input" id="abMusicTitle" placeholder="' + t('admin.music.titlePh') + '" style="max-width:220px;flex:1 1 160px" autocomplete="off">' +
           '<input class="ab-input" id="abMusicArtist" placeholder="' + t('admin.music.artistPh') + '" style="max-width:180px;flex:1 1 130px" autocomplete="off">' +
           '<button type="button" class="ab-btn primary" id="abMusicUpload">' + icon('upload', 15) + ' ' + t('admin.music.upload') + '</button>' +
         '</div>' +
-        '<div class="ab-muted" id="abMusicMsg" style="font-size:12.5px;margin-top:8px">' + t('admin.music.r2Hint') + '</div>' +
+        '<div class="ab-hint" id="abMusicMsg">' + t('admin.music.r2Hint') + '</div>' +
         '<div class="ab-progress" id="abMusicBar" style="display:none;height:6px;border-radius:999px;background:var(--ab-border);margin-top:10px;overflow:hidden">' +
           '<div id="abMusicBarFill" style="width:0%;height:100%;background:var(--ab-primary);transition:width .2s"></div></div>' +
       '</div></div>' +
@@ -1565,7 +1565,7 @@
   function pageSettings(content) {
     content.innerHTML = '<div class="ab-page-head"><div><h1 class="ab-page-title">' + t('admin.settings.title') + '</h1><p class="ab-page-sub">' + t('admin.settings.desc') + '</p></div>' +
       (cloudOn() ? '<button class="ab-btn primary" id="abSaveSettings">' + icon('save', 15) + ' ' + t('admin.settings.save') + '</button>' : '<span class="ab-chip" style="background:var(--ab-primary-weak);color:var(--ab-primary)">' + t('admin.categories.staticHint') + '</span>') + '</div>' +
-      (cloudOn() ? '' : '<div class="ab-card"><div class="ab-empty"><div class="ab-empty-ico">⚙️</div><p>' + t('admin.settings.desc') + '</p></div></div>');
+      (cloudOn() ? '' : '<div class="ab-card"><div class="ab-empty"><div class="ab-empty-ico">⚙️</div><p>' + t('admin.settings.cloudOnly') + '</p></div></div>');
     if (!cloudOn()) return;
     content.innerHTML += '<div class="ab-tabs">' +
       '<div class="ab-tab active" data-tab="site">' + t('admin.settings.siteInfo') + '</div>' +
