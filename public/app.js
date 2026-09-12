@@ -1321,6 +1321,14 @@ function app() { return document.querySelector('#app'); }
     + '<select id="accentNativeSide" class="lang-switch accent-native" aria-label="' + accentTitle() + '"></select>'
     + '</div>'
     + '</div>'
+    // 第二排：背景动画开关（与语言/主题色控件同族：lang-switch 外观 + 图标 + 状态字）
+    + '<div class="sidebar-picks sidebar-picks-2">'
+    + '<button type="button" class="lang-switch bg-anim-switch" id="bgAnimSideToggle" aria-pressed="' + (bgAnimOn ? 'true' : 'false') + '" aria-label="' + t('bgAnim.title') + '">'
+    + '<span class="ba-icon">' + svgIcon('spark', 13) + '</span>'
+    + '<span class="ba-label">' + t('bgAnim.title') + '</span>'
+    + '<span class="ba-state">' + (bgAnimOn ? t('bgAnim.stateOn') : t('bgAnim.stateOff')) + '</span>'
+    + '</button>'
+    + '</div>'
     + '</div>'
     + '</aside>';
 
@@ -3683,14 +3691,21 @@ function bindAccentPicker() {
     closeAccentPop();
     closeLangPop();
   });
-  // 背景动画开关状态变化：即时刷新顶栏按钮的 title / aria-pressed（无需整页重渲染）
+  // 背景动画开关状态变化：即时刷新顶栏按钮与侧栏第二排按钮（无需整页重渲染）
   document.addEventListener('qingyu:bgAnim', function () {
-    var b = document.getElementById('bgAnimToggle');
-    if (!b) return;
     var on = !!(window.bgAnim && window.bgAnim.isOn());
-    b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.title = on ? t('bgAnim.on') : t('bgAnim.off');
-    b.setAttribute('aria-label', t('bgAnim.title'));
+    var b = document.getElementById('bgAnimToggle');
+    if (b) {
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      b.title = on ? t('bgAnim.on') : t('bgAnim.off');
+      b.setAttribute('aria-label', t('bgAnim.title'));
+    }
+    var side = document.getElementById('bgAnimSideToggle');
+    if (side) {
+      side.setAttribute('aria-pressed', on ? 'true' : 'false');
+      var st = side.querySelector('.ba-state');
+      if (st) st.textContent = on ? t('bgAnim.stateOn') : t('bgAnim.stateOff');
+    }
   });
   renderAccentSwatches();
   renderAccentNativeSelect();
@@ -3725,6 +3740,9 @@ function bindMobileSidebar() {
   // 侧边栏内的主题切换（独立 ID，与顶栏不冲突）
   var sideTheme = document.querySelector('#themeToggleSide');
   if (sideTheme) sideTheme.addEventListener('click', function () { toggleTheme(); });
+  // 侧边栏内背景动画开关（第二排，与语言/主题色同族）
+  var bgAnimSide = document.querySelector('#bgAnimSideToggle');
+  if (bgAnimSide) bgAnimSide.addEventListener('click', function () { if (window.bgAnim) window.bgAnim.toggle(); });
   // 侧栏内语言切换
   var sideLang = sidebar.querySelector('.lang-switch');
   if (sideLang && !sideLang.dataset.bound) {

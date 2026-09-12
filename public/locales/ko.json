@@ -15,6 +15,8 @@
   "bgAnim.title": "배경 애니메이션",
   "bgAnim.on": "배경 애니메이션 켜짐 (클릭하여 끄기)",
   "bgAnim.off": "배경 애니메이션 꺼짐 (클릭하여 켜기)",
+  "bgAnim.stateOn": "켜짐",
+  "bgAnim.stateOff": "꺼짐",
   "ai.title": "AI 요약",
   "ai.generated": "AI 생성 · 참고용",
   "ai.regenerate": "다시 생성",

@@ -15,6 +15,8 @@
   "bgAnim.title": "背景アニメーション",
   "bgAnim.on": "背景アニメーションON（クリックでOFF）",
   "bgAnim.off": "背景アニメーションOFF（クリックでON）",
+  "bgAnim.stateOn": "ON",
+  "bgAnim.stateOff": "OFF",
   "ai.title": "AI要約",
   "ai.generated": "AI生成 · 参考用",
   "ai.regenerate": "再生成",
