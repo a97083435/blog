@@ -1737,6 +1737,17 @@ async function renderPost(id) {
   var post = posts.find(function (p) { return p.id === id; });
   html += '<main class="container page-fade"><div class="post-body">';
   if (!post) {
+    // 云端列表尚未拉取完成（boot 探测中）时不能急于下结论：刷新文章页会出现
+    // 「内容不存在」一闪而过（内容刚加载出来前先闪红字再变正常）。
+    // 此时先显示加载态，等 boot 完成后 route() 重渲染再给出定论（存在→正文 / 不存在→404）。
+    var cfgNow = getConfig();
+    var cloudPending = (cfgNow.mode === 'api' || cfgNow.mode === 'auto') && !_cloudReady;
+    if (cloudPending) {
+      html += '<div class="empty"><div class="big">' + svgIcon('spinner', 26) + '</div><p>' + t('site.loading') + '…</p></div></div></main>';
+      html += renderFooter();
+      app().innerHTML = html;
+      return;
+    }
     html += '<div class="empty"><div class="big">' + svgIcon('question', 36) + '</div><p>' + t('post.notFound') + '</p><p><a href="' + esc(href('/')) + '">' + t('post.backHome') + '</a></p></div></div></main>';
     html += renderFooter();
     app().innerHTML = html;

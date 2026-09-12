@@ -1857,6 +1857,39 @@ tests.push(['云端详情：文章删除后访问旧链接 → 移除列表并�
   assert.strictEqual(detailHits, 1, '二次访问不再请求详情接口');
 }]);
 
+tests.push(['云端探测未完成时访问文章 → 显示加载态而非「内容不存在」误闪', async () => {
+  const gate = {};
+  gate.promise = new Promise((r) => { gate.resolve = r; });
+  // api 拉取挂起（模拟云端探测仍在进行）→ 期间首次渲染必须显示加载态，不得闪现 notFound
+  const fetchStub = async (url) => {
+    const u = String(url);
+    // locale JSON 立即 404 → i18n 回退内嵌中文，避免卡住首帧渲染
+    if (u.indexOf('/locales/') >= 0) return { ok: false, status: 404, json: async () => ({}) };
+    await gate.promise;   // 仅挂起 /api/*（posts + settings）
+    if (u.endsWith('/api/posts')) return { ok: true, status: 200, json: async () => ({ ok: true, posts: [{ id: 'c1', title: '云端文章', date: '2025-01-01', content: '正文D', tags: [] }] }) };
+    return { ok: true, status: 200, json: async () => ({ ok: true }) };
+  };
+  const { ctx, appEl, win } = makeCtx({ 'window.BLOG_CONFIG': { mode: 'api' }, fetch: fetchStub });
+  setRoute(ctx, '/posts/c1/');
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'i18n.js'), 'utf8'), ctx, { filename: 'i18n.js' });
+  ctx.t = (k, v) => win.__i18n.t(k, v);
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'posts.js'), 'utf8'), ctx, { filename: 'posts.js' });
+  win.BLOG_POSTS = []; // posts.js 当前为空 → 列表里没有任何文章
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'app.js'), 'utf8'), ctx, { filename: 'app.js' });
+  // __bootPromise 已启动、api 拉取仍挂起；等微任务/首帧渲染完成
+  // （本用例 locale 请求 404 → i18n 回退内嵌中文 → t() 渲染中文字面量）
+  await new Promise((r) => setTimeout(r, 20));
+  let html = appEl.innerHTML;
+  assert.ok(html.includes('加载中'), '探测未完成时显示加载态（site.loading=加载中）');
+  assert.ok(!html.includes('内容不存在'), '不闪现「内容不存在」（post.notFound）');
+  // 放行探测 → boot 完成 → 重渲染出文章正文
+  gate.resolve();
+  await win.__bootPromise;
+  await new Promise((r) => setTimeout(r, 20));
+  html = appEl.innerHTML;
+  assert.ok(html.includes('正文D'), '探测完成后渲染出文章正文');
+}]);
+
 /* ---------- 运行 ---------- */
 (async () => {
   let passed = 0, failed = 0;
