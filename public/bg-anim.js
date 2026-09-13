@@ -116,12 +116,19 @@
     ctx.translate(p.x, p.y);
     ctx.rotate(p.rot);
     ctx.beginPath();
-    // 两段弧线构成花瓣轮廓 + 中心叶脉
-    ctx.moveTo(jx, -s);
-    ctx.quadraticCurveTo(s + jx, -s * 0.4, jx, s);
-    ctx.quadraticCurveTo(-s + jx, -s * 0.4, jx, -s);
-    ctx.moveTo(jx, -s);
-    ctx.lineTo(jx * 0.3, 0);
+    // 樱花花瓣：下方圆润、顶端有缺刻，比单纯椭圆更接近真实花瓣
+    ctx.moveTo(jx, s);
+    ctx.quadraticCurveTo(-s - jx, -s * 0.2, -s * 0.34, -s * 0.6);
+    ctx.quadraticCurveTo(-s * 0.12, -s * 0.78, jx, -s * 0.42);
+    ctx.quadraticCurveTo(s * 0.12, -s * 0.78, s * 0.34, -s * 0.6);
+    ctx.quadraticCurveTo(s + jx, -s * 0.2, jx, s);
+    // 中脉 + 两条侧脉
+    ctx.moveTo(jx, s - s * 0.12);
+    ctx.lineTo(jx, -s * 0.25);
+    ctx.moveTo(jx, s * 0.3);
+    ctx.lineTo(-s * 0.35, s * 0.15);
+    ctx.moveTo(jx, s * 0.3);
+    ctx.lineTo(s * 0.35, s * 0.15);
     ctx.stroke();
     ctx.restore();
   }
@@ -131,11 +138,18 @@
     ctx.translate(p.x, p.y);
     ctx.rotate(p.rot);
     ctx.beginPath();
-    ctx.moveTo(jx, -s * 0.9);
-    ctx.quadraticCurveTo(s + jx, 0, jx, s * 0.9);   // 右侧轮廓
-    ctx.quadraticCurveTo(-s + jx, 0, jx, -s * 0.9); // 左侧轮廓
-    ctx.moveTo(jx, -s * 0.9);
-    ctx.lineTo(jx * 0.2, s * 0.2);                  // 中脉（手绘感：略歪）
+    // 秋叶：有叶柄、叶尖与侧脉，更接近真实落叶
+    ctx.moveTo(jx, s);
+    ctx.quadraticCurveTo(s + jx, s * 0.15, jx, -s);
+    ctx.quadraticCurveTo(-s + jx, s * 0.15, jx, s);
+    // 中脉
+    ctx.moveTo(jx, s * 0.8);
+    ctx.lineTo(jx, -s * 0.7);
+    // 侧脉
+    ctx.moveTo(jx, -s * 0.05); ctx.lineTo(-s * 0.45, -s * 0.4);
+    ctx.moveTo(jx, -s * 0.05); ctx.lineTo(s * 0.45, -s * 0.4);
+    ctx.moveTo(jx, s * 0.35); ctx.lineTo(-s * 0.4, s * 0.1);
+    ctx.moveTo(jx, s * 0.35); ctx.lineTo(s * 0.4, s * 0.1);
     ctx.stroke();
     ctx.restore();
   }
@@ -145,11 +159,18 @@
     ctx.translate(p.x, p.y);
     ctx.rotate(p.rot);
     ctx.beginPath();
-    // 手绘星号雪花：3 条交叉短线
-    for (var i = 0; i < 3; i++) {
+    // 六角雪花：主枝 + 侧枝，比单纯米字更符合雪花形态
+    for (var i = 0; i < 6; i++) {
       var a = i * Math.PI / 3;
-      ctx.moveTo(Math.cos(a) * -s, Math.sin(a) * -s);
-      ctx.lineTo(Math.cos(a) * s + jx, Math.sin(a) * s + jx * 0.5);
+      var c = Math.cos(a), sn = Math.sin(a);
+      ctx.moveTo(c * -s, sn * -s);
+      ctx.lineTo(c * s, sn * s);
+      var bx = c * s * 0.62, by = sn * s * 0.62;
+      var dir = (i % 2) ? -1 : 1;
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx - sn * s * 0.26 * dir, by + c * s * 0.26 * dir);
+      ctx.moveTo(bx * 0.55, by * 0.55);
+      ctx.lineTo(bx * 0.55 - sn * s * 0.18 * dir, by * 0.55 + c * s * 0.18 * dir);
     }
     ctx.stroke();
     ctx.restore();
@@ -159,9 +180,11 @@
     ctx.save();
     ctx.translate(p.x, p.y);
     ctx.beginPath();
-    // 日光微尘：米粒状短线
-    ctx.moveTo(-s * 0.6 + jx, 0);
-    ctx.lineTo(s * 0.6 + jx * 0.5, 0);
+    // 日光微尘：微小十字光点
+    ctx.moveTo(-s + jx, 0);
+    ctx.lineTo(s + jx, 0);
+    ctx.moveTo(0, -s + jx * 0.4);
+    ctx.lineTo(0, s + jx * 0.4);
     ctx.stroke();
     ctx.restore();
   }
@@ -171,11 +194,16 @@
     ctx.globalAlpha = p.alpha;
     ctx.translate(p.x, p.y);
     ctx.beginPath();
-    // 流云：两段横向波浪短线（手绘感）
-    ctx.moveTo(-s + jx, 0);
-    ctx.quadraticCurveTo(-s * 0.3, -p.size * 0.4, s * 0.3, 0);
-    ctx.moveTo(-s * 0.7, p.size * 0.3);
-    ctx.quadraticCurveTo(0, p.size * 0.55, s * 0.7, p.size * 0.3);
+    // 流云：蓬松圆弧轮廓，比单纯两道波浪更接近云朵
+    ctx.moveTo(-s + jx, p.size * 0.28);
+    ctx.quadraticCurveTo(-s - p.size * 0.2, -p.size * 0.18, -s * 0.5, -p.size * 0.22);
+    ctx.quadraticCurveTo(-s * 0.55, -p.size * 0.72, -s * 0.12, -p.size * 0.62);
+    ctx.quadraticCurveTo(-s * 0.2, -p.size * 1.05, s * 0.18, -p.size * 0.78);
+    ctx.quadraticCurveTo(s * 0.25, -p.size * 1.1, s * 0.6, -p.size * 0.55);
+    ctx.quadraticCurveTo(s * 1.02, -p.size * 0.5, s * 0.85, -p.size * 0.08);
+    ctx.quadraticCurveTo(s * 1.15, p.size * 0.2, s * 0.4, p.size * 0.28);
+    ctx.quadraticCurveTo(s * 0.25, p.size * 0.42, -s * 0.35, p.size * 0.42);
+    ctx.quadraticCurveTo(-s * 0.85, p.size * 0.5, -s + jx, p.size * 0.28);
     ctx.stroke();
     ctx.restore();
   }
