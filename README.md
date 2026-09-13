@@ -161,7 +161,7 @@ npx wrangler kv namespace create BLOG
 5. ✅ 部署 Worker 到 Cloudflare
 6. ✅ 写入运行时 Secret（安装密钥 / R2 凭据 / 清缓存凭证，配置了才写）
 
-部署完成后访问 `https://www.2024921.xyz/admin`：
+部署完成后访问 `https://www.example.com/admin`：
 
 - 首次部署（配置了 `BLOG_ADMIN_SETUP_KEY`）：点击「首次部署？使用安装密钥初始化」，输入新管理密码 + 安装密钥提交；
 - 首次部署（未配置安装密钥）：直接用任意密码登录一次，后端会自动生成随机默认密码（`xxxx-xxxx`）并在页面上提示，用它登录后系统强制修改密码；
@@ -433,7 +433,7 @@ window.BLOG_CONFIG = {
   // ====== 基础配置 ======
   mode: 'auto',           // 'auto' | 'static' | 'api'
   apiBase: '',            // API 基础地址，留空 = 同源
-  siteUrl: 'https://www.2024921.xyz', // 站点对外地址（RSS/Sitemap 用）
+  siteUrl: 'https://www.example.com', // 站点对外地址（RSS/Sitemap 用）
   writeToken: '',         // 旧版静态令牌（建议用登录替代）
   pageSize: 5,            // 首页每页文章数（0 = 不分页）
   adminPwd: '',           // 静态模式本地密码（云端模式请留空）
@@ -508,7 +508,7 @@ node search-verify.js   # 搜索专项验证 13 例
 导入示例文章到已部署的云端实例：
 
 ```bash
-node seed.js https://www.2024921.xyz [--token <会话或写入令牌>]
+node seed.js https://www.example.com [--token <会话或写入令牌>]
 ```
 
 ---
