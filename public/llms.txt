@@ -1,0 +1,33 @@
+# Qingyu'Blog
+
+> 零后端依赖的轻量博客系统，原生 HTML/CSS/JS + Cloudflare Workers/D1。支持文章、评论、标签、归档、后台写作、Smoji 表情、多语言切换。
+
+## 关键页面
+
+- [首页](/)
+- [归档](/archive)
+- [标签](/tags)
+- [关于](/about)
+- [文章](/posts/)
+- [后台](/admin)
+
+## 功能与说明
+
+- 文章编辑内置选择器，发表后正文、评论、留言板均可插入 Smoji 表情。
+- 顶部与底部导航、友情链接可在后台「设置」中维护，改动即时生效。
+- 支持简体中文、English、日本語、한국어、हिन्दी 多语言界面。
+- 文章列表支持分页与标签筛选；评论与留言板带审核与 AI 辅助能力。
+- 本地 `file://` 双击 `public/index.html` 即可离线预览，无需构建。
+
+## 技术栈
+
+- 前端：原生 HTML / CSS / JavaScript（无框架、无构建步骤）
+- 后端：Cloudflare Workers / Pages Functions + D1 / KV
+- 数据：文章、评论、留言、设置均持久化到 Cloudflare D1
+
+## 链接
+
+- 仓库：https://github.com/kejiland/qingyu-blog
+- 文档：https://docs.2024921.xyz/
+- Sitemap：https://kejiland.azhz.workers.dev/sitemap.xml
+- RSS：https://kejiland.azhz.workers.dev/api/feed.xml

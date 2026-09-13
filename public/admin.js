@@ -458,8 +458,8 @@
         '<div class="ab-header-right">' +
           '<button class="ab-header-btn" id="abPreview" title="' + t('admin.header.preview') + '">' + icon('external', 16) + '<span class="ab-hide-sm">' + t('admin.header.preview') + '</span></button>' +
           '<div class="ab-lang-wrap">' +
-            '<button class="ab-btn-icon" id="abLangToggle" title="' + esc(window.langTitle ? window.langTitle() : 'Language') + '" aria-haspopup="menu" aria-expanded="false">' + icon('globe', 18) + '</button>' +
-            '<div class="ab-lang-pop" id="abLangPop" role="menu">' +
+            '<button class="ab-btn-icon" id="abLangToggle" title="' + esc(window.langTitle ? window.langTitle() : 'Language') + '" aria-haspopup="listbox" aria-controls="abLangPop" aria-expanded="false">' + icon('globe', 18) + '</button>' +
+            '<div class="ab-lang-pop" id="abLangPop" role="listbox">' +
               '<div class="ab-lang-pop-title">' + esc(window.langTitle ? window.langTitle() : 'Language') + '</div>' +
               '<div class="ab-lang-pop-options" id="abLangPopInner"></div>' +
             '</div>' +
@@ -553,7 +553,7 @@
     if (langToggle && langPop && window.__i18n) {
       var langInner = root.querySelector('#abLangPopInner');
       if (langInner) langInner.innerHTML = (typeof window.langOptionsHTML === 'function') ? window.langOptionsHTML() : '';
-      langToggle.addEventListener('click', function (e) { e.stopPropagation(); langPop.classList.toggle('open'); });
+      langToggle.addEventListener('click', function (e) { e.stopPropagation(); var open = langPop.classList.toggle('open'); langToggle.setAttribute('aria-expanded', open ? 'true' : 'false'); });
       langPop.addEventListener('click', function (e) {
         var b = e.target.closest('[data-lang]');
         if (!b) return;
@@ -611,6 +611,8 @@
       document.addEventListener('click', function () {
         var ms = document.querySelectorAll('.ab-menu.open, .ab-lang-pop.open');
         ms.forEach(function (m) { m.classList.remove('open'); });
+        var alt = document.getElementById('abLangToggle');
+        if (alt && !document.querySelector('.ab-lang-pop.open')) alt.setAttribute('aria-expanded', 'false');
       });
     }
   }

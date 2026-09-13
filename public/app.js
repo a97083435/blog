@@ -6,7 +6,7 @@
  * ============================================================================ */
 'use strict';
 
-var BLOG_VERSION = '2.6.1';
+var BLOG_VERSION = '2.6.2';
 
 /* ---------- 全局缓存 ---------- */
 var _searchOpen = false;   // 顶部导航搜索是否展开
@@ -265,11 +265,15 @@ function renderAccentSwatches() {
 function toggleAccentPop() {
   var pop = document.getElementById('accentPop');
   if (!pop) return;
-  pop.classList.toggle('open');
+  var open = pop.classList.toggle('open');
+  var btn = document.getElementById('accentToggle');
+  if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
 }
 function closeAccentPop() {
   var pop = document.getElementById('accentPop');
   if (pop) pop.classList.remove('open');
+  var btn = document.getElementById('accentToggle');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
 }
 /* 手机侧栏：与语言选择完全一致的原生下拉（样式 .lang-switch 复用，效果 = 系统原生弹出） */
 function accentLabelOf(id) {
@@ -308,9 +312,9 @@ function langTitle() {
 function langOptionsHTML() {
   var langs = (window.__i18n && window.__i18n.getLanguages) ? window.__i18n.getLanguages() : [];
   var cur = (window.__i18n && window.__i18n.getLocale) ? window.__i18n.getLocale() : 'zh-CN';
-  return langs.map(function (l) {
+  return langs.map(function (l, i) {
     var active = l.code === cur;
-    return '<button type="button" class="lang-option' + (active ? ' active' : '') + '" data-lang="' + l.code + '" role="option" aria-selected="' + active + '">'
+    return '<button type="button" class="lang-option' + (active ? ' active' : '') + '" data-lang="' + l.code + '" role="option" aria-selected="' + active + '" aria-posinset="' + (i + 1) + '" aria-setsize="' + langs.length + '">'
       + '<span class="lang-flag">' + flagImg(l.code) + '</span><span class="lang-name">' + esc(l.name) + '</span></button>';
   }).join('');
 }
@@ -1474,16 +1478,16 @@ function app() { return document.querySelector('#app'); }
   }).join('');
 
   var langSwitch = '<div class="lang-wrap" id="langWrap" role="group" aria-label="' + langTitle() + '">'
-    + '<button class="icon-btn" id="langToggle" aria-label="' + langTitle() + '" title="' + langTitle() + '" aria-haspopup="menu" aria-expanded="false">' + svgIcon('globe', 18) + '</button>'
-    + '<div class="lang-pop" id="langPop" role="menu" aria-label="' + langTitle() + '">'
+    + '<button class="icon-btn" id="langToggle" aria-label="' + langTitle() + '" title="' + langTitle() + '" aria-haspopup="listbox" aria-controls="langPop" aria-expanded="false">' + svgIcon('globe', 18) + '</button>'
+    + '<div class="lang-pop" id="langPop" role="listbox" aria-label="' + langTitle() + '">'
     + '<div class="accent-pop-title">' + langTitle() + '</div>'
     + '<div class="lang-pop-options" id="langPopInner"></div>'
     + '</div></div>';
   var themeBtn = '<button class="icon-btn" id="themeToggle" aria-label="' + t('theme.toggle') + '" title="' + t('theme.toggle') + '">' + themeIcon() + '</button>';
   var searchBtn = '<button class="icon-btn search-toggle" id="searchToggle" aria-label="' + t('search.toggle') + '" title="' + t('search.toggle') + '">' + searchIconSvg() + '</button>';
   var accentSwitch = '<div class="accent-wrap" id="accentWrap" role="group" aria-label="' + accentTitle() + '">'
-    + '<button class="icon-btn" id="accentToggle" aria-label="' + accentTitle() + '" title="' + accentTitle() + '">' + svgIcon('palette', 18) + '</button>'
-    + '<div class="accent-pop" id="accentPop" role="menu" aria-label="' + accentTitle() + '">'
+    + '<button class="icon-btn" id="accentToggle" aria-label="' + accentTitle() + '" title="' + accentTitle() + '" aria-haspopup="true" aria-expanded="false" aria-controls="accentPop">' + svgIcon('palette', 18) + '</button>'
+    + '<div class="accent-pop" id="accentPop" role="group" aria-label="' + accentTitle() + '">'
     + '<div class="accent-pop-title">' + accentTitle() + '</div>'
     + '<div class="accent-pop-swatches"></div>'
     + '</div></div>';
