@@ -7,22 +7,55 @@
 /style.css*
   Cache-Control: public, max-age=31536000, immutable
 
+/style.min.css*
+  Cache-Control: public, max-age=31536000, immutable
+
 /app.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/app.min.js*
   Cache-Control: public, max-age=31536000, immutable
 
 /music-player.js*
   Cache-Control: public, max-age=31536000, immutable
 
+/music-player.min.js*
+  Cache-Control: public, max-age=31536000, immutable
+
 /bg-anim.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/bg-anim.min.js*
   Cache-Control: public, max-age=31536000, immutable
 
 /i18n.js*
   Cache-Control: public, max-age=31536000, immutable
 
-/posts.js
+/i18n.min.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/admin.css*
+  Cache-Control: public, max-age=31536000, immutable
+
+/admin.min.css*
+  Cache-Control: public, max-age=31536000, immutable
+
+/admin.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/admin.min.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/posts.js*
   Cache-Control: public, max-age=3600
 
-/config.js
+/posts.min.js*
+  Cache-Control: public, max-age=3600
+
+/config.js*
+  Cache-Control: public, max-age=3600
+
+/config.min.js*
   Cache-Control: public, max-age=3600
 
 /fonts/*

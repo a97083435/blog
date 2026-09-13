@@ -6,7 +6,7 @@
  * ============================================================================ */
 'use strict';
 
-var BLOG_VERSION = '2.5.0';
+var BLOG_VERSION = '2.5.1';
 
 /* ---------- 全局缓存 ---------- */
 var _searchOpen = false;   // 顶部导航搜索是否展开
@@ -585,7 +585,7 @@ function inlineMd(s) {
   // 图片（过滤 javascript:/data: 等危险协议）
   t = t.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function (m, alt, src) {
     if (/^\s*(javascript|data|vbscript):/i.test(String(src).trim())) return m;
-    return '<img src="' + src + '" alt="' + alt + '">';
+    return '<img src="' + src + '" alt="' + alt + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
   });
   // 链接（过滤 javascript:/data: 等危险协议）
   t = t.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function (m, txt, url) {
@@ -1270,11 +1270,11 @@ function ensureAdminBundle() {
       function done() { resolve(!!(window.QingyuAdmin && window.QingyuAdmin.mount)); }
       if (!document.querySelector('link[data-admin-css]')) {
         var l = document.createElement('link');
-        l.rel = 'stylesheet'; l.href = 'admin.css?v=' + BLOG_VERSION; l.setAttribute('data-admin-css', '1');
+        l.rel = 'stylesheet'; l.href = 'admin.min.css?v=' + BLOG_VERSION; l.setAttribute('data-admin-css', '1');
         document.head.appendChild(l);
       }
       var s = document.createElement('script');
-      s.src = 'admin.js?v=' + BLOG_VERSION;
+      s.src = 'admin.min.js?v=' + BLOG_VERSION;
       s.onload = done;
       s.onerror = done;
       document.head.appendChild(s);
@@ -2240,7 +2240,7 @@ function renderAbout() {
   var profBio = prof.bio || '';
   if (profName || profAvatar || profBio) {
     html += '<div class="about-author card">';
-    if (profAvatar) html += '<img class="about-author-avatar" src="' + esc(profAvatar) + '" alt="' + esc(profName || 'avatar') + '">';
+    if (profAvatar) html += '<img class="about-author-avatar" src="' + esc(profAvatar) + '" alt="' + esc(profName || 'avatar') + '" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
     html += '<div class="about-author-info">';
     if (profName) html += '<div class="about-author-name">' + esc(profName) + '</div>';
     if (profBio) html += '<div class="about-author-bio">' + esc(profBio) + '</div>';
