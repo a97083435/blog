@@ -1443,7 +1443,7 @@ tests.push(['页脚新版式：非管理员显示 RSS 不显示写作后台，�
   ['首页', '标签', '归档', '关于'].forEach((t) => assert.ok(f.includes('>' + t + '<'), '页脚导航含「' + t + '」'));
   assert.ok(!f.includes('>后台<'), '非管理员不显示写作后台');
   assert.ok(f.includes('>RSS<'), '非管理员显示 RSS');
-  assert.ok(f.includes('footer-extra') && f.includes('站点声明：本站部分内容转载自网络'), '站点声明渲染（含前缀）');
+  assert.ok(f.includes('footer-extra') && f.includes('站点声明：') && f.includes('本站部分内容转载自网络'), '站点声明渲染（含前缀）');
   assert.ok(f.includes('admin@cloumail.com'), '联系邮箱渲染');
   assert.ok(f.includes('友情链接：') && f.includes('>雨幕<'), '友情链接渲染');
   const y = String(new Date().getFullYear());

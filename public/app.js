@@ -1527,13 +1527,13 @@ function renderFooter() {
   // 电脑端专属区块：自定义文字 / 站点声明 / 联系方式 / 友情链接
   var extra = '';
   if (f.text) extra += '<p class="footer-text">' + esc(f.text) + '</p>';
-  if (f.decl) extra += '<p class="footer-decl">' + t('footer.declPrefix') + esc(f.decl) + '</p>';
+  if (f.decl) extra += '<p class="footer-decl"><span class="footer-lbl">' + t('footer.declPrefix') + '</span>' + esc(f.decl) + '</p>';
   // 联系邮箱：云端「个人资料 → 联系邮箱」优先，回退静态 config.js footer.email
   var contactEmail = (cfg.profile && cfg.profile.email) || f.email || '';
-  if (contactEmail) extra += '<p class="footer-contact">' + t('footer.contactPrefix') + '<a href="mailto:' + esc(contactEmail) + '">' + esc(contactEmail) + '</a></p>';
+  if (contactEmail) extra += '<p class="footer-contact"><span class="footer-lbl">' + t('footer.contactPrefix') + '</span><a href="mailto:' + esc(contactEmail) + '">' + esc(contactEmail) + '</a></p>';
   var friendsArr = (cfg.friendLinks && cfg.friendLinks.length) ? cfg.friendLinks : (f.links || []);
   var friends = friendsArr.map(l).join('');
-  if (friends) extra += '<p class="footer-friends">' + t('footer.friends') + friends + '</p>';
+  if (friends) extra += '<p class="footer-friends"><span class="footer-lbl">' + t('footer.friends') + '</span><span class="footer-friend-links">' + friends + '</span></p>';
   // 版权行（移动端仅显示此行，备案号在移动端隐藏）
   // 版权署名：云端「页脚版权署名」优先显示；若未设置则使用站点名称
   var copyName = (cfg.site && cfg.site.copyright) || site;

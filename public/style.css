@@ -1384,16 +1384,17 @@ footer { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--
   display: flex;
   flex-direction: column;
   align-items: flex-start;   /* 左对齐，不居中 */
-  gap: 8px;                  /* 所有行之间距统一 */
-  padding: 14px 20px 16px;
+  gap: 10px;                 /* 所有行之间距统一 */
+  padding: 20px 20px 24px;
 }
 /* 页脚导航行（电脑端含 RSS；移动端隐藏 RSS 与下方声明区块） */
 .footer-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 12.5px;
+  line-height: 1.7;
+  letter-spacing: 0.3px;
 }
 .footer-nav a { color: var(--muted); text-decoration: none; transition: color 0.15s ease; padding: 1px 5px; }
 .footer-nav a:hover { color: var(--accent); }
@@ -1403,20 +1404,22 @@ footer { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--
 .footer-extra {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  font-size: 11.5px;
+  gap: 9px;
+  font-size: 12px;
   color: var(--muted);
-  line-height: 1.6;
+  line-height: 1.7;
 }
 .footer-extra p { margin: 0; }
-.footer-decl { max-width: 760px; }
+.footer-decl { max-width: 820px; }
+.footer-lbl { color: color-mix(in srgb, var(--muted) 78%, var(--fg)); }
 .footer-nav a:first-child { padding-left: 0; }   /* 首个链接贴最左边 */
 .footer-contact a, .footer-contact a:hover { color: var(--muted); text-decoration: none; }  /* 邮箱纯文本样式 */
-.footer-friends { display: flex; flex-wrap: wrap; align-items: center; }
-.footer-friends a + a { margin-left: 14px; }
+.footer-friends { display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 6px; }
+.footer-friends .footer-friend-links { display: inline-flex; flex-wrap: wrap; align-items: center; column-gap: 12px; row-gap: 6px; }
+.footer-friends a + a { margin-left: 0; }
 .footer-friends a { color: var(--muted); text-decoration: none; }
 .footer-friends a:hover { color: var(--accent); text-decoration: none; cursor: pointer; }
-.footer-copy { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+.footer-copy { font-size: 11.5px; color: var(--muted); line-height: 1.7; letter-spacing: 0.2px; }
 .footer-icp { margin-left: 8px; }
 .footer-icp:hover { color: var(--accent); }
 
