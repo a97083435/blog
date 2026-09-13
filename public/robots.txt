@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /write
 Disallow: /posts/*/edit
 
-Sitemap: /sitemap.xml
+Sitemap: https://kejiland.azhz.workers.dev/sitemap.xml

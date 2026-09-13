@@ -1511,7 +1511,7 @@ function app() { return document.querySelector('#app'); }
     + '<nav class="sidebar-nav">' + sidebarLinks + '</nav>'
     + '<div class="sidebar-footer">'
     + '<div class="sidebar-picks">'
-    + '<select id="langSwitchSide" class="lang-switch"></select>'
+    + '<select id="langSwitchSide" class="lang-switch" aria-label="' + langTitle() + '"></select>'
     + '<div class="accent-native-wrap">'
     + '<span class="accent-dot" id="accentNativeDot" aria-hidden="true"></span>'
     + '<select id="accentNativeSide" class="lang-switch accent-native" aria-label="' + accentTitle() + '"></select>'
@@ -3973,14 +3973,28 @@ function populateLangSwitch() {
   });
 }
 
-/* 返回顶部悬浮按钮：滚动超过一屏出现，点击平滑滚回当前页顶部（不跳转页面） */
+/* 返回顶部悬浮按钮：滚动超过一屏出现，点击平滑滚回当前页顶部（不跳转页面）
+   缓存按钮元素 + rAF 合帧，减少滚动时的查询与强制布局 */
 var _backTopScrollBound = false;
+var _backTopEl = null;
+var _backTopRafPending = false;
 function bindBackTop() {
   if (!_backTopScrollBound && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
     _backTopScrollBound = true;
-    window.addEventListener('scroll', function () { updateBackTop(); }, { passive: true });
+    if (!_backTopEl) _backTopEl = document.querySelector('#backTop');
+    window.addEventListener('scroll', function () {
+      if (_backTopRafPending) return;
+      _backTopRafPending = true;
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(function () { _backTopRafPending = false; updateBackTop(); });
+      } else {
+        _backTopRafPending = false;
+        updateBackTop();
+      }
+    }, { passive: true });
   }
-  var bt = document.querySelector('#backTop');
+  if (!_backTopEl) _backTopEl = document.querySelector('#backTop');
+  var bt = _backTopEl;
   if (bt && bt.addEventListener) bt.addEventListener('click', function () {
     if (typeof window.scrollTo === 'function') {
       try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -3990,7 +4004,7 @@ function bindBackTop() {
   updateBackTop();
 }
 function updateBackTop() {
-  var bt = document.querySelector('#backTop');
+  var bt = _backTopEl || document.querySelector('#backTop');
   if (!bt || !bt.classList || !bt.classList.add) return;
   var y = (typeof window !== 'undefined' && typeof window.scrollY === 'number')
     ? window.scrollY

@@ -165,8 +165,14 @@ export default {
         const headers = new Headers(res.headers);
         Object.keys(securityHeaders()).forEach(function (k) { headers.set(k, securityHeaders()[k]); });
         const hasExt = /\.[a-zA-Z0-9]+$/.test(url.pathname);
+        // 版本化资源（style.css?v=…、app.js?v=…）与字体/图标等不可变资源，可放心一年强缓存；
+        // 其余扩展名静态文件保持 1 小时 + SWR（部署后仍能快速生效）。
+        const versioned = url.search && url.search.indexOf('v=') === 1;
+        const immutablePath = /^\/fonts\/|^\/flags\/|^\/libs\/smoji\//.test(url.pathname);
         if (hasExt && request.method === 'GET') {
-          headers.set('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+          headers.set('Cache-Control', versioned || immutablePath
+            ? 'public, max-age=31536000, immutable'
+            : 'public, max-age=3600, stale-while-revalidate=86400');
         } else if (request.method === 'GET') {
           headers.set('Cache-Control', 'no-cache');
         }

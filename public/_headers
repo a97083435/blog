@@ -1,0 +1,42 @@
+# Qingyu'Blog · Cloudflare Pages 响应头
+# 静态资源 URL 已带版本号（?v=），可放心长缓存；字体/图标不变时勿频繁改版本
+/
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/style.css*
+  Cache-Control: public, max-age=31536000, immutable
+
+/app.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/music-player.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/bg-anim.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/i18n.js*
+  Cache-Control: public, max-age=31536000, immutable
+
+/posts.js
+  Cache-Control: public, max-age=3600
+
+/config.js
+  Cache-Control: public, max-age=3600
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+
+/flags/*
+  Cache-Control: public, max-age=86400
+
+/libs/smoji/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/feed.xml
+  Cache-Control: public, max-age=300
+
+/sitemap.xml
+  Cache-Control: public, max-age=3600
