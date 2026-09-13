@@ -38,16 +38,23 @@ function _loadSmojiCss() {
   });
 }
 
-function _loadSmojiLib() {
-  if (window.SmojiLib) return Promise.resolve();
-  if (_smojiLibReady) return _smojiLibReady;
-  _smojiLibReady = new Promise(function (resolve, reject) {
+function _loadSmojiScript(src) {
+  return new Promise(function (resolve, reject) {
     var script = document.createElement('script');
-    script.src = appRoot() + 'libs/smoji/smoji.global.js';
+    script.src = src;
     script.onload = function () { resolve(); };
-    script.onerror = function () { _smojiLibReady = null; reject(new Error('Smoji load failed')); };
+    script.onerror = function () { reject(new Error('Smoji load failed: ' + src)); };
     document.head.appendChild(script);
   });
+}
+
+function _loadSmojiLib() {
+  if (_smojiLibReady) return _smojiLibReady;
+  var libP = window.SmojiLib ? Promise.resolve() : _loadSmojiScript(appRoot() + 'libs/smoji/smoji.global.js');
+  var dataP = window.SmojiManifestData ? Promise.resolve() : _loadSmojiScript(appRoot() + 'libs/smoji/smoji.data.js');
+  _smojiLibReady = Promise.all([libP, dataP]).then(function () {
+    if (!window.SmojiLib) throw new Error('Smoji not loaded');
+  }, function (e) { _smojiLibReady = null; throw e; });
   return _smojiLibReady;
 }
 
@@ -71,18 +78,26 @@ function ensureSmojiPicker(trigger, textarea) {
       var smoj = window.SmojiLib.ui;
       var man = window.SmojiLib.manifest;
       var mark = window.SmojiLib.marker;
-    return man.loadSmojiManifest('https://s3-cdn.zsh.moe/smoji/smoji.json').then(function (manifest) {
-      if (!manifest || !manifest.packs || !manifest.packs.length) return;
-      _ensureCryptoRandomUUID();
-      _smojiPicker = smoj.createSmoji({
-        trigger: trigger,
-        target: smoj.textTarget(textarea, { serialize: mark.smojiMarker }),
-        packs: manifest.packs,
-        closeOnSelect: true
+      function getManifest() {
+        // 优先使用本地内置的更丰富表情清单（file:// 直开也能弹出选择器）；
+        // 加载失败或异常时再回退远程官方 manifest。
+        if (window.SmojiManifestData) {
+          try { return Promise.resolve(man.parseSmojiManifest(window.SmojiManifestData, 'https://s3-cdn.zsh.moe/smoji/smoji.json')); } catch (e) {}
+        }
+        return man.loadSmojiManifest('https://s3-cdn.zsh.moe/smoji/smoji.json');
+      }
+      return getManifest().then(function (manifest) {
+        if (!manifest || !manifest.packs || !manifest.packs.length) return;
+        _ensureCryptoRandomUUID();
+        _smojiPicker = smoj.createSmoji({
+          trigger: trigger,
+          target: smoj.textTarget(textarea, { serialize: mark.smojiMarker }),
+          packs: manifest.packs,
+          closeOnSelect: true
+        });
+        _smojiTrigger = trigger;
       });
-      _smojiTrigger = trigger;
     });
-  });
 }
 
 function initSmojiPicker(trigger, textarea) {
