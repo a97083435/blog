@@ -98,12 +98,12 @@
       .boot-name { color: #a89b8e; }
     }
   </style>
-  <link id="global-style" rel="stylesheet" href="style.min.css?v=2.6.0" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="style.min.css?v=2.6.0"></noscript>
+  <link id="global-style" rel="stylesheet" href="style.min.css?v=2.6.1" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="style.min.css?v=2.6.1"></noscript>
   <!-- 字体策略：前台全部改走系统宋体/仿宋栈，不再加载任何 webfont，PageSpeed 网络负载大幅下降 -->
-  <script defer src="config.min.js?v=2.6.0"></script>
-  <script defer src="posts.min.js?v=2.6.0"></script>
-  <script defer src="i18n.min.js?v=2.6.0"></script>
+  <script defer src="config.min.js?v=2.6.1"></script>
+  <script defer src="posts.min.js?v=2.6.1"></script>
+  <script defer src="i18n.min.js?v=2.6.1"></script>
 </head>
 <body>
   <div id="app">
@@ -113,11 +113,36 @@
       <div class="boot-name">Qingyu'Blog · 加载中</div>
     </div>
   </div>
-  <script defer src="app.min.js?v=2.6.0"></script>
-  <!-- 全站底部音乐播放器（阶段二）：需在 app.js 之后（共用全局 i18n / 主题变量） -->
-  <script defer src="music-player.min.js?v=2.6.0"></script>
-  <!-- 背景素描动画（春夏秋冬 · 自动切换 · 可关闭）：独立零依赖，滞后加载不阻塞首屏 -->
-  <script defer src="bg-anim.min.js?v=2.6.0"></script>
+  <script defer src="app.min.js?v=2.6.1"></script>
+  <script>
+  // 非首屏脚本改为「空闲/按需」加载：先保证首页渲染与核心交互，
+  // 再在浏览器空闲时拉取播放器与背景动画；触屏设备默认不预载背景动画。
+  (function () {
+    function loadJs(src) {
+      var s = document.createElement('script');
+      s.src = src + '?v=2.6.1';
+      s.defer = true;
+      document.body.appendChild(s);
+      return s;
+    }
+    function idle(fn) {
+      try {
+        if ('requestIdleCallback' in window) { requestIdleCallback(fn, { timeout: 2500 }); return; }
+      } catch (e) {}
+      setTimeout(fn, 1600);
+    }
+    var isTouch = false;
+    try { isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints || 0) > 0; } catch (e) {}
+    if (!isTouch) {
+      idle(function () { loadJs('bg-anim.min.js'); });
+    }
+    var p = '';
+    try { p = location.pathname || ''; } catch (e) {}
+    if (p.indexOf('/admin') !== 0 && p !== '/write' && !/^\/posts\/[^/]+\/(edit)$/.test(p)) {
+      idle(function () { loadJs('music-player.min.js'); });
+    }
+  })();
+  </script>
   <!-- 后台脚本按需加载：仅进入后台路由时由 app.js 懒加载 -->
 </body>
 </html>

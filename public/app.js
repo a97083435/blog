@@ -6,7 +6,7 @@
  * ============================================================================ */
 'use strict';
 
-var BLOG_VERSION = '2.6.0';
+var BLOG_VERSION = '2.6.1';
 
 /* ---------- 全局缓存 ---------- */
 var _searchOpen = false;   // 顶部导航搜索是否展开
@@ -1761,7 +1761,8 @@ function renderPostThumb(p, idx) {
   var title = (p && p.title) || '';
   if (url) {
     var pri = (idx !== undefined && idx < 2) ? 'high' : 'low';
-    return '<span class="post-thumb has-img"><img src="' + esc(url) + '" alt="' + esc(title || t('post.thumbnailAlt')) + '" loading="lazy" decoding="async" fetchpriority="' + pri + '" referrerpolicy="no-referrer" onload="this.classList.add(\'thumb-in\')" onerror="this.remove()"></span>';
+    var lazy = (idx !== undefined && idx < 2) ? 'eager' : 'lazy';
+    return '<span class="post-thumb has-img"><img src="' + esc(url) + '" alt="' + esc(title || t('post.thumbnailAlt')) + '" loading="' + lazy + '" decoding="async" fetchpriority="' + pri + '" referrerpolicy="no-referrer" onload="this.classList.add(\'thumb-in\')" onerror="this.remove()"></span>';
   }
   return '<span class="post-thumb ph"><span class="post-thumb-ph">' + svgIcon('image', 26) + '</span></span>';
 }
@@ -3873,6 +3874,18 @@ function initAdSlots(scope) {
 /* 主题色 & 语言（桌面弹层）+ 手机原生下拉的切换。
  * 全部走 document 级事件委托：与顶栏/侧栏的渲染时序解耦——
  * 若首个进入的页面不含顶栏（后台等），之后回到前台时点击依然有效。 */
+function ensureBgAnimLoaded(cb) {
+  if (window.bgAnim) { if (cb) cb(); return; }
+  if (document.getElementById('bgAnimLazyLoader')) return;
+  var s = document.createElement('script');
+  s.id = 'bgAnimLazyLoader';
+  s.src = appRoot() + 'bg-anim.min.js?v=' + BLOG_VERSION;
+  s.async = true;
+  s.onload = function () { if (cb) cb(); };
+  s.onerror = function () { try { s.parentNode.removeChild(s); } catch (e) {} };
+  document.head.appendChild(s);
+}
+
 var _accentBound = false;
 function bindAccentPicker() {
   if (_accentBound) { renderAccentSwatches(); renderAccentNativeSelect(); renderLangPop(); return; }
@@ -3882,7 +3895,7 @@ function bindAccentPicker() {
     if (!t || !t.closest) return;
     if (t.closest('#accentToggle')) { toggleAccentPop(); return; }
     if (t.closest('#langToggle')) { toggleLangPop(); return; }
-    if (t.closest('#bgAnimToggle')) { if (window.bgAnim) window.bgAnim.toggle(); return; }
+    if (t.closest('#bgAnimToggle')) { if (window.bgAnim) { window.bgAnim.toggle(); return; } ensureBgAnimLoaded(function () { if (window.bgAnim) window.bgAnim.toggle(); }); return; }
     var sw = t.closest('.accent-pop [data-accent]');
     if (sw) { setAccent(sw.getAttribute('data-accent')); closeAccentPop(); closeLangPop(); return; }
     var lo = t.closest('.lang-pop [data-lang]');
