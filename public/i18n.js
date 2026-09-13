@@ -19,7 +19,7 @@
 
   var DEFAULT_LANG = 'zh-CN';
   /* 语言 JSON 缓存版本：修改 locales/*.json 后递增，强制浏览器拉新文件 */
-  var I18N_VER = '6';
+  var I18N_VER = '7';
   var _locale = DEFAULT_LANG;
   var _translations = {};
 
@@ -468,6 +468,14 @@
     "admin.music.empty": "暂无音乐，上传一首开始播放吧",
     "admin.settings.cloudOnly": "站点设置需在云端模式（Cloudflare）下使用",
     "admin.settings.navMenu": "导航菜单",
+    "admin.settings.footerNav": "底部导航",
+    "admin.settings.footerNavHint": "可视化编辑底部导航：修改文字与链接，会自动暂存，切换页面也不丢失。",
+    "admin.settings.friendLinks": "友情链接",
+    "admin.settings.friendLinksHint": "管理页脚展示的友情链接，修改文字与链接后保存即可生效。",
+    "admin.settings.linkText": "文字",
+    "admin.settings.linkUrl": "链接",
+    "admin.settings.linkAdd": "添加链接",
+    "admin.settings.linkEmpty": "暂无链接，点击下方按钮添加。",
     "admin.settings.about": "关于页面内容",
     "admin.settings.aboutHint": "支持 Markdown，显示在关于页面正文之上",
     "admin.settings.aboutPlaceholder": "编写关于页面的内容（支持 Markdown）…",

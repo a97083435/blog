@@ -1752,6 +1752,9 @@
     content.innerHTML += '<div class="ab-tabs">' +
       '<div class="ab-tab active" data-tab="site">' + t('admin.settings.siteInfo') + '</div>' +
       '<div class="ab-tab" data-tab="profile">' + t('admin.settings.profile') + '</div>' +
+      '<div class="ab-tab" data-tab="nav">' + t('admin.settings.navMenu') + '</div>' +
+      '<div class="ab-tab" data-tab="footerNav">' + t('admin.settings.footerNav') + '</div>' +
+      '<div class="ab-tab" data-tab="friends">' + t('admin.settings.friendLinks') + '</div>' +
       '</div><div id="abSettingsBody"></div>';
     content.querySelectorAll('.ab-tab').forEach(function (t) { t.addEventListener('click', function () { saveTabToDraft(content); content.querySelectorAll('.ab-tab').forEach(function (x) { x.classList.remove('active'); }); t.classList.add('active'); renderSettingsTab(content, t.getAttribute('data-tab')); }); });
     renderSettingsTab(content, 'site');
@@ -1760,7 +1763,7 @@
   }
   var settingsCache = {};
   // 内存草稿：各 tab 未保存的输入在此暂存，切换 tab 不丢失数据
-  var settingsDraft = { site: {}, profile: {} };
+  var settingsDraft = { site: {}, profile: {}, nav: [], footerNav: [], links: [] };
   async function loadSettings(content) {
     try { var d = await api('api/settings'); settingsCache = (d && d.settings) || {}; } catch (e) { settingsCache = {}; }
     // 同步到前台全局变量，确保前台渲染时读取到最新的站点设置
@@ -1786,6 +1789,39 @@
     settingsDraft.profile = {
       name: prof.name || '', bio: prof.bio || '', avatar: prof.avatar || '', email: prof.email || ''
     };
+    settingsDraft.nav = parseArr(s.nav_menu, defaultNavItems());
+    settingsDraft.footerNav = parseArr(s.footer_nav, defaultFooterNav());
+    settingsDraft.links = parseArr(s.friend_links, defaultFriendLinks());
+  }
+  /** 默认顶部导航（与前台渲染兜底一致）：站点未自定义导航时作为基础项 */
+  function defaultNavItems() {
+    return [
+      { text: t('nav.home'),      url: '/' },
+      { text: t('nav.tags'),      url: '/tags' },
+      { text: t('nav.archive'),   url: '/archive' },
+      { text: t('nav.guestbook'), url: '/guestbook' },
+      { text: t('nav.about'),     url: '/about' }
+    ];
+  }
+  /** 默认底部导航：优先沿用 config.js footer.contact，方便老配置无缝衔接 */
+  function defaultFooterNav() {
+    var c = (cfg().footer && cfg().footer.contact) || [];
+    if (Array.isArray(c)) return c.map(function (it) { return { text: it.text || '', url: it.url || '/' }; });
+    return [];
+  }
+  /** 默认友情链接：优先沿用 config.js footer.links */
+  function defaultFriendLinks() {
+    var c = (cfg().footer && cfg().footer.links) || [];
+    if (Array.isArray(c)) return c.map(function (it) { return { text: it.text || '', url: it.url || '/' }; });
+    return [];
+  }
+  /** 把导航/链接字段解析为数组（兼容字符串 JSON / 对象 / 数组）；为空时回退默认项 */
+  function parseArr(v, fallback) {
+    if (Array.isArray(v) && v.length) return v;
+    if (typeof v === 'string' && v.trim()) {
+      try { var a = JSON.parse(v); if (Array.isArray(a) && a.length) return a; } catch (e) {}
+    }
+    return fallback;
   }
   // 从当前 DOM 把可见 tab 的输入保存进草稿（tab 切换/保存前调用，保证不丢数据）
   function saveTabToDraft(content) {
@@ -1803,6 +1839,43 @@
         avatar: val(content, '#abProfileAvatar'), email: val(content, '#abProfileEmail')
       };
     }
+    if (content.querySelector('#abNavVisual')) collectNavFromDom(content);
+    if (content.querySelector('#abFooterNavVisual')) collectLinksFromDom(content, 'footerNav', '#abFooterNavVisual');
+    if (content.querySelector('#abFriendsVisual')) collectLinksFromDom(content, 'links', '#abFriendsVisual');
+  }
+  /** 从顶部导航可视化 DOM 收集当前编辑结果到 settingsDraft.nav 并持久化草稿 */
+  function collectNavFromDom(content) {
+    var wrap = content.querySelector('#abNavVisual');
+    if (!wrap) return;
+    var newItems = [];
+    wrap.querySelectorAll('.ab-nav-row').forEach(function (row) {
+      if (row.classList.contains('child')) return; // 子项在父项中处理
+      var idx = parseInt(row.querySelector('[data-idx]').getAttribute('data-idx'), 10);
+      var text = (row.querySelector('.ab-nav-text') || {}).value || '';
+      var url = (row.querySelector('.ab-nav-url') || {}).value || '';
+      var children = [];
+      wrap.querySelectorAll('.ab-nav-row.child[data-idx="' + idx + '"]').forEach(function (cr) {
+        children.push({ text: (cr.querySelector('.ab-nav-text') || {}).value || '', url: (cr.querySelector('.ab-nav-url') || {}).value || '' });
+      });
+      var item = { text: text, url: url };
+      if (children.length) item.children = children;
+      newItems.push(item);
+    });
+    settingsDraft.nav = newItems;
+    try { localStorage.setItem(navDraftKey(), JSON.stringify(settingsDraft.nav)); } catch (e) {}
+  }
+  /** 从底部导航/友情链接的可视化 DOM 收集当前编辑结果到草稿 */
+  function collectLinksFromDom(content, key, sel) {
+    var wrap = content.querySelector(sel);
+    if (!wrap) return;
+    var arr = [];
+    wrap.querySelectorAll('.ab-link-row').forEach(function (row) {
+      arr.push({
+        text: (row.querySelector('.ab-link-text') || {}).value || '',
+        url: (row.querySelector('.ab-link-url') || {}).value || ''
+      });
+    });
+    settingsDraft[key] = arr;
   }
   function fillSettings(content) {
     var site = settingsDraft.site || {};
@@ -1843,11 +1916,63 @@
       var pa = body.querySelector('#abProfileAvatar');
       var pv = body.querySelector('#abProfPrev');
       pa.addEventListener('input', function () { pv.src = pa.value; });
-      // 重新打开设置 / 切回该 tab 时，fillSettings 会在 renderSettingsTab 末尾填充输入框，
-      // 但不会触发 input 事件；此处延迟同步一次，保证头像预览立即显示已保存的头像
       setTimeout(function () { if (pa && pv) pv.src = pa.value; }, 0);
+    } else if (tab === 'nav') {
+      body.innerHTML = '<div class="ab-card" style="max-width:720px">' +
+        '<div class="ab-section-title">' + icon('list', 15) + ' ' + t('admin.settings.visualEditor') + '</div>' +
+        '<div class="ab-hint" style="margin-bottom:8px">' + t('admin.settings.navVisualHint') + '</div>' +
+        '<div id="abNavVisual" class="ab-nav-editor"></div>' +
+      '</div>';
+      renderNavVisual(content);
+    } else if (tab === 'footerNav') {
+      body.innerHTML = '<div class="ab-card" style="max-width:720px">' +
+        '<div class="ab-section-title">' + icon('list', 15) + ' ' + t('admin.settings.footerNav') + '</div>' +
+        '<div class="ab-hint" style="margin-bottom:8px">' + t('admin.settings.footerNavHint') + '</div>' +
+        '<div id="abFooterNavVisual" class="ab-nav-editor"></div>' +
+      '</div>';
+      renderLinkVisual(content, 'footerNav', '#abFooterNavVisual');
+    } else if (tab === 'friends') {
+      body.innerHTML = '<div class="ab-card" style="max-width:720px">' +
+        '<div class="ab-section-title">' + icon('heart', 15) + ' ' + t('admin.settings.friendLinks') + '</div>' +
+        '<div class="ab-hint" style="margin-bottom:8px">' + t('admin.settings.friendLinksHint') + '</div>' +
+        '<div id="abFriendsVisual" class="ab-nav-editor"></div>' +
+      '</div>';
+      renderLinkVisual(content, 'links', '#abFriendsVisual');
     }
     fillSettings(content);
+  }
+  /** 通用链接可视化编辑器：底部导航 / 友情链接共用 */
+  function renderLinkVisual(content, key, sel) {
+    var wrap = content.querySelector(sel);
+    if (!wrap) return;
+    var items = settingsDraft[key];
+    if (!Array.isArray(items)) items = [];
+    settingsDraft[key] = items;
+    wrap.innerHTML = (items.length ? '<div class="ab-link-list">' + items.map(function (it, i) {
+      return '<div class="ab-link-row">' +
+        '<input class="ab-input ab-link-text" value="' + esc(it.text || '') + '" placeholder="' + t('admin.settings.linkText') + '">' +
+        '<input class="ab-input ab-link-url" value="' + esc(it.url || '') + '" placeholder="' + t('admin.settings.linkUrl') + '">' +
+        '<button class="ab-btn-icon danger" data-rmlink="' + i + '" title="' + t('admin.comments.delete') + '">' + icon('trash', 14) + '</button>' +
+      '</div>';
+    }).join('') + '</div>' : '<div class="ab-hint">' + t('admin.settings.linkEmpty') + '</div>');
+    wrap.innerHTML += '<div class="ab-nav-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="ab-btn sm" id="abLinkAdd">' + icon('plus', 13) + ' ' + t('admin.settings.linkAdd') + '</button>' +
+    '</div>';
+    function persist() { try { localStorage.setItem('qingyu.linksDraft.' + key, JSON.stringify(settingsDraft[key])); } catch (e) {} }
+    wrap.querySelectorAll('input').forEach(function (inp) { inp.addEventListener('input', debounce(function () { collectLinksFromDom(content, key, sel); }, 250)); });
+    wrap.querySelector('#abLinkAdd').addEventListener('click', function () {
+      settingsDraft[key].push({ text: t('admin.settings.linkText'), url: '/' });
+      persist();
+      renderLinkVisual(content, key, sel);
+    });
+    wrap.querySelectorAll('[data-rmlink]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(btn.getAttribute('data-rmlink'), 10);
+        settingsDraft[key].splice(idx, 1);
+        persist();
+        renderLinkVisual(content, key, sel);
+      });
+    });
   }
   async function saveSettings(content) {
     // 先把当前可见 tab 的输入并入草稿，确保跨 tab 的数据都不遗漏
@@ -1862,21 +1987,113 @@
       profile: {
         name: prof.name || '', bio: prof.bio || '', avatar: prof.avatar || '', email: prof.email || ''
       },
+      nav_menu: JSON.stringify(Array.isArray(settingsDraft.nav) ? settingsDraft.nav : []),
+      footer_nav: JSON.stringify(Array.isArray(settingsDraft.footerNav) ? settingsDraft.footerNav : []),
+      friend_links: JSON.stringify(Array.isArray(settingsDraft.links) ? settingsDraft.links : []),
       moderate_comments: site.moderate ? '1' : '0'
     };
     try {
       await api('api/settings', { method: 'PUT', body: JSON.stringify(payload) });
+      try { localStorage.removeItem(navDraftKey()); } catch (e) {}
       settingsCache = Object.assign({}, settingsCache, {
         site_info: JSON.stringify(payload.site_info), profile: JSON.stringify(payload.profile),
+        nav_menu: payload.nav_menu, footer_nav: payload.footer_nav, friend_links: payload.friend_links,
         moderate_comments: payload.moderate_comments
       });
-      // 同步到前台全局变量，使站点名称/头像/简介等设置立即生效（无需刷新整页）
+      // 同步到前台全局变量，使站点名称/导航/页脚/友链等设置立即生效（无需刷新整页）
       window._siteSettings = settingsCache;
       writeAdminProfile(payload.profile);
       toast(t('admin.settings.saved'), 'ok');
     } catch (e) { toast(t('admin.settings.saveFail') + (e.message || e), 'err'); }
   }
   function val(content, sel) { var el = content.querySelector(sel); return el ? el.value : ''; }
+
+  /* ---------- 可视化导航编辑器 ----------
+   * 直接读写内存 settingsDraft.nav 数组，无需 JSON 中转，保存时由 saveSettings 统一取用。
+   * 保留 localStorage 临时草稿，刷新/切页不丢失未保存的导航编辑。 */
+  function navDraftKey() { return 'qingyu.settingsNavDraft'; }
+  function loadNavDraft() {
+    try { var v = JSON.parse(localStorage.getItem(navDraftKey()) || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
+    return null;
+  }
+  function renderNavVisual(content) {
+    var wrap = content.querySelector('#abNavVisual');
+    if (!wrap) return;
+    var saved = loadNavDraft();
+    var items = saved ? saved : settingsDraft.nav;
+    if (!Array.isArray(items) || !items.length) items = defaultNavItems();
+    settingsDraft.nav = items;
+
+    wrap.innerHTML = (items.length ? '<div class="ab-nav-list">' + items.map(function (it, i) {
+      var children = (it.children || []).map(function (ch, ci) {
+        return '<div class="ab-nav-row child">' +
+          '<span class="ab-nav-ico">└</span>' +
+          '<input class="ab-input ab-nav-text" data-idx="' + i + '" data-cidx="' + ci + '" value="' + esc(ch.text || '') + '" placeholder="' + t('admin.settings.subMenu') + '">' +
+          '<input class="ab-input ab-nav-url" data-idx="' + i + '" data-cidx="' + ci + '" value="' + esc(ch.url || '') + '" placeholder="/path">' +
+          '<button class="ab-btn-icon danger" data-rmchild="' + i + '-' + ci + '" title="' + t('admin.comments.delete') + '">' + icon('trash', 14) + '</button>' +
+        '</div>';
+      }).join('');
+      return '<div class="ab-nav-row">' +
+        '<span class="ab-nav-ico">' + icon('list', 14) + '</span>' +
+        '<input class="ab-input ab-nav-text" data-idx="' + i + '" value="' + esc(it.text || '') + '" placeholder="' + t('admin.settings.newMenu') + '">' +
+        '<input class="ab-input ab-nav-url" data-idx="' + i + '" value="' + esc(it.url || '') + '" placeholder="/path">' +
+        '<button class="ab-btn-icon" data-addchild="' + i + '" title="' + t('admin.settings.subMenu') + '">' + icon('plus', 14) + '</button>' +
+        '<button class="ab-btn-icon danger" data-rmitem="' + i + '" title="' + t('admin.comments.delete') + '">' + icon('trash', 14) + '</button>' +
+      '</div>' + children;
+    }).join('') + '</div>' : '<div class="ab-hint">' + t('admin.settings.navEmpty') + '</div>');
+
+    wrap.innerHTML += '<div class="ab-nav-actions" style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="ab-btn sm" id="abNavAddItem">' + icon('plus', 13) + ' ' + t('admin.settings.addMenuItem') + '</button>' +
+      '<button class="ab-btn sm ghost" id="abNavReset">' + icon('refresh', 13) + ' ' + t('admin.settings.resetDefault') + '</button>' +
+    '</div>';
+
+    function persist() { try { localStorage.setItem(navDraftKey(), JSON.stringify(settingsDraft.nav)); } catch (e) {} }
+
+    wrap.querySelectorAll('input').forEach(function (inp) { inp.addEventListener('input', debounce(function () { collectNavFromDom(content); }, 250)); });
+
+    wrap.querySelector('#abNavAddItem').addEventListener('click', function () {
+      settingsDraft.nav.push({ text: t('admin.settings.newMenu'), url: '/' });
+      persist();
+      renderNavVisual(content);
+    });
+
+    var resetBtn = wrap.querySelector('#abNavReset');
+    if (resetBtn) resetBtn.addEventListener('click', function () {
+      settingsDraft.nav = defaultNavItems();
+      persist();
+      renderNavVisual(content);
+    });
+
+    wrap.querySelectorAll('[data-addchild]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(btn.getAttribute('data-addchild'), 10);
+        if (!settingsDraft.nav[idx]) return;
+        if (!settingsDraft.nav[idx].children) settingsDraft.nav[idx].children = [];
+        settingsDraft.nav[idx].children.push({ text: t('admin.settings.subMenu'), url: '/' });
+        persist();
+        renderNavVisual(content);
+      });
+    });
+
+    wrap.querySelectorAll('[data-rmitem]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var idx = parseInt(btn.getAttribute('data-rmitem'), 10);
+        settingsDraft.nav.splice(idx, 1);
+        persist();
+        renderNavVisual(content);
+      });
+    });
+
+    wrap.querySelectorAll('[data-rmchild]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var parts = btn.getAttribute('data-rmchild').split('-');
+        var idx = parseInt(parts[0], 10), cidx = parseInt(parts[1], 10);
+        if (settingsDraft.nav[idx] && settingsDraft.nav[idx].children) settingsDraft.nav[idx].children.splice(cidx, 1);
+        persist();
+        renderNavVisual(content);
+      });
+    });
+  }
 
 
   /* ====================== 修改密码 ====================== */

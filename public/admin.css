@@ -635,6 +635,16 @@ select.ab-select { cursor: pointer; padding-right: 30px; }
 .ab-muted { color: var(--ab-muted); }
 .ab-text-sm { font-size: 12.5px; }
 
+/* 设置页：顶部导航 / 底部导航 / 友情链接可视化编辑器 */
+.ab-nav-list, .ab-link-list { display: flex; flex-direction: column; gap: 6px; }
+.ab-nav-row, .ab-link-row { display: flex; align-items: center; gap: 6px; }
+.ab-nav-row.child { padding-left: 28px; }
+.ab-nav-ico { flex-shrink: 0; color: var(--ab-muted); display: flex; align-items: center; }
+.ab-link-row .ab-input, .ab-nav-row .ab-input { flex: 1; }
+.ab-link-row .ab-btn-icon, .ab-nav-row .ab-btn-icon { flex: 0 0 auto; }
+.ab-link-text, .ab-nav-text { flex: 1; min-width: 100px; }
+.ab-link-url, .ab-nav-url { flex: 1.5; min-width: 120px; }
+
 /* ---------- 响应式 ---------- */
 @media (max-width: 1100px) {
   .ab-grid.cols-5 { grid-template-columns: repeat(3, 1fr); }

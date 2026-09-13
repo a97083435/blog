@@ -608,6 +608,13 @@ function parseJsonSafe(v) {
   if (typeof v === 'object') return v;
   try { return JSON.parse(v); } catch (e) { return {}; }
 }
+function parseArrSafe(v) {
+  if (Array.isArray(v) && v.length) return v;
+  if (typeof v === 'string' && v.trim()) {
+    try { var a = JSON.parse(v); if (Array.isArray(a) && a.length) return a; } catch (e) {}
+  }
+  return [];
+}
 
 function getConfig() {
   var cfg = (typeof window !== 'undefined' && window.BLOG_CONFIG) || {};
@@ -625,7 +632,9 @@ function getConfig() {
     writeToken: cfg.writeToken || '',
     adminPwd: cfg.adminPwd || '',
     pageSize: (typeof cfg.pageSize === 'number' && cfg.pageSize >= 0) ? cfg.pageSize : 8,
-    nav: [],
+    nav: parseArrSafe(s && s.nav_menu),
+    footerNav: parseArrSafe(s && s.footer_nav),
+    friendLinks: parseArrSafe(s && s.friend_links),
     footer: footer,
     site: siteInfo,        // 站点信息（头像/名称/简介）供关于页等使用
     profile: prof,         // 个人信息（头像/昵称/简介/邮箱）供关于页等使用
@@ -1341,6 +1350,14 @@ function app() { return document.querySelector('#app'); }
     { i18n: 'nav.about',    url: '/about',     path: '/about' }
   ];
 
+  // 前台导航项：优先使用后台「博客设置 → 顶部导航」保存的配置，
+  // 未配置时回退到内置 NAV 默认值，保证样式与原有行为一致。
+  function navItems() {
+    var c = getConfig();
+    if (Array.isArray(c.nav) && c.nav.length) return c.nav;
+    return NAV;
+  }
+
   // 将 NAV 配置解析为带翻译文本的导航项（含可选子菜单）。
   function resolveNav(items) {
     return items.map(function (it) {
@@ -1353,7 +1370,7 @@ function app() { return document.querySelector('#app'); }
   }
 
   function renderNav(active) {
-  var navs = resolveNav(NAV);
+  var navs = resolveNav(navItems());
   var links = navs.map(function (n) {
     var raw = n.url || '/';
     var pathKey = n.path || (/^#\//.test(raw) ? raw.slice(1) : (/^\//.test(raw) ? raw : null));
@@ -1445,13 +1462,13 @@ function renderFooter() {
   var startYear = Number(f.startYear) || 2019;
   var copyRange = (startYear && startYear < year) ? (startYear + '-' + year) : ('' + year);
   var site = getSiteName();
-  // 页脚导航行：优先使用 config.js footer.contact（可自定义、支持外部链接）；
-  // 未配置 contact 时回退到站点主导航 NAV。写作后台仅管理员显示；
+  // 页脚导航行：优先使用后台「底部导航」保存的配置，其次沿用 config.js footer.contact；
+  // 都未配置时回退到站点主导航 NAV。写作后台仅管理员显示；
   // RSS 仅普通用户显示（互斥，避免导航过长）。
-  var custom = (f.contact && f.contact.length) ? f.contact : null;
+  var custom = (cfg.footerNav && cfg.footerNav.length) ? cfg.footerNav : ((f.contact && f.contact.length) ? f.contact : null);
   var nav = custom ? custom.map(function (it) {
     return { text: it.text || '', url: it.url || '/' };
-  }) : resolveNav(NAV);
+  }) : resolveNav(navItems());
   if (adminOk()) nav.push({ text: t('nav.admin'), url: '/admin' });
   function l(x) {
     var u = x.url || '/';
@@ -1475,7 +1492,8 @@ function renderFooter() {
   // 联系邮箱：云端「个人资料 → 联系邮箱」优先，回退静态 config.js footer.email
   var contactEmail = (cfg.profile && cfg.profile.email) || f.email || '';
   if (contactEmail) extra += '<p class="footer-contact">' + t('footer.contactPrefix') + '<a href="mailto:' + esc(contactEmail) + '">' + esc(contactEmail) + '</a></p>';
-  var friends = (f.links || []).map(l).join('');
+  var friendsArr = (cfg.friendLinks && cfg.friendLinks.length) ? cfg.friendLinks : (f.links || []);
+  var friends = friendsArr.map(l).join('');
   if (friends) extra += '<p class="footer-friends">' + t('footer.friends') + friends + '</p>';
   // 版权行（移动端仅显示此行，备案号在移动端隐藏）
   // 版权署名：云端「页脚版权署名」优先显示；若未设置则使用站点名称
