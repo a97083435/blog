@@ -4008,7 +4008,7 @@ function updateBackTop() {
   if (!bt || !bt.classList || !bt.classList.add) return;
   var y = (typeof window !== 'undefined' && typeof window.scrollY === 'number')
     ? window.scrollY
-    : ((typeof document !== 'undefined' && document.documentElement && document.documentElement.scrollTop) || 0);
+    : ((typeof window !== 'undefined' && typeof window.pageYOffset === 'number') ? window.pageYOffset : 0);
   if (y > 300) bt.classList.add('show'); else bt.classList.remove('show');
 }
 
