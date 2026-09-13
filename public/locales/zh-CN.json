@@ -476,5 +476,13 @@
   "guestbook.emoji": "表情",
   "guestbook.noteTag": "留言",
   "guestbook.ideaTag": "优化方案",
-  "admin.media.r2Missing": "R2 存储未配置，无法上传"
+  "admin.media.r2Missing": "R2 存储未配置，无法上传",
+  "admin.postSaved": "文章已保存",
+  "admin.pwdModal.title": "修改密码",
+  "admin.pwdModal.confirmPwd": "当前密码",
+  "admin.pwdModal.newPwd": "新密码",
+  "admin.pwdModal.change": "确认修改",
+  "admin.pwdModal.tooShort": "新密码至少 6 位",
+  "admin.pwdModal.success": "密码已修改",
+  "admin.pwdModal.fail": "修改失败："
 }

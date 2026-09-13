@@ -476,5 +476,13 @@
   "guestbook.emoji": "이모지",
   "guestbook.noteTag": "메시지",
   "guestbook.ideaTag": "개선안",
-  "admin.media.r2Missing": "R2 저장소가 구성되지 않아 업로드할 수 없습니다"
+  "admin.media.r2Missing": "R2 저장소가 구성되지 않아 업로드할 수 없습니다",
+  "admin.postSaved": "게시글이 저장되었습니다",
+  "admin.pwdModal.title": "비밀번호 변경",
+  "admin.pwdModal.confirmPwd": "현재 비밀번호",
+  "admin.pwdModal.newPwd": "새 비밀번호",
+  "admin.pwdModal.change": "변경하기",
+  "admin.pwdModal.tooShort": "새 비밀번호는 6자 이상이어야 합니다",
+  "admin.pwdModal.success": "비밀번호가 변경되었습니다",
+  "admin.pwdModal.fail": "변경 실패: "
 }

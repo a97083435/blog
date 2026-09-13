@@ -476,5 +476,13 @@
   "guestbook.emoji": "Emoji",
   "guestbook.noteTag": "Message",
   "guestbook.ideaTag": "Optimization",
-  "admin.media.r2Missing": "R2 storage not configured, upload unavailable"
+  "admin.media.r2Missing": "R2 storage not configured, upload unavailable",
+  "admin.postSaved": "Post saved",
+  "admin.pwdModal.title": "Change Password",
+  "admin.pwdModal.confirmPwd": "Current Password",
+  "admin.pwdModal.newPwd": "New Password",
+  "admin.pwdModal.change": "Confirm",
+  "admin.pwdModal.tooShort": "New password must be at least 6 characters",
+  "admin.pwdModal.success": "Password changed",
+  "admin.pwdModal.fail": "Failed to change: "
 }

@@ -476,5 +476,13 @@
   "guestbook.emoji": "絵文字",
   "guestbook.noteTag": "メッセージ",
   "guestbook.ideaTag": "改善案",
-  "admin.media.r2Missing": "R2 ストレージが未設定のためアップロードできません"
+  "admin.media.r2Missing": "R2 ストレージが未設定のためアップロードできません",
+  "admin.postSaved": "記事を保存しました",
+  "admin.pwdModal.title": "パスワード変更",
+  "admin.pwdModal.confirmPwd": "現在のパスワード",
+  "admin.pwdModal.newPwd": "新しいパスワード",
+  "admin.pwdModal.change": "変更する",
+  "admin.pwdModal.tooShort": "新しいパスワードは6文字以上必要です",
+  "admin.pwdModal.success": "パスワードを変更しました",
+  "admin.pwdModal.fail": "変更に失敗："
 }
