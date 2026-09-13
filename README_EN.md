@@ -187,7 +187,7 @@ The entire site lives in `public/`: frontend `index.html` + `style.css` + `app.j
 | TOC | Auto-generated with anchor jumps; syntax highlighting |
 | Read Stats | Views / likes (cloud-global / local) |
 | Featured Articles | Auto-recommended below comments (likes×3 + views + comments×5) |
-| RSS / Sitemap | Auto-generated, encrypted posts excluded |
+| RSS / Sitemap | `/feed.xml` and `/sitemap.xml` are generated dynamically in cloud and auto-update after post CRUD; encrypted posts excluded |
 | Prev/Next | Hides empty slot when only one direction exists |
 | Card List | Cover thumbnails, pin badge, tags pinned to bottom |
 | Dark / Light Theme | One-click toggle, responsive multi-breakpoint |
@@ -394,7 +394,7 @@ window.BLOG_CONFIG = {
   // ====== Basic ======
   mode: 'auto',           // 'auto' | 'static' | 'api'
   apiBase: '',            // API base URL, empty = same origin
-  siteUrl: '',            // Public site URL (for RSS/Sitemap)
+  siteUrl: 'https://www.2024921.xyz', // Public site URL (for RSS/Sitemap)
   writeToken: '',         // Legacy write token (use login instead)
   pageSize: 5,            // Posts per page (0 = no pagination)
   adminPwd: '',           // Static mode local password (leave empty for cloud)
@@ -457,10 +457,12 @@ window.BLOG_CONFIG = {
 ## 🧪 Tests
 
 ```bash
-node smoke-test.js
+node smoke-test.js      # Smoke tests: 76 cases
+node gb-verify.js       # Guestbook verification: 18 cases
+node search-verify.js   # Search verification: 13 cases
 ```
 
-Covers: Markdown rendering, TOC, syntax highlighting, import/export, admin gate, pinning, archive, tags, comment security, encryption, stats, search, RSS, Sitemap, cloud APIs, caching.
+Covers: Markdown rendering, TOC, syntax highlighting, import/export, admin gate, pinning, archive, tags, comment security, encryption, stats, search, RSS, Sitemap, cloud APIs, caching. All three suites run automatically before each CI deploy.
 
 Import sample posts into a deployed cloud instance:
 

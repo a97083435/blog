@@ -196,7 +196,7 @@ node scripts/migrate-kv-to-d1.mjs             # 正式写入 D1
 | 正文目录 TOC | 自动生成、锚点跳转；代码高亮 |
 | 阅读统计 | 浏览数 / 点赞（云端全局 / 静态本机，点赞 IP 去重 + 频控） |
 | 精选文章 | 评论区下方自动推荐（点赞×3 + 浏览 + 评论×5） |
-| RSS / Sitemap | 自动生成，加密文章自动排除 |
+| RSS / Sitemap | `/feed.xml`、`/sitemap.xml` 云端动态生成，随文章增删改查自动更新；加密文章自动排除 |
 | 上一篇 / 下一篇 | 只有一条时自动隐藏空位 |
 | 卡片式列表 | 封面缩略图、置顶徽章、标签贴底 |
 | **深色 / 浅色主题** | 一键切换，多断点响应式适配 |
@@ -308,7 +308,7 @@ node scripts/migrate-kv-to-d1.mjs             # 正式写入 D1
 ├── index.html                       # 根跳转页（自动跳 public/index.html）
 ├── wrangler.toml                    # Cloudflare Pages 配置
 ├── wrangler.workers.toml            # Cloudflare Workers 配置
-├── smoke-test.js                    # 冒烟测试（API + 前端逻辑，71 例）
+├── smoke-test.js                    # 冒烟测试（API + 前端逻辑，76 例）
 ├── gb-verify.js                     # 留言板专项验证（18 例）
 ├── search-verify.js                 # 搜索专项验证（13 例）
 ├── README.md                        # 中文说明
@@ -433,7 +433,7 @@ window.BLOG_CONFIG = {
   // ====== 基础配置 ======
   mode: 'auto',           // 'auto' | 'static' | 'api'
   apiBase: '',            // API 基础地址，留空 = 同源
-  siteUrl: '',            // 站点对外地址（RSS/Sitemap 用）
+  siteUrl: 'https://www.2024921.xyz', // 站点对外地址（RSS/Sitemap 用）
   writeToken: '',         // 旧版静态令牌（建议用登录替代）
   pageSize: 5,            // 首页每页文章数（0 = 不分页）
   adminPwd: '',           // 静态模式本地密码（云端模式请留空）
@@ -498,7 +498,7 @@ window.BLOG_CONFIG = {
 ## 🧪 测试
 
 ```bash
-node smoke-test.js      # 冒烟测试 71 例（Markdown / TOC / 高亮 / 导入导出 / 管理门禁 / 评论安全 / 统计 / 搜索 / RSS / Sitemap / 云端 API / 缓存）
+node smoke-test.js      # 冒烟测试 76 例（Markdown / TOC / 高亮 / 导入导出 / 管理门禁 / 评论安全 / 统计 / 搜索 / RSS / Sitemap / 云端 API / 缓存）
 node gb-verify.js       # 留言板专项验证 18 例
 node search-verify.js   # 搜索专项验证 13 例
 ```
