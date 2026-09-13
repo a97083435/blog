@@ -89,7 +89,7 @@ window.BLOG_CONFIG = {
     copyrightName: "Qingyu'Blog"
   },
   ads: {
-    enabled: true,   // ← 填好下方真实广告代码后，改为 true 才会显示
+    enabled: false,  // 已按需求关闭广告开关；需要时改为 true 才会显示
     // AdSense 发布商 ID（ca-pub-xxxx），启用广告时由前端自动加载 adsbygoogle.js 库。
     // 留空则即使 enabled=true 也不会加载广告脚本（无可用账号）。
     client: 'ca-pub-4096395942817870',

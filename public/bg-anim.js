@@ -6,7 +6,7 @@
  *   秋  落叶     冬  飘雪
  * 特性：
  *   · 季节按月自动切换（3-5春 / 6-8夏 / 9-11秋 / 12-2冬），平滑换季
- *   · 默认开启；localStorage(qingyu.bgAnim) 持久化用户开关
+ *   · 桌面默认开启；触屏/手机默认关闭（省电、提升 PageSpeed）；localStorage(qingyu.bgAnim) 持久化用户开关
  *   · 尊重 prefers-reduced-motion（系统"减少动态"自动关闭）
  *   · 标签页隐藏自动暂停（省电）；只首页运行；iOS/小屏自动减半粒子数
  *   · 暴露 window.bgAnim：{ on, off, toggle, isOn, sync, seasonName }
@@ -28,13 +28,19 @@
   var MAX = 48;
 
   // ---------- 开关持久化 ----------
+  function isTouchDevice() {
+    try {
+      if (typeof window !== 'undefined' && 'ontouchstart' in window) return true;
+      return (typeof navigator !== 'undefined' && (navigator.maxTouchPoints || 0) > 0);
+    } catch (e) { return false; }
+  }
   function readSetting() {
     try {
       var v = localStorage.getItem(KEY);
       if (v === '0') return false;
       if (v === '1') return true;
     } catch (e) {}
-    return true; // 默认开
+    return !isTouchDevice(); // 桌面默认开；触屏/手机默认关（省电 + 提升 PageSpeed）
   }
   function persist() { try { localStorage.setItem(KEY, enabled ? '1' : '0'); } catch (e) {} }
   function notify() {
