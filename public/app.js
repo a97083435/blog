@@ -1627,12 +1627,16 @@ function renderHome() {
 function homeLoadingHtml() {
   var card = function () {
     return '<div class="sk-card">'
-      + '<div class="sk-line" style="width:35%"></div>'
-      + '<div class="sk-line" style="width:90%;height:13px"></div>'
-      + '<div class="sk-line" style="width:70%;height:13px"></div>'
+      + '<div class="sk-card-main">'
+      + '<div class="sk-line sk-meta"></div>'
+      + '<div class="sk-line sk-title"></div>'
+      + '<div class="sk-line" style="width:90%"></div>'
+      + '<div class="sk-line" style="width:65%;height:12px"></div>'
       + '<div class="sk-row">'
-      + '<span class="sk-chip"></span><span class="sk-chip"></span>'
+      + '<span class="sk-chip"></span><span class="sk-chip"></span><span class="sk-chip"></span>'
       + '</div>'
+      + '</div>'
+      + '<div class="sk-thumb"></div>'
       + '</div>';
   };
   return '<div class="home-loading" role="status" aria-label="' + esc(t('home.loadingCloud')) + '">'
