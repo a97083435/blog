@@ -1418,6 +1418,30 @@ tests.push(['导航渲染：默认主导航 + resolveNav 支持 i18n/直接文�
   assert.strictEqual(def.length, 5, '默认 NAV 5 项');
 }]);
 
+tests.push(['导航翻译：旧后台自定义导航在切换语言后内置项自动翻译、自定义文本保留', async () => {
+  const enLocales = JSON.parse(fs.readFileSync(path.join(PUB, 'locales/en.json'), 'utf8'));
+  const b = await boot({
+    'window.BLOG_CONFIG': { mode: 'static' },
+    localStorage: { getItem: (k) => k === 'blog.locale' ? 'en' : null, setItem() {}, removeItem() {} },
+    fetch: async () => ({ ok: true, json: async () => enLocales })
+  }, '/');
+  const items = [
+    { text: '首页', url: '/' },
+    { text: '标签', url: '/tags' },
+    { text: '留言', url: '/guestbook' },
+    { text: '主页', url: '/', path: '/' },
+    { text: '自定义', url: 'https://example.com' }
+  ];
+  const resolved = b.ctx.resolveNav(items);
+  assert.strictEqual(resolved[0].text, 'Home', '旧默认「首页」自动翻译为 Home');
+  assert.strictEqual(resolved[1].text, 'Tags', '旧默认「标签」自动翻译为 Tags');
+  assert.strictEqual(resolved[2].text, 'Guestbook', '旧版「留言」也自动翻译为 Guestbook');
+  assert.strictEqual(resolved[3].text, '主页', '自定义「主页」不被覆盖');
+  assert.strictEqual(resolved[4].text, '自定义', '外部自定义链接文字保留');
+  const def = b.ctx.resolveNav(b.ctx.NAV);
+  assert.strictEqual(def[0].text, 'Home', '内置导航默认项在英文下为 Home');
+  assert.strictEqual(def[1].text, 'Tags', '内置导航默认项在英文下为 Tags');
+}]);
 tests.push(['页脚：可配置友链与文字，无「本地」字样、贴底结构', async () => {
   const b = await boot({ 'window.BLOG_CONFIG': {
     mode: 'static',

@@ -1397,12 +1397,56 @@ function app() { return document.querySelector('#app'); }
     return NAV;
   }
 
+  // 旧后台保存数据里的默认中文文案：路径命中内置项时，仅当文本为空或等于当初的
+  // 默认中文才自动翻译；自定义导航文字（如“主页”）保持用户原样。
+  var NAV_DEFAULT_ZH = {
+    '/': '首页',
+    '/tags': '标签',
+    '/archive': '归档',
+    '/guestbook': '留言板',
+    '/about': '关于'
+  };
+  // 旧版后台可能保存过「留言」作为留言板入口文案，同样视为内置默认文案。
+  var NAV_DEFAULT_ZH_ALIAS = {
+    '/guestbook': ['留言']
+  };
+  function isDefaultZhText(norm, text) {
+    if (!text) return true;
+    if (NAV_DEFAULT_ZH[norm] === text) return true;
+    var al = NAV_DEFAULT_ZH_ALIAS[norm];
+    return al ? al.indexOf(text) >= 0 : false;
+  }
+  // 渲染导航前先合并一次默认导航，用于识别“首页/标签/归档/留言/关于”等内置路径。
+  var _navDefMap = null;
+  function defaultNavMap() {
+    if (_navDefMap) return _navDefMap;
+    var map = {};
+    NAV.forEach(function (it) {
+      var key = it.path || String(it.url || '').replace(/^#?\//, '/');
+      map[key] = it.i18n;
+      if (it.children) it.children.forEach(function (c) {
+        map[String(c.url || '').replace(/^#?\//, '/')] = c.i18n || '';
+      });
+    });
+    _navDefMap = map;
+    return map;
+  }
   // 将 NAV 配置解析为带翻译文本的导航项（含可选子菜单）。
+  // 兼容旧的后台保存数据：旧导航没有 i18n key 而只有“首页/标签…”等文字，
+  // 这里会按路径识别内置项并自动套用当前语言，外部自定义链接仍保留原文。
   function resolveNav(items) {
+    var defMap = defaultNavMap();
     return items.map(function (it) {
-      var n = { text: (it.i18n ? t(it.i18n) : '') || it.text || '', url: it.url, path: it.path };
+      var norm = String(it.url || '/').replace(/^#?\//, '/');
+      var i18n = it.i18n || (isDefaultZhText(norm, it.text) ? (defMap[norm] || '') : '');
+      var text = (i18n ? t(i18n) : '') || it.text || '';
+      var n = { text: text, url: it.url, path: it.path };
       if (it.children && it.children.length) {
-        n.children = it.children.map(function (c) { return { text: (c.i18n ? t(c.i18n) : '') || c.text || '', url: c.url }; });
+        n.children = it.children.map(function (c) {
+          var cNorm = String(c.url || '/').replace(/^#?\//, '/');
+          var cI18n = c.i18n || (isDefaultZhText(cNorm, c.text) ? (defMap[cNorm] || '') : '');
+          return { text: (cI18n ? t(cI18n) : '') || c.text || '', url: c.url };
+        });
       }
       return n;
     });

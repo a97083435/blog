@@ -1796,11 +1796,11 @@
   /** 默认顶部导航（与前台渲染兜底一致）：站点未自定义导航时作为基础项 */
   function defaultNavItems() {
     return [
-      { text: t('nav.home'),      url: '/' },
-      { text: t('nav.tags'),      url: '/tags' },
-      { text: t('nav.archive'),   url: '/archive' },
-      { text: t('nav.guestbook'), url: '/guestbook' },
-      { text: t('nav.about'),     url: '/about' }
+      { i18n: 'nav.home',      text: t('nav.home'),      url: '/' },
+      { i18n: 'nav.tags',      text: t('nav.tags'),      url: '/tags' },
+      { i18n: 'nav.archive',   text: t('nav.archive'),   url: '/archive' },
+      { i18n: 'nav.guestbook', text: t('nav.guestbook'), url: '/guestbook' },
+      { i18n: 'nav.about',     text: t('nav.about'),     url: '/about' }
     ];
   }
   /** 默认底部导航：优先沿用 config.js footer.contact，方便老配置无缝衔接 */
@@ -1857,8 +1857,16 @@
       wrap.querySelectorAll('.ab-nav-row.child[data-idx="' + idx + '"]').forEach(function (cr) {
         children.push({ text: (cr.querySelector('.ab-nav-text') || {}).value || '', url: (cr.querySelector('.ab-nav-url') || {}).value || '' });
       });
+      var old = settingsDraft.nav[idx] || {};
       var item = { text: text, url: url };
-      if (children.length) item.children = children;
+      if (old.i18n) item.i18n = old.i18n;
+      if (children.length) {
+        item.children = children.map(function (c, ci) {
+          var childOld = (old.children && old.children[ci]) || {};
+          if (childOld.i18n) c.i18n = childOld.i18n;
+          return c;
+        });
+      }
       newItems.push(item);
     });
     settingsDraft.nav = newItems;
