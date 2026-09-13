@@ -82,7 +82,7 @@
           '<span class="mp-fab-icon" id="mpFabIcon">' + icon('music') + '</span>' +
         '</button>' +
       '</div>' +
-      '<div class="mp-panel" id="mpPanel" role="dialog" aria-hidden="true">' +
+      '<div class="mp-panel" id="mpPanel" role="dialog" aria-hidden="true" aria-labelledby="mpTitle">' +
         '<div class="mp-panel-head">' +
           '<span class="mp-cover" id="mpCover">' + icon('music', 17) + '</span>' +
           '<div class="mp-meta">' +

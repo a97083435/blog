@@ -2726,12 +2726,15 @@ textarea { resize: none; }
   transform: translateY(14px) scale(.97);
   transform-origin: bottom right;
   pointer-events: none;
-  transition: opacity .22s ease, transform .24s cubic-bezier(.32,.72,.25,1);
+  visibility: hidden;
+  transition: opacity .22s ease, transform .24s cubic-bezier(.32,.72,.25,1), visibility 0s linear .24s;
 }
 .mp-panel.open {
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
+  visibility: visible;
+  transition: opacity .22s ease, transform .24s cubic-bezier(.32,.72,.25,1), visibility 0s;
 }
 
 .mp-panel-head {
