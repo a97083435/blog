@@ -6,7 +6,7 @@
  * ============================================================================ */
 'use strict';
 
-var BLOG_VERSION = '2.5.1';
+var BLOG_VERSION = '2.5.2';
 
 /* ---------- 全局缓存 ---------- */
 var _searchOpen = false;   // 顶部导航搜索是否展开
@@ -3851,6 +3851,7 @@ function initAdSlots(scope) {
   Array.prototype.forEach.call(scope.querySelectorAll('.ad-slot'), function (slot) {
     var ins = slot.querySelector('ins.adsbygoogle');
     if (!ins) { slot.classList.add('has-ad'); return; }  // 静态广告内容：直接显示
+    ensureAdSenseScheduled();
     var tries = 0;
     var timer = setInterval(function () {
       tries++;
@@ -4154,6 +4155,13 @@ function renderSearchPanel(query) {
 /* AdSense 延迟加载：首屏结束后再注入广告库，不与首屏渲染/API 抢带宽。
  * 策略：最早 2.5s、空闲时 3.5s、兜底 5s 才开始加载广告；
  * 广告位已有显隐控制，晚加载不影响布局 */
+var _adSenseScheduled = false;
+// 仅当页面中真实出现 AdSense 广告位时才安排加载，首页/无广告页完全不引入第三方脚本。
+function ensureAdSenseScheduled() {
+  if (_adSenseScheduled) return;
+  _adSenseScheduled = true;
+  scheduleAdSense();
+}
 function scheduleAdSense() {
   var start = Date.now();
   var fired = false;
@@ -4198,10 +4206,6 @@ window.__bootPromise = (async function () {
   applyTheme(getTheme());
   applyAccent(getAccent());
   bindNavClicks();
-  // AdSense 库延迟加载：首屏主流程（路由/数据拉取/渲染）优先，广告库挂到空闲再注入，
-  // 避免 pagead2/adsbygoogle 全家桶（约 10~20 个第三方请求）与首屏渲染抢带宽。
-  scheduleAdSense();
-
   // 确保 i18n 翻译数据在首次渲染前加载完成
   if (window.__i18n && window.__i18n.loadLocale && !window.__i18n.isReady()) {
     await window.__i18n.loadLocale(window.__i18n.getLocale());
