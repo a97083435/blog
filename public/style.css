@@ -721,11 +721,12 @@ main { flex: 1 0 auto; width: 100%; padding: 34px 0 60px; }
 }
 
 /* 发表表单 */
-.guestbook-form { padding: 18px; margin-bottom: 20px; }
+.guestbook-form { padding: 18px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 16px; }
 .gb-form-row { display: flex; gap: 10px; align-items: center; }
 .gb-form-row input[type="text"] {
   flex: 1; border: 1px solid var(--border); background: var(--bg-soft);
   color: var(--fg); border-radius: 10px; padding: 9px 12px; font-size: 14px; outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 .gb-form-row input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .gb-submit {
@@ -745,7 +746,8 @@ main { flex: 1 0 auto; width: 100%; padding: 34px 0 60px; }
 .guestbook-form textarea {
   width: 100%; box-sizing: border-box; resize: vertical; border: 1px solid var(--border);
   background: var(--bg-soft); color: var(--fg); border-radius: 10px; padding: 10px 12px;
-  font-size: 14px; line-height: 1.6; outline: none; font-family: inherit;
+  font-size: 14px; line-height: 1.65; outline: none; font-family: inherit;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 .guestbook-form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .gb-form-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
@@ -755,12 +757,17 @@ main { flex: 1 0 auto; width: 100%; padding: 34px 0 60px; }
 /* 留言列表 */
 .guestbook-list { display: flex; flex-direction: column; gap: 12px; }
 .gb-empty {
-  text-align: center; padding: 40px 16px; color: var(--muted);
-  border: 1px dashed var(--border); border-radius: 14px; background: var(--bg-soft);
+  text-align: center; padding: 42px 16px; color: var(--muted);
+  border: 1px dashed var(--border); border-radius: 16px; background: var(--bg-soft);
 }
 .gb-empty-icon { font-size: 0; opacity: .5; }
 .gb-empty p { margin: 10px 0 0; font-size: 14px; }
-.gb-entry { padding: 16px 18px; animation: gb-in .25s ease; }
+.gb-entry {
+  padding: 16px 18px; animation: gb-in .25s ease;
+  border: 1px solid var(--border); border-radius: 16px;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.gb-entry:hover { border-color: color-mix(in srgb, var(--border) 55%, var(--accent) 20%); box-shadow: var(--shadow); transform: translateY(-1px); }
 @keyframes gb-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .gb-entry-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .gb-avatar {
@@ -1675,16 +1682,24 @@ kbd {
 .lock-msg { margin-top: 10px; color: var(--accent); font-size: 13px; }
 
 /* ---------- 评论区 ---------- */
-.comments { margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--border); }
-.comments h3 { font-size: 17px; margin: 0 0 4px; }
-.comment-count { color: var(--muted); font-weight: 400; font-size: 14px; }
+.comments { margin-top: 34px; padding-top: 22px; border-top: 1px solid var(--border); position: relative; }
+.comments::before {
+  content: ""; position: absolute; top: -2px; left: 0; width: 42px; height: 3px; border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2)); opacity: .7;
+}
+.comments h3 { font-size: 18px; margin: 0 0 4px; font-family: var(--font-heading); letter-spacing: .01em; }
+.comment-count { color: var(--muted); font-weight: 400; font-size: 13.5px; }
 .comment-hint { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; }
-.comment-form { display: flex; flex-direction: column; gap: 8px; }
+.comment-form {
+  display: flex; flex-direction: column; gap: 8px;
+  border: 1px solid var(--border); border-radius: 14px; padding: 16px;
+  background: color-mix(in srgb, var(--card) 88%, var(--bg-soft));
+}
 .comment-form input, .comment-form textarea {
   width: 100%;
-  padding: 9px 12px;
+  padding: 10px 13px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg);
   color: var(--fg);
   font-size: 14px;
@@ -1695,33 +1710,59 @@ kbd {
 .comment-form input:focus, .comment-form textarea:focus { border-color: var(--accent); box-shadow: var(--ring); outline: none; }
 .comment-submit-row { display: flex; align-items: center; gap: 10px; }
 .c-status { font-size: 13px; color: var(--muted); }
-.comment-list { list-style: none; margin: 16px 0 0; padding: 0; }
-.comment { padding: 12px 0; border-bottom: 1px dashed var(--border); }
-.comment-head { display: flex; align-items: baseline; gap: 10px; font-size: 13px; }
+.comment-list { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.comment {
+  position: relative; display: flex; gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card) 96%, var(--bg-soft));
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+}
+.comment:hover { border-color: color-mix(in srgb, var(--border) 55%, var(--accent) 18%); box-shadow: var(--shadow); transform: translateY(-1px); }
+.comment-head { display: flex; align-items: center; gap: 9px; font-size: 13px; min-width: 0; flex: 0 0 auto; flex-wrap: wrap; }
+.comment-avatar {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: var(--accent-fg);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: 0 3px 8px -3px color-mix(in srgb, var(--accent) 48%, transparent);
+}
 .comment-author { font-weight: 600; color: var(--accent); }
 .comment-date { color: var(--muted); font-size: 12px; }
+.comment-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; }
 .comment-del {
-  margin-left: auto;
   border: none;
   background: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 13px;
-  opacity: 0.6;
+  font-size: 12.5px;
+  opacity: 0.65;
   padding: 2px 6px;
   border-radius: 6px;
 }
 .comment-del:hover { opacity: 1; color: var(--danger, #c0392b); background: var(--bg-soft); }
-.comment-content { margin: 4px 0 0; font-size: 14.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.comment-main { flex: 1 1 auto; min-width: 0; }
+.comment-content { margin: 2px 0 0; font-size: 14.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
 /* “回复了某人”小标签：标明该评论是对谁的回复，直观呈现回复层级 */
 .comment-reply-to { display: inline-block; margin: 6px 0 0; font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; line-height: 1.5; }
 .comment-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
 /* 评论回复 */
-.comment-children { list-style: none; margin: 8px 0 0; padding: 0 0 0 20px; }
-.comment-children .comment { border-left: 2px solid var(--border); padding-left: 12px; margin-bottom: 8px; }
+.comment-children { list-style: none; margin: 8px 0 0; padding: 0 0 0 8px; display: flex; flex-direction: column; gap: 8px; }
+.comment-children .comment {
+  border-left: 2px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  background: color-mix(in srgb, var(--bg-soft) 64%, var(--card));
+}
+.comment-children .comment:hover { border-left-color: var(--accent); }
 .comment-reply-btn { background: none; border: none; color: var(--muted, #999); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
 .comment-reply-btn:hover { background: var(--bg-soft); color: var(--accent); }
-.reply-indicator { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 10px; font-size: 13px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+@media (max-width: 560px) {
+  .comment { flex-wrap: wrap; }
+  .comment-head { width: 100%; }
+  .comment-actions { margin-left: auto; }
+  .comment-main { flex: 1 1 100%; }
+}
+.reply-indicator { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 9px 13px; margin-bottom: 10px; font-size: 13px; display: flex; align-items: center; gap: 8px; color: var(--text); }
 .reply-cancel { background: none; border: none; cursor: pointer; color: var(--muted, #999); font-size: 16px; padding: 0 2px; }
 .reply-cancel:hover { color: var(--text); }
 

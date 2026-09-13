@@ -1876,15 +1876,18 @@ function renderCommentTree(list, canDel) {
     var childrenHtml = replies.length
       ? '<ul class="comment-children">' + replies.map(function (r) { return renderOne(r, depth + 1); }).join('') + '</ul>'
       : '';
+    var initial = String(c.author || '?').trim().slice(0, 1) || '?';
     return '<li class="comment" data-id="' + esc(c.id) + '"><div class="comment-head">'
+      + '<span class="comment-avatar" aria-hidden="true">' + esc(initial) + '</span>'
       + '<span class="comment-author">' + esc(c.author) + '</span>'
       + '<span class="comment-date">' + esc(c.date || '') + '</span>'
-      + replyBtn
-      + delBtn
+      + '<span class="comment-actions">' + replyBtn + delBtn + '</span>'
       + '</div>'
+      + '<div class="comment-main">'
       + replyToLabel
       + '<div class="comment-content">' + escSmoji(esc(c.content)) + '</div>'
-      + childrenHtml + '</li>';
+      + childrenHtml
+      + '</div></li>';
   }
 
   return roots.map(function (c) { return renderOne(c, 0); }).join('');
