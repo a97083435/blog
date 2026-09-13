@@ -96,6 +96,7 @@
   "comment.reply": "返信",
   "comment.replyTo": "{author}に返信",
   "comment.cancelReply": "返信キャンセル",
+  "comment.emoji": "絵文字",
   "pagination.page": "{current} / {total} ページ",
   "pagination.prev": "← 前へ",
   "pagination.next": "次へ →",
@@ -260,6 +261,7 @@
   "admin.editor.list": "リスト",
   "admin.editor.link": "リンク",
   "admin.editor.image": "画像",
+  "admin.editor.emoji": "絵文字",
   "admin.editor.writeHint": "Markdownで書き始めましょう…",
   "admin.editor.saveDraft": "下書き保存",
   "admin.editor.publish": "公開",
@@ -471,6 +473,7 @@
   "guestbook.fail": "投稿に失敗しました。後でもう一度お試しください",
   "guestbook.fillBoth": "ニックネームと内容を入力してください",
   "guestbook.postAnon": "投稿する",
+  "guestbook.emoji": "絵文字",
   "guestbook.noteTag": "メッセージ",
   "guestbook.ideaTag": "改善案",
   "admin.media.r2Missing": "R2 ストレージが未設定のためアップロードできません"

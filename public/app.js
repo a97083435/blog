@@ -14,6 +14,69 @@ var _searchDocBound = false;   // document 级外部点击监听是否已绑定
 var _commentsCache = {};
 var _statsCache = {};
 
+/* ---------- Smoji 表情库 ---------- */
+var _smojiPicker = null;
+var _smojiTrigger = null;
+var _smojiCssLoaded = false;
+
+function destroySmojiPicker() {
+  if (_smojiPicker && typeof _smojiPicker.destroy === 'function') { try { _smojiPicker.destroy(); } catch (e) {} }
+  _smojiPicker = null;
+  _smojiTrigger = null;
+}
+
+function _loadSmojiCss() {
+  if (_smojiCssLoaded) return Promise.resolve();
+  return new Promise(function (resolve) {
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = appRoot() + 'libs/smoji/style.css';
+    link.onload = function () { _smojiCssLoaded = true; resolve(); };
+    link.onerror = function () { _smojiCssLoaded = true; resolve(); };
+    document.head.appendChild(link);
+  });
+}
+
+function ensureSmojiPicker(trigger, textarea) {
+  if (_smojiPicker && _smojiTrigger === trigger) return Promise.resolve();
+  if (_smojiPicker) destroySmojiPicker();
+  var root = appRoot() || '';
+  return _loadSmojiCss().then(function () {
+    return Promise.all([
+      import(root + 'libs/smoji/index.js'),
+      import(root + 'libs/smoji/manifest.js'),
+      import(root + 'libs/smoji/marker.js')
+    ]);
+  }).then(function (mods) {
+    var smoj = mods[0], man = mods[1], mark = mods[2];
+    return man.loadSmojiManifest('https://s3-cdn.zsh.moe/smoji/smoji.json').then(function (manifest) {
+      if (!manifest || !manifest.packs || !manifest.packs.length) return;
+      _smojiPicker = smoj.createSmoji({
+        trigger: trigger,
+        target: smoj.textTarget(textarea, { serialize: mark.smojiMarker }),
+        packs: manifest.packs,
+        closeOnSelect: true
+      });
+      _smojiTrigger = trigger;
+    });
+  });
+}
+
+function initSmojiPicker(trigger, textarea) {
+  if (!trigger || !textarea || trigger.__smojiBound) return;
+  trigger.__smojiBound = true;
+  function onClick(e) {
+    e.preventDefault();
+    if (trigger.__smojiLoading) return;
+    trigger.__smojiLoading = true;
+    ensureSmojiPicker(trigger, textarea).then(function () {
+      if (_smojiPicker && _smojiTrigger === trigger) _smojiPicker.open();
+      trigger.removeEventListener('click', onClick);
+    }).catch(function () { trigger.__smojiLoading = false; });
+  }
+  trigger.addEventListener('click', onClick);
+}
+
 /* ---------- 基础工具 ---------- */
 /* ---------- main theme (dark / light) ---------- */
 function themeKey() { return 'qingyu.theme'; }
@@ -436,6 +499,12 @@ function renderMarkdown(md) {
   return html;
 }
 
+function escSmoji(safeHtml) {
+  return String(safeHtml == null ? '' : safeHtml).replace(/!\[smoji:([^\]]{1,40})\]\((https?:\/\/s3-cdn\.zsh\.moe\/smoji\/[^()\s]+)\)/g, function (m, label, src) {
+    return '<img class="smoji-inline" src="' + src + '" alt="[表情：' + label + ']" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
+  });
+}
+
 function inlineMd(s) {
   var t = esc(String(s || ""));
   t = t.replace(/\\\\([*_`~\\[\\]])/g, '\u0001$1');
@@ -447,6 +516,10 @@ function inlineMd(s) {
   t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
   // 删除线
   t = t.replace(/~~([^~\n]+)~~/g, '<del>$1</del>');
+  // Smoji 表情（先于普通图片；仅匹配 smoji: 标记 + Smoji 官方 CDN 的 http(s) 图片 URL 后才渲染）
+  t = t.replace(/!\[smoji:([^\]]{1,40})\]\((https?:\/\/s3-cdn\.zsh\.moe\/smoji\/[^()\s]+)\)/g, function (m, label, src) {
+    return '<img class="smoji-inline" src="' + src + '" alt="[表情：' + label + ']" loading="lazy" decoding="async" referrerpolicy="no-referrer">';
+  });
   // 图片（过滤 javascript:/data: 等危险协议）
   t = t.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function (m, alt, src) {
     if (/^\s*(javascript|data|vbscript):/i.test(String(src).trim())) return m;
@@ -1726,7 +1799,7 @@ function renderCommentTree(list, canDel) {
       + delBtn
       + '</div>'
       + replyToLabel
-      + '<div class="comment-content">' + esc(c.content) + '</div>'
+      + '<div class="comment-content">' + escSmoji(esc(c.content)) + '</div>'
       + childrenHtml + '</li>';
   }
 
@@ -1852,7 +1925,7 @@ async function renderPost(id) {
   html += '<div class="comments"><h3>' + t('comment.title') + ' <span class="comment-count" id="commentCount">' + '0' + '</span></h3>';
   html += '<p class="comment-hint">' + t('comment.hint') + '</p>';
   html += '<div class="reply-indicator" id="replyIndicator" style="display:none"><span id="replyTo"></span><button class="reply-cancel" id="replyCancel">✕</button></div>';
-  html += '<div class="comment-form"><input type="text" id="commentAuthor" maxlength="30" placeholder="' + t('comment.authorPlaceholder') + '"><textarea id="commentContent" rows="2" maxlength="1000" placeholder="' + t('comment.contentPlaceholder') + '"></textarea><div class="comment-submit-row"><button class="btn btn-primary" id="commentSubmit">' + t('comment.submit') + '</button><span class="c-status" id="commentStatus"></span></div></div>';
+  html += '<div class="comment-form"><input type="text" id="commentAuthor" maxlength="30" placeholder="' + t('comment.authorPlaceholder') + '"><div class="comment-editor-row"><textarea id="commentContent" rows="2" maxlength="1000" placeholder="' + t('comment.contentPlaceholder') + '"></textarea><button type="button" class="comment-emoji-btn" id="commentEmoji" title="' + t('comment.emoji') + '" aria-label="' + t('comment.emoji') + '">😊</button></div><div class="comment-submit-row"><button class="btn btn-primary" id="commentSubmit">' + t('comment.submit') + '</button><span class="c-status" id="commentStatus"></span></div></div>';
   html += '<ul class="comment-list" id="commentList"></ul></div>';
 
   // 精选文章（评论区下方）
@@ -1932,6 +2005,11 @@ async function renderPost(id) {
     var indicator = document.querySelector('#replyIndicator');
     if (indicator) { indicator.style.display = 'none'; indicator.removeAttribute('data-reply-id'); }
   });
+
+  // 评论框表情选择器
+  var commentEmoji = document.querySelector('#commentEmoji');
+  var commentContent = document.querySelector('#commentContent');
+  if (commentEmoji && commentContent && window.initSmojiPicker) window.initSmojiPicker(commentEmoji, commentContent);
 
   var submit = document.querySelector('#commentSubmit');
   if (submit) submit.addEventListener('click', async function () {
@@ -2097,7 +2175,9 @@ function renderGuestbook() {
     + '</div>'
     + '<div class="gb-kind-hint" id="gbKindHint">' + svgIcon('pen', 13) + ' <span></span></div>'
     + '<textarea id="gbContent" rows="3" maxlength="1000" placeholder="' + t('guestbook.contentPlaceholder') + '"></textarea>'
-    + '<div class="gb-form-foot"><span class="gb-status" id="gbStatus"></span>'
+    + '<div class="gb-form-foot">'
+    + '<button type="button" class="gb-emoji-btn" id="gbEmoji" title="' + t('guestbook.emoji') + '" aria-label="' + t('guestbook.emoji') + '">😊</button>'
+    + '<span class="gb-status" id="gbStatus"></span>'
     + '<span class="gb-count" id="gbCount"></span></div>'
     + '</div>'
     // 留言列表
@@ -2145,7 +2225,7 @@ async function bindGuestbook() {
         + '<span class="gb-kind-badge ' + kindClass + '">' + kindLabel + '</span>'
         + '<span class="gb-date">' + esc(c.date || '') + '</span>'
         + '</div>'
-        + '<div class="gb-entry-content">' + esc(c.content || '') + '</div>'
+        + '<div class="gb-entry-content">' + escSmoji(esc(c.content || '')) + '</div>'
         + '</div>';
     }).join('');
     if (count) count.textContent = String(entries.length);
@@ -2185,6 +2265,9 @@ async function bindGuestbook() {
       status.textContent = (e && e.message) || t('guestbook.fail');
     } finally { submit.disabled = false; }
   }
+
+  var gbEmoji = document.querySelector('#gbEmoji');
+  if (gbEmoji && content && window.initSmojiPicker) window.initSmojiPicker(gbEmoji, content);
 
   refreshUI();
   load();
@@ -2573,10 +2656,11 @@ function renderWrite() {
   bindWriteEvents();
 }
 function toolbarHtml() {
-  return ['bold', 'italic', 'code', 'h2', 'link', 'img', 'quote', 'ul', 'ol', 'fence'].map(function (cmd) {
+  var html = ['bold', 'italic', 'code', 'h2', 'link', 'img', 'quote', 'ul', 'ol', 'fence'].map(function (cmd) {
     var icons = { bold: 'B', italic: 'I', code: '<>', h2: 'H2', link: svgIcon('link', 13), img: svgIcon('image', 13), quote: svgIcon('quote', 13), ul: '•', ol: '1.', fence: '```' };
     return '<button type="button" class="tb-btn" data-cmd="' + cmd + '" title="' + cmd + '">' + (icons[cmd] || cmd) + '</button>';
   }).join('');
+  return html + '<button type="button" class="tb-btn" id="tbSmoji" title="' + t('admin.editor.emoji') + '" aria-label="' + t('admin.editor.emoji') + '">😊</button>';
 }
 
 /** 当前编辑的文章别名：来自路由 /posts/<别名>/edit 或 ?edit= */
@@ -2658,6 +2742,10 @@ function bindWriteEvents() {
       window.open(u, '_blank');
     } catch (e) {}
   });
+
+  var tbSmoji = document.querySelector('#tbSmoji');
+  var tbSmojiArea = document.querySelector('#mdInput');
+  if (tbSmoji && tbSmojiArea && window.initSmojiPicker) window.initSmojiPicker(tbSmoji, tbSmojiArea);
 
   document.querySelectorAll('#toolbar [data-cmd]').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -3116,6 +3204,7 @@ var _i18nReady = false;
 async function route() {
   _searchOpen = false;   // 进入新页面时收起顶部搜索
   _featuredCache = null; // 清除精选缓存，确保每页重新计算
+  destroySmojiPicker(); // 清理 Smoji 表情选择器
   // 重置 body overflow，防止侧边栏打开时切换语言导致页面无法滚动
   document.body.style.overflow = '';
   // 首次路由时加载语言文件（同步读 localStorage，异步加载 JSON）

@@ -96,6 +96,7 @@
   "comment.reply": "Reply",
   "comment.replyTo": "Reply to {author}",
   "comment.cancelReply": "Cancel reply",
+  "comment.emoji": "Emoji",
   "pagination.page": "Page {current} / {total}",
   "pagination.prev": "Previous",
   "pagination.next": "Next",
@@ -260,6 +261,7 @@
   "admin.editor.list": "List",
   "admin.editor.link": "Link",
   "admin.editor.image": "Image",
+  "admin.editor.emoji": "Emoji",
   "admin.editor.writeHint": "Start writing with Markdown…",
   "admin.editor.saveDraft": "Save Draft",
   "admin.editor.publish": "Publish",
@@ -471,6 +473,7 @@
   "guestbook.fail": "Post failed, try again later",
   "guestbook.fillBoth": "Please fill in name and content",
   "guestbook.postAnon": "Post",
+  "guestbook.emoji": "Emoji",
   "guestbook.noteTag": "Message",
   "guestbook.ideaTag": "Optimization",
   "admin.media.r2Missing": "R2 storage not configured, upload unavailable"

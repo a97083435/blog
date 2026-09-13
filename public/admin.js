@@ -628,6 +628,7 @@
   /* ----------------------- 内容区分发 ----------------------- */
   function renderPage(root, route) {
     var content = root.querySelector('#abContent');
+    if (window.destroySmojiPicker) window.destroySmojiPicker();
     if (_feedTimer) { clearInterval(_feedTimer); _feedTimer = null; } // 离开仪表盘时停止评论自动滚动
     if (route.page === 'dashboard') return pageDashboard(content);
     if (route.page === 'posts') return pagePosts(content);
@@ -1182,6 +1183,7 @@
             '<button class="ab-tool" data-md="ul" title="' + t('admin.editor.list') + '">≡</button>' +
             '<button class="ab-tool" data-md="link" title="' + t('admin.editor.link') + '">' + icon('link', 15) + '</button>' +
             '<button class="ab-tool" data-md="img" title="' + t('admin.editor.image') + '">' + icon('image', 15) + '</button>' +
+            '<button class="ab-tool" id="abSmoji" title="' + t('admin.editor.emoji') + '" aria-label="' + t('admin.editor.emoji') + '">😊</button>' +
           '</div>' +
           '<textarea class="ab-editor-area" id="abBody" placeholder="' + t('admin.editor.writeHint') + '"></textarea>' +
         '</div>' +
@@ -1211,6 +1213,8 @@
     if (exp) exp.addEventListener('click', downloadAllStatic);
     var pick = content.querySelector('#abPickCover');
     if (pick) pick.addEventListener('click', function () { openMediaPicker(content); });
+    var smojiBtn = content.querySelector('#abSmoji');
+    if (smojiBtn && window.initSmojiPicker) window.initSmojiPicker(smojiBtn, area);
   }
   function updatePreview(content) {
     var area = content.querySelector('#abBody');

@@ -96,6 +96,7 @@
   "comment.reply": "답글",
   "comment.replyTo": "{author}에게 답글",
   "comment.cancelReply": "답글 취소",
+  "comment.emoji": "이모지",
   "pagination.page": "{current} / {total} 페이지",
   "pagination.prev": "이전",
   "pagination.next": "다음",
@@ -260,6 +261,7 @@
   "admin.editor.list": "목록",
   "admin.editor.link": "링크",
   "admin.editor.image": "이미지",
+  "admin.editor.emoji": "이모지",
   "admin.editor.writeHint": "Markdown으로 작성하세요…",
   "admin.editor.saveDraft": "임시저장",
   "admin.editor.publish": "발행",
@@ -471,6 +473,7 @@
   "guestbook.fail": "게시하지 못했습니다. 나중에 다시 시도하세요",
   "guestbook.fillBoth": "닉네임과 내용을 입력해 주세요",
   "guestbook.postAnon": "게시",
+  "guestbook.emoji": "이모지",
   "guestbook.noteTag": "메시지",
   "guestbook.ideaTag": "개선안",
   "admin.media.r2Missing": "R2 저장소가 구성되지 않아 업로드할 수 없습니다"

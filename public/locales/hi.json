@@ -96,6 +96,7 @@
   "comment.reply": "जवाब दें",
   "comment.replyTo": "{author} को जवाब दें",
   "comment.cancelReply": "जवाब रद्द करें",
+  "comment.emoji": "इमोजी",
   "pagination.page": "पेज {current} / {total}",
   "pagination.prev": "पिछला",
   "pagination.next": "अगला",
@@ -260,6 +261,7 @@
   "admin.editor.list": "सूची",
   "admin.editor.link": "लिंक",
   "admin.editor.image": "इमेज",
+  "admin.editor.emoji": "इमोजी",
   "admin.editor.writeHint": "Markdown में लिखना शुरू करें…",
   "admin.editor.saveDraft": "ड्राफ्ट सहेजें",
   "admin.editor.publish": "प्रकाशित करें",
@@ -471,6 +473,7 @@
   "guestbook.fail": "पोस्ट विफल, बाद में पुनः प्रयास करें",
   "guestbook.fillBoth": "कृपया नाम और सामग्री भरें",
   "guestbook.postAnon": "पोस्ट करें",
+  "guestbook.emoji": "इमोजी",
   "guestbook.noteTag": "संदेश",
   "guestbook.ideaTag": "सुधार",
   "admin.media.r2Missing": "R2 स्टोरेज कॉन्फ़िगर नहीं है, अपलोड उपलब्ध नहीं"
