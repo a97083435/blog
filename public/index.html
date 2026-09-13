@@ -98,56 +98,12 @@
       .boot-name { color: #a89b8e; }
     }
   </style>
-  <link id="global-style" rel="stylesheet" href="style.min.css?v=2.5.5" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="style.min.css?v=2.5.5"></noscript>
-  <!-- 后台样式按需加载：仅访问后台路由时由 app.js 动态注入 -->
-  <!-- 预连接字体 CDN，降低首字节延迟（仅桌面/安卓真正加载 CDN 字体时才有意义；iOS 走系统字体） -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <script>
-    // 字体按需加载：iOS 用系统原生宋体/仿宋（.ios 类，见 style.css），跳过 CDN webfont
-    // 下载（省 ~300-600KB 流量）；桌面/安卓才注入三款 CDN 子集样式表。
-    // 非阻塞加载（media=print + onload 切回 all），避免拖慢首屏渲染；
-    // 思源宋体 VF 为按字形分片的 webfont，浏览器按需拉取页面实际用到的分片。
-    (function () {
-      if (document.documentElement.classList.contains('ios')) return;
-      var fonts = [
-        '@free-fonts/genyo-mincho@1.0.1/genyo-mincho.css',
-        '@free-fonts/zhuque-fangsong@1.0.0/zhuque-fangsong.css',
-        'cn-fontsource-source-han-serif-sc-vf@1.0.9/font.css'
-      ];
-      for (var i = 0; i < fonts.length; i++) {
-        var link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/' + fonts[i];
-        link.media = 'print';
-        link.onload = function () { this.media = 'all'; };
-        document.head.appendChild(link);
-      }
-    })();
-  </script>
-  <noscript>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@free-fonts/genyo-mincho@1.0.1/genyo-mincho.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@free-fonts/zhuque-fangsong@1.0.0/zhuque-fangsong.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cn-fontsource-source-han-serif-sc-vf@1.0.9/font.css">
-  </noscript>
-  <script>
-    // 本地大字体「梦源宋体」延迟加载：首屏关键资源优先，空闲后再注入，降低网络负载
-    if (!document.documentElement.classList.contains('ios')) {
-      var _loadDream = function () {
-        var l = document.createElement('link');
-        l.rel = 'stylesheet';
-        l.href = 'fonts/dreamserif/result.css?v=2.5.5';
-        document.head.appendChild(l);
-      };
-      if (window.requestIdleCallback) { window.requestIdleCallback(_loadDream, { timeout: 3000 }); }
-      else if (window.addEventListener) { window.addEventListener('load', _loadDream); }
-      else { setTimeout(_loadDream, 2000); }
-    }
-  </script>
-  <noscript><link rel="stylesheet" href="fonts/dreamserif/result.css?v=2.5.5"></noscript>
-  <script defer src="config.min.js?v=2.5.5"></script>
-  <script defer src="posts.min.js?v=2.5.5"></script>
-  <script defer src="i18n.min.js?v=2.5.5"></script>
+  <link id="global-style" rel="stylesheet" href="style.min.css?v=2.6.0" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="style.min.css?v=2.6.0"></noscript>
+  <!-- 字体策略：前台全部改走系统宋体/仿宋栈，不再加载任何 webfont，PageSpeed 网络负载大幅下降 -->
+  <script defer src="config.min.js?v=2.6.0"></script>
+  <script defer src="posts.min.js?v=2.6.0"></script>
+  <script defer src="i18n.min.js?v=2.6.0"></script>
 </head>
 <body>
   <div id="app">
@@ -157,11 +113,11 @@
       <div class="boot-name">Qingyu'Blog · 加载中</div>
     </div>
   </div>
-  <script defer src="app.min.js?v=2.5.5"></script>
+  <script defer src="app.min.js?v=2.6.0"></script>
   <!-- 全站底部音乐播放器（阶段二）：需在 app.js 之后（共用全局 i18n / 主题变量） -->
-  <script defer src="music-player.min.js?v=2.5.5"></script>
+  <script defer src="music-player.min.js?v=2.6.0"></script>
   <!-- 背景素描动画（春夏秋冬 · 自动切换 · 可关闭）：独立零依赖，滞后加载不阻塞首屏 -->
-  <script defer src="bg-anim.min.js?v=2.5.5"></script>
+  <script defer src="bg-anim.min.js?v=2.6.0"></script>
   <!-- 后台脚本按需加载：仅进入后台路由时由 app.js 懒加载 -->
 </body>
 </html>

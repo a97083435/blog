@@ -3,11 +3,11 @@
  * 纯 CSS 变量驱动，支持深色模式与移动端响应式。
  * ============================================================ */
 
-/* ---------- 字体方案（测试中，暂不推送；四款均开源可用） ----------
- * 大标题   梦源宋体 W16      → 本地分片 fonts/dreamserif/result.css（cn-font-split 切分，OFL）
- * 章节标题 源樣明體 SemiBold → GenYoMin2TC 分片 woff2（CDN，OFL）
- * 引用装饰 朱雀仿宋         → Zhuque Fangsong 分片 woff2（CDN，OFL）
- * 正文    思源宋体 VF / Noto Serif SC → cn-fontsource 分片 woff2（CDN，OFL）
+/* ---------- 字体方案（性能优先：全站使用系统宋体/仿宋，不加载任何 webfont） ----------
+ * 正文    / Songti SC / SimSun / Noto Serif CJK SC 等系统宋体
+ * 大标题  / 章节标题 = 同正文宋体，靠字重与字距保持层级
+ * 引用装饰/ STFangsong / 仿宋 / FangSong
+ * 好处：零字体网络开销，双端 PageSpeed 网络负载显著下降。
  * ----------------------------------------------- */
 
 /* ---------- 主题变量 ---------- */
@@ -33,15 +33,13 @@
   --font: "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
   --mono: "Cascadia Code", Consolas, "Courier New", monospace;
   /* 四级字体栈：正文 / 章节标题 / 大标题 / 装饰引用（管理后台仍用 --font 无衬线） */
-  /* 正文跨平台回退栈：优先 webfont/系统思源宋体，再依次匹配各 OS 自带宋体，
-   末位 serif 保证任何设备都兜底到系统默认宋体（不存在“没字体”的情况）。
-   Android/Linux: Noto Serif CJK SC / Source Han Serif SC · macOS/iOS: Songti SC/华文宋体
-   Windows: SimSun/宋体 · 已把正文 webfont 化（思源宋体 VF 走 jsDelivr，每设备一致），此栈仅作回退 */
---font-body: "Source Han Serif SC VF", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", "思源宋体",
-             "Songti SC", "STSong", "华文宋体", "SimSun", "宋体", serif;
-  --font-heading: "GenYoMin2TC", "源樣明體", var(--font-body);
-  --font-display: "QY-Display", "梦源宋体 W16", var(--font-heading);
-  --font-deco: "Zhuque Fangsong", "朱雀仿宋", var(--font-body);
+  /* 正文跨平台系统衬线栈：不加载任何 webfont，零网络开销；安卓/移动端也有各系统宋体回退 */
+  /* macOS/iOS: Songti SC/华文宋体 · Windows: SimSun/宋体 · Android/Linux: Noto Serif CJK SC */
+  /* 四级栈全部落到系统字体，视觉保持书卷宋体气质，同时 PageSpeed 网络体积大降 */
+  --font-body: "Songti SC", "STSong", "华文宋体", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun", "宋体", serif;
+  --font-heading: var(--font-body);
+  --font-display: var(--font-body);
+  --font-deco: "STFangsong", "FangSong", "仿宋", "Songti SC", "SimSun", "宋体", serif;
   --tok-kw: #cf3a4f;
   --tok-str: #0a7d3f;
   --tok-com: #9aa0a6;
@@ -1748,12 +1746,12 @@ kbd {
 .comment-reply-to { display: inline-block; margin: 6px 0 0; font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 999px; line-height: 1.5; }
 .comment-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
 /* 评论回复 */
-.comment-children { list-style: none; margin: 8px 0 0; padding: 0 0 0 8px; display: flex; flex-direction: column; gap: 8px; }
+.comment-children { list-style: none; margin: 8px 0 0; padding: 0 0 0 18px; display: flex; flex-direction: column; gap: 6px; }
 .comment-children .comment {
-  border-left: 2px solid var(--border); border-radius: 10px; padding: 12px 14px;
-  background: color-mix(in srgb, var(--bg-soft) 64%, var(--card));
+  border: none; border-left: 2px solid var(--border); border-radius: 0 12px 12px 0;
+  padding: 10px 10px 10px 14px; background: transparent;
 }
-.comment-children .comment:hover { border-left-color: var(--accent); }
+.comment-children .comment:hover { border-left-color: var(--accent); background: color-mix(in srgb, var(--bg-soft) 40%, transparent); }
 .comment-reply-btn { background: none; border: none; color: var(--muted, #999); cursor: pointer; font-size: 12px; padding: 2px 6px; border-radius: 4px; }
 .comment-reply-btn:hover { background: var(--bg-soft); color: var(--accent); }
 @media (max-width: 560px) {
