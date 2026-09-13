@@ -314,10 +314,19 @@ function langOptionsHTML() {
       + '<span class="lang-flag">' + flagImg(l.code) + '</span><span class="lang-name">' + esc(l.name) + '</span></button>';
   }).join('');
 }
-/* 桌面语言面板的旗帜：使用本地 SVG，避免 Windows 上旗帜 emoji 渲染为字母（手机端原生 select 仍用 emoji） */
+/* 桌面语言面板的旗帜：使用本地 SVG，避免 Windows 上旗帜 emoji 渲染为字母（手机端原生 select 按平台显示表情或字母标识）。
+   本地 file:// 直开时用相对路径，其余场景用站点根路径。 */
 function flagImg(code) {
   var c = { 'zh-CN': 'cn', 'en': 'gb', 'ja': 'jp', 'ko': 'kr', 'hi': 'in' }[code] || 'cn';
-  return '<img class="lang-flag-img" src="/flags/' + c + '.svg" alt="" width="20" height="14" loading="lazy">';
+  var src = useHashMode() ? 'flags/' + c + '.svg' : '/flags/' + c + '.svg';
+  return '<img class="lang-flag-img" src="' + src + '" alt="' + c.toUpperCase() + '" width="20" height="14" loading="lazy">';
+}
+/* Windows 下原生 select 无法渲染旗帜 emoji（会退化成字母），改用具象的字母标识；
+   其他平台（手机/非 Windows 桌面）仍保留真实旗帜 emoji。 */
+function compactLangFlag(l) {
+  if (!l || typeof navigator === 'undefined') return l && l.flag ? l.flag : '';
+  if (!/win/i.test(String(navigator.platform || navigator.userAgent || ''))) return l.flag || '';
+  return ({ 'zh-CN': 'CN', 'en': 'EN', 'ja': 'JA', 'ko': 'KO', 'hi': 'HI' })[l.code] || '';
 }
 function renderLangPop() {
   var inner = document.getElementById('langPopInner');
@@ -3906,7 +3915,7 @@ function populateLangSwitch() {
     langs.forEach(function (lang) {
       var opt = document.createElement('option');
       opt.value = lang.code;
-      opt.textContent = lang.flag + ' ' + lang.name;
+      opt.textContent = compactLangFlag(lang) ? compactLangFlag(lang) + ' ' + lang.name : lang.name;
       if (lang.code === current) opt.selected = true;
       sel.appendChild(opt);
     });
