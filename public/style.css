@@ -1030,13 +1030,13 @@ html[data-theme="dark"] .post-card .mini-tags span {
 /* ---------- 文章详情 ---------- */
 /* 文章详情页：正文居中且保持舒适阅读宽度（较关于页的容器全宽略收窄，避免中文行过长） */
 .post-body {
-  max-width: 1000px;
+  max-width: 940px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .post-header { margin-bottom: 26px; padding-bottom: 18px; border-bottom: 1px solid var(--border); text-align: center; }
-.post-header h1 { margin: 0 0 10px; font-size: 28px; line-height: 1.35; font-family: var(--font-display); }
+.post-header h1 { margin: 0 auto 12px; font-size: 32px; line-height: 1.35; font-family: var(--font-display); max-width: 880px; }
 .post-header .meta {
   color: var(--muted);
   font-size: 13.5px;
@@ -1070,8 +1070,8 @@ html[data-theme="dark"] .post-card .mini-tags span {
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  margin-top: 12px;
-  padding-top: 16px;
+  margin-top: 18px;
+  padding-top: 18px;
   border-top: 1px solid var(--border);
 }
 .af-actions { display: flex; gap: 10px; margin-left: auto; }
@@ -1080,7 +1080,7 @@ html[data-theme="dark"] .post-card .mini-tags span {
 .like-bar {
   display: flex;
   justify-content: center;
-  margin-top: 30px;
+  margin-top: 36px;
 }
 .like-bar .like-btn { font-size: 14px; padding: 8px 22px; }
 
@@ -1088,11 +1088,16 @@ html[data-theme="dark"] .post-card .mini-tags span {
 .meta-views { color: var(--muted); display: inline-flex; align-items: center; gap: 2px; }
 
 /* Markdown 正文 */
-.article { word-break: break-word; }
-.article h1, .article h2, .article h3, .article h4 { line-height: 1.35; margin: 1.6em 0 0.6em; }
+.article {
+  word-break: break-word;
+  line-height: 1.85;
+  font-size: 16.5px;
+  letter-spacing: var(--ls-body);
+}
+.article h1, .article h2, .article h3, .article h4 { line-height: 1.35; margin: 1.7em 0 0.6em; }
 .article h1 { font-size: 1.55em; }
-.article h2 { font-size: 1.35em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
-.article h3 { font-size: 1.15em; }
+.article h2 { font-size: 1.35em; margin: 2em 0 0.7em; padding-bottom: 0.32em; border-bottom: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent) 12%); }
+.article h3 { font-size: 1.18em; margin-top: 1.8em; }
 /* 章节标题字体：源樣明體 SemiBold（卡片标题、正文 H2/H3 及写作台预览同步） */
 .post-card h2,
 .article h2, .article h3,
@@ -1117,32 +1122,35 @@ html[data-theme="dark"] .post-card .mini-tags span {
 .article li > ul, .article li > ol { margin: 0.2em 0; }
 /* 引用区块：装饰性字体（清刻本悦宋，缺文件时回退正文宋体），略大一号 */
 .article blockquote, .write-preview blockquote {
-  margin: 1em 0;
-  padding: 2px 16px;
+  margin: 1.1em 0;
+  padding: 12px 18px;
   border-left: 3px solid var(--accent);
-  background: var(--bg-soft);
-  color: var(--muted);
-  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--accent-soft) 38%, var(--bg-soft));
+  color: var(--fg);
+  border-radius: 0 10px 10px 0;
   font-family: var(--font-deco);
   font-size: 1.06em;
+  box-shadow: var(--shadow);
 }
 .article blockquote p { margin: 0.5em 0; }
 .article code.inline-code, .write-preview code.inline-code {
   font-family: var(--mono);
   font-size: 0.9em;
   background: var(--code-bg);
+  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   padding: 1px 6px;
-  border-radius: 5px;
+  border-radius: 6px;
 }
 .article pre.code-block, .write-preview pre.code-block {
   font-family: var(--mono);
   background: var(--code-bg);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 14px 18px;
   overflow-x: auto;
   font-size: 13.5px;
-  line-height: 1.6;
+  line-height: 1.65;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow);
 }
 .article img, .write-preview img { max-width: 100%; border-radius: 10px; box-shadow: var(--shadow); }
 .article table, .write-preview table {
@@ -1800,27 +1808,30 @@ kbd {
 
 /* ---------- 目录 TOC ---------- */
 .toc {
-  margin: 0 0 20px;
+  margin: 0 0 22px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-soft);
-  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-soft) 82%, var(--card));
+  padding: 12px 16px;
+  box-shadow: var(--shadow);
 }
 .toc summary {
   cursor: pointer;
   font-size: 13px;
-  color: var(--muted);
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent) 72%, var(--fg));
+  letter-spacing: .5px;
   user-select: none;
   list-style: none;
 }
 .toc summary::-webkit-details-marker { display: none; }
-.toc-list { display: flex; flex-direction: column; gap: 1px; margin-top: 8px; }
+.toc-list { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
 .toc-list a {
   font-size: 13.5px;
   color: var(--fg);
   text-decoration: none;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
