@@ -6,7 +6,7 @@
  * ============================================================================ */
 'use strict';
 
-var BLOG_VERSION = '2.5.2';
+var BLOG_VERSION = '2.5.3';
 
 /* ---------- 全局缓存 ---------- */
 var _searchOpen = false;   // 顶部导航搜索是否展开
@@ -3851,7 +3851,7 @@ function initAdSlots(scope) {
   Array.prototype.forEach.call(scope.querySelectorAll('.ad-slot'), function (slot) {
     var ins = slot.querySelector('ins.adsbygoogle');
     if (!ins) { slot.classList.add('has-ad'); return; }  // 静态广告内容：直接显示
-    ensureAdSenseScheduled();
+    ensureAdSenseScheduled(slot);
     var tries = 0;
     var timer = setInterval(function () {
       tries++;
@@ -4152,15 +4152,33 @@ function renderSearchPanel(query) {
   panel.classList.add('open');
 }
 
-/* AdSense 延迟加载：首屏结束后再注入广告库，不与首屏渲染/API 抢带宽。
- * 策略：最早 2.5s、空闲时 3.5s、兜底 5s 才开始加载广告；
+/* AdSense 延迟加载：仅在广告位进入视口后才注入广告库，不与首屏渲染/API 抢带宽。
+ * 策略：广告位进入视口（提前 150px 预判）后，最早 2.5s、空闲时 3.5s、兜底 5s 才开始加载广告；
+ * 用户没有滚动到广告位时，不加载任何第三方广告脚本。
  * 广告位已有显隐控制，晚加载不影响布局 */
 var _adSenseScheduled = false;
+var _adSenseObserver = null;
 // 仅当页面中真实出现 AdSense 广告位时才安排加载，首页/无广告页完全不引入第三方脚本。
-function ensureAdSenseScheduled() {
+function ensureAdSenseScheduled(slot) {
   if (_adSenseScheduled) return;
-  _adSenseScheduled = true;
-  scheduleAdSense();
+  if (!slot || !('IntersectionObserver' in window)) {
+    // 不支持 IntersectionObserver：退回原有延迟加载
+    _adSenseScheduled = true;
+    scheduleAdSense();
+    return;
+  }
+  if (!_adSenseObserver) {
+    _adSenseObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        _adSenseScheduled = true;
+        _adSenseObserver.disconnect();
+        _adSenseObserver = null;
+        scheduleAdSense();
+      });
+    }, { rootMargin: '150px 0px' });
+  }
+  _adSenseObserver.observe(slot);
 }
 function scheduleAdSense() {
   var start = Date.now();
