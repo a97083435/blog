@@ -6,7 +6,7 @@
  * ============================================================================ */
 'use strict';
 
-var BLOG_VERSION = '2.5.3';
+var BLOG_VERSION = '2.5.4';
 
 /* ---------- 全局缓存 ---------- */
 var _searchOpen = false;   // 顶部导航搜索是否展开
@@ -4215,6 +4215,29 @@ function loadAdSense() {
   } catch (e) { /* 忽略：广告加载失败不影响站点 */ }
 }
 
+/* 等待全局样式表加载完成：style.min.css 已由 render-blocking 改为非阻塞加载，
+ * 但首次渲染的 DOM 仍需要它，因此 route() 前先等待，避免未样式闪烁（FOUC）。
+ * 如果样式迟迟未完成（弱网/异常），最多 4s 后继续渲染，避免永久停在加载态。 */
+function _waitGlobalStyle() {
+  var link = document.getElementById('global-style');
+  if (!link) return Promise.resolve();
+  // 非浏览器环境（测试桩/无 HTMLLinkElement 语义）直接放行，避免无谓等待
+  if (typeof link.media === 'undefined' || typeof link.sheet === 'undefined') return Promise.resolve();
+  try {
+    if (link.media === 'all' && link.sheet && link.sheet.cssRules && link.sheet.cssRules.length) return Promise.resolve();
+  } catch (e) {}
+  return new Promise(function (resolve) {
+    var done = false;
+    var finish = function () { if (done) return; done = true; if (timer) clearInterval(timer); if (fallback) clearTimeout(fallback); resolve(); };
+    var timer = setInterval(function () {
+      try { if (link.media === 'all' && link.sheet && link.sheet.cssRules && link.sheet.cssRules.length) finish(); } catch (e) {}
+    }, 50);
+    var fallback = setTimeout(finish, 4000);
+    link.addEventListener('load', finish);
+    link.addEventListener('error', finish);
+  });
+}
+
 /* ---------- 启动引导 ----------
  * 首屏渲染不等待网络：先用静态/本地数据立即渲染，云端探测（/api/posts）
  * 异步完成后再合并数据并重渲染一次，切换为云端模式 UI。
@@ -4224,12 +4247,15 @@ window.__bootPromise = (async function () {
   applyTheme(getTheme());
   applyAccent(getAccent());
   bindNavClicks();
+  // 全局样式非阻塞加载后，首帧渲染前需等它就绪（与 i18n 并行），避免 FOUC
+  var _cssReady = _waitGlobalStyle();
   // 确保 i18n 翻译数据在首次渲染前加载完成
   if (window.__i18n && window.__i18n.loadLocale && !window.__i18n.isReady()) {
     await window.__i18n.loadLocale(window.__i18n.getLocale());
     _i18nReady = true;
   }
 
+  await _cssReady;
   route();
   window.addEventListener('hashchange', function () { route(); });
   window.addEventListener('popstate', function () { route(); });
