@@ -79,12 +79,27 @@ function ensureSmojiPicker(trigger, textarea) {
       var man = window.SmojiLib.manifest;
       var mark = window.SmojiLib.marker;
       function getManifest() {
-        // 优先使用本地内置的更丰富表情清单（file:// 直开也能弹出选择器）；
-        // 加载失败或异常时再回退远程官方 manifest。
+        var localP = null;
         if (window.SmojiManifestData) {
-          try { return Promise.resolve(man.parseSmojiManifest(window.SmojiManifestData, 'https://s3-cdn.zsh.moe/smoji/smoji.json')); } catch (e) {}
+          // 本地内置更丰富表情清单：file:// 直开也能弹出选择器。
+          try { localP = Promise.resolve(man.parseSmojiManifest(window.SmojiManifestData, 'https://s3-cdn.zsh.moe/smoji/smoji.json')); } catch (e) {}
         }
-        return man.loadSmojiManifest('https://s3-cdn.zsh.moe/smoji/smoji.json');
+        // 在线官方表情清单：能联网时优先展示并合并到选择器里。
+        var remoteP = man.loadSmojiManifest('https://s3-cdn.zsh.moe/smoji/smoji.json').catch(function () { return null; });
+        return Promise.all([Promise.resolve(localP), remoteP]).then(function (res) {
+          var packs = [];
+          var seen = {};
+          function addPacks(m) {
+            if (!m || !Array.isArray(m.packs)) return;
+            m.packs.forEach(function (p) {
+              if (!seen[p.id]) { seen[p.id] = 1; packs.push(p); }
+            });
+          }
+          // 在线官方表情显示在前面，本地清单补齐后面，避免重复。
+          addPacks(res[1]);
+          addPacks(res[0]);
+          return packs.length ? { version: 1, packs: packs } : null;
+        });
       }
       return getManifest().then(function (manifest) {
         if (!manifest || !manifest.packs || !manifest.packs.length) return;
