@@ -58,7 +58,7 @@ export async function dbBatch(db, stmts) {
  * 同源请求（无 Origin 头）不加 ACAO；跨站请求：
  *   · 若配置了 SITE_URL（推荐），仅当来源命中外站域名白名单才回写 ACAO，其余一律拦截；
  *   · 若未配置 SITE_URL（如未设置的跨域部署），回退为「回显请求源」（等价于 *，但更精确），
- *     避免自定义域名 + workers.dev 这类合法跨域被误拦截。
+ *     避免自定义域名这类合法跨域被误拦截。
  * 配合 Bearer Token（非凭据请求），即便回显源也不会泄露凭据。 */
 export function getCorsHeaders(request, env) {
   const h = {

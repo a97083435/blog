@@ -29,5 +29,5 @@
 
 - 仓库：https://github.com/kejiland/qingyu-blog
 - 文档：https://docs.2024921.xyz/
-- Sitemap：https://kejiland.azhz.workers.dev/sitemap.xml
-- RSS：https://kejiland.azhz.workers.dev/api/feed.xml
+- Sitemap：https://www.2024921.xyz/sitemap.xml
+- RSS：https://www.2024921.xyz/feed.xml

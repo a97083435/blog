@@ -2,8 +2,8 @@
 # 轻语博客 · Cloudflare Workers 配置
 # ------------------------------------------------------------
 # 部署：npx wrangler deploy -c wrangler.workers.toml
-#   （Workers 部署。域名格式 <worker名>.<账户子域>.workers.dev：
-#    worker 名 = kejiland，账户子域 = azhz → kejiland.azhz.workers.dev。
+#   （Workers 部署。域名格式可绑定自定义域名（如 https://www.2024921.xyz）：
+#    worker 名 = kejiland，账户子域 = azhz → www.2024921.xyz。
 #    如 GitHub Secrets 里设置了 PAGES_PROJECT_NAME 则用它覆盖 --name）
 # 与 Pages 共用的 KV 绑定也在此声明。
 # ------------------------------------------------------------

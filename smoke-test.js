@@ -364,7 +364,7 @@ tests.push(['写作页：正文实时预览 + 未保存状态（bindWriteEvents 
 }]);
 
 tests.push(['写作入口（真实路径 /admin）：由 pathname 进入后台，URL 干净无 hash', async () => {
-  // 模拟直接访问 https://xxx.workers.dev/admin（pathname=/admin，hash 为空）
+  // 模拟直接访问 https://www.2024921.xyz/admin（pathname=/admin，hash 为空）
   const g = await boot({ 'window.BLOG_CONFIG': { mode: 'static', adminPwd: 'admin-999' } }, '/admin');
   const gate = g.ctx.document.querySelector('#app').innerHTML;
   assert.ok(gate.includes('gatePwd') || gate.includes('管理员验证'), '/admin 未放行显示门禁');

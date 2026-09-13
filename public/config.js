@@ -7,7 +7,7 @@
  *   'static' 强制静态模式（只用 posts.js + 导出发布）。
  *   'api'    强制云端模式（需要后端：Cloudflare Pages Functions 或 Workers）。
  * apiBase：后端 API 基础地址。留空表示同源（Cloudflare 部署默认）；
- *          也可填如 https://xxx.workers.dev（跨域时后端已带 CORS 头）。
+ *          也可填如 https://www.2024921.xyz（跨域时后端已带 CORS 头）。
  * siteUrl ：站点对外地址（用于生成 RSS/Sitemap 链接），如 https://blog.example.com；
  *          留空时后端自动取请求来源、前端取页面来源。
  *
@@ -43,7 +43,7 @@
 window.BLOG_CONFIG = {
   mode: 'auto',
   apiBase: '',
-  siteUrl: '',
+  siteUrl: 'https://www.2024921.xyz',
   writeToken: '',
   /* 首页每页显示文章数（分页）。设为 0 = 不分页、全部显示。
    * 例：pageSize: 8 → 首页每页 8 篇，底部出现「上一页 / 下一页」。 */

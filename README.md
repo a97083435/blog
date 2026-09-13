@@ -9,8 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://kejiland.azhz.workers.dev">
-    <img src="https://img.shields.io/badge/在线预览-kejiland.azhz.workers.dev-blue?style=flat-square" alt="Demo" />
+  <a href="https://www.2024921.xyz">
+    <img src="https://img.shields.io/badge/在线预览-www.2024921.xyz-blue?style=flat-square" alt="Demo" />
   </a>
   <img src="https://img.shields.io/badge/许可证-MIT-green?style=flat-square" alt="MIT License" />
   <img src="https://img.shields.io/badge/技术栈-原生JS-orange?style=flat-square" alt="Vanilla JS" />
@@ -161,7 +161,7 @@ npx wrangler kv namespace create BLOG
 5. ✅ 部署 Worker 到 Cloudflare
 6. ✅ 写入运行时 Secret（安装密钥 / R2 凭据 / 清缓存凭证，配置了才写）
 
-部署完成后访问 `https://<worker名>.<子域>.workers.dev/admin`：
+部署完成后访问 `https://www.2024921.xyz/admin`：
 
 - 首次部署（配置了 `BLOG_ADMIN_SETUP_KEY`）：点击「首次部署？使用安装密钥初始化」，输入新管理密码 + 安装密钥提交；
 - 首次部署（未配置安装密钥）：直接用任意密码登录一次，后端会自动生成随机默认密码（`xxxx-xxxx`）并在页面上提示，用它登录后系统强制修改密码；
@@ -243,8 +243,7 @@ node scripts/migrate-kv-to-d1.mjs             # 正式写入 D1
 │   ├── locales/                     # 语言包（zh-CN / en / ja / ko / hi）
 │   ├── flags/                       # 语言切换用的 SVG 国旗图标
 │   ├── fonts/                       # 衬线字体（local 分片 + CDN 分片）
-│   ├── feed.xml                     # 静态 RSS（可选，云端由 API 生成）
-│   ├── sitemap.xml                  # 静态 Sitemap（可选）
+│   # feed.xml / sitemap.xml 由云端动态生成（见 functions/）
 │   ├── robots.txt                   # 爬虫规则（禁止抓取后台，声明 Sitemap）
 │   ├── ads.txt                      # 广告声明（可选，配合 config.js ads）
 │   └── _redirects                   # Cloudflare Pages 路由（SPA 回退 + /public 重定向）
@@ -275,8 +274,10 @@ node scripts/migrate-kv-to-d1.mjs             # 正式写入 D1
 │   │   │   ├── login.js             # 密码登录
 │   │   │   ├── logout.js            # 登出
 │   │   │   └── password.js          # 修改密码
-│   │   ├── feed.xml.js              # RSS 生成
-│   │   └── sitemap.xml.js           # Sitemap 生成
+│   │   ├── feed.xml.js              # /api/feed.xml 动态 RSS（兼容旧入口）
+│   │   └── sitemap.xml.js           # /api/sitemap.xml 动态 Sitemap（兼容旧入口）
+│   ├── feed.xml.js                  # 根路径 /feed.xml 动态 RSS（云端最新文章）
+│   ├── sitemap.xml.js               # 根路径 /sitemap.xml 动态 Sitemap（云端最新文章）
 │   └── _lib/
 │       ├── api-core.js              # API 核心逻辑（D1 + 鉴权 + 安全）
 │       ├── ai.js                    # Workers AI 封装（模型 / 提示词 / 限流 / 降级）
@@ -507,7 +508,7 @@ node search-verify.js   # 搜索专项验证 13 例
 导入示例文章到已部署的云端实例：
 
 ```bash
-node seed.js https://your-blog.workers.dev [--token <会话或写入令牌>]
+node seed.js https://www.2024921.xyz [--token <会话或写入令牌>]
 ```
 
 ---

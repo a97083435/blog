@@ -92,6 +92,12 @@ export default {
     if (url.pathname === '/api/sitemap.xml') {
       return handleSitemap(request, env);
     }
+    if (url.pathname === '/sitemap.xml') {
+      return handleSitemap(request, env);
+    }
+    if (url.pathname === '/feed.xml') {
+      return handleFeed(request, env);
+    }
     let match = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
     if (match) {
       return handleCommentId(request, env, decodeURIComponent(match[1]), decodeURIComponent(match[2]));
