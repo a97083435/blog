@@ -18,6 +18,7 @@ var _statsCache = {};
 var _smojiPicker = null;
 var _smojiTrigger = null;
 var _smojiCssLoaded = false;
+var _smojiLibReady = null;
 
 function destroySmojiPicker() {
   if (_smojiPicker && typeof _smojiPicker.destroy === 'function') { try { _smojiPicker.destroy(); } catch (e) {} }
@@ -37,20 +38,42 @@ function _loadSmojiCss() {
   });
 }
 
+function _loadSmojiLib() {
+  if (window.SmojiLib) return Promise.resolve();
+  if (_smojiLibReady) return _smojiLibReady;
+  _smojiLibReady = new Promise(function (resolve, reject) {
+    var script = document.createElement('script');
+    script.src = appRoot() + 'libs/smoji/smoji.global.js';
+    script.onload = function () { resolve(); };
+    script.onerror = function () { _smojiLibReady = null; reject(new Error('Smoji load failed')); };
+    document.head.appendChild(script);
+  });
+  return _smojiLibReady;
+}
+
+function _ensureCryptoRandomUUID() {
+  try {
+    if (typeof crypto !== 'undefined' && !crypto.randomUUID) {
+      crypto.randomUUID = function () {
+        return 'smoji-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
+      };
+    }
+  } catch (e) {}
+}
+
 function ensureSmojiPicker(trigger, textarea) {
   if (_smojiPicker && _smojiTrigger === trigger) return Promise.resolve();
   if (_smojiPicker) destroySmojiPicker();
-  var root = appRoot() || '';
-  return _loadSmojiCss().then(function () {
-    return Promise.all([
-      import(root + 'libs/smoji/index.js'),
-      import(root + 'libs/smoji/manifest.js'),
-      import(root + 'libs/smoji/marker.js')
-    ]);
-  }).then(function (mods) {
-    var smoj = mods[0], man = mods[1], mark = mods[2];
+  return _loadSmojiCss()
+    .then(function () { return _loadSmojiLib(); })
+    .then(function () {
+      if (!window.SmojiLib) throw new Error('Smoji not loaded');
+      var smoj = window.SmojiLib.ui;
+      var man = window.SmojiLib.manifest;
+      var mark = window.SmojiLib.marker;
     return man.loadSmojiManifest('https://s3-cdn.zsh.moe/smoji/smoji.json').then(function (manifest) {
       if (!manifest || !manifest.packs || !manifest.packs.length) return;
+      _ensureCryptoRandomUUID();
       _smojiPicker = smoj.createSmoji({
         trigger: trigger,
         target: smoj.textTarget(textarea, { serialize: mark.smojiMarker }),
