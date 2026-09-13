@@ -318,7 +318,7 @@ function langOptionsHTML() {
    本地 file:// 直开时用相对路径，其余场景用站点根路径。 */
 function flagImg(code) {
   var c = { 'zh-CN': 'cn', 'en': 'gb', 'ja': 'jp', 'ko': 'kr', 'hi': 'in' }[code] || 'cn';
-  var src = useHashMode() ? 'flags/' + c + '.svg' : '/flags/' + c + '.svg';
+  var src = useHashMode() ? 'flags/' + c + '.svg' : appRoot() + '/flags/' + c + '.svg';
   return '<img class="lang-flag-img" src="' + src + '" alt="' + c.toUpperCase() + '" width="20" height="14" loading="lazy">';
 }
 /* Windows 下原生 select 无法渲染旗帜 emoji（会退化成字母），改用具象的字母标识；

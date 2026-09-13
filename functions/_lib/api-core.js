@@ -437,7 +437,7 @@ export async function handleComments(request, env, postId) {
     }
     // 频率限制：同一 IP 每分钟最多 perMin 条（KV 计数，60s 窗口）。
     // 注意：若 KV（env.BLOG）未绑定，频控会静默失效 —— 显式告警，避免无声降级。
-    const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+    const ip = clientIp(request);
     const win = Math.floor(Date.now() / 60000);
     const rk = 'rate:cmt:' + ip + ':' + win;
     let cnt = 0;
